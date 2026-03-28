@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { UserPlus, Pencil, Trash2, Shield, User, ShieldCheck, ShieldX } from "lucide-react";
+import { UserPlus, Pencil, Trash2, Shield, User, ShieldCheck, ShieldX, KeyRound } from "lucide-react";
 
 interface ManagedUser {
   id: string;
@@ -25,6 +25,8 @@ export default function UserManagement() {
   const { toast } = useToast();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editUser, setEditUser] = useState<ManagedUser | null>(null);
+  const [resetPwUser, setResetPwUser] = useState<ManagedUser | null>(null);
+  const [resetPwValue, setResetPwValue] = useState("");
   const [newUser, setNewUser] = useState({ username: "", password: "", displayName: "", role: "recon_user" });
   const [editFields, setEditFields] = useState({ displayName: "", role: "", password: "", active: true });
 
@@ -140,6 +142,9 @@ export default function UserManagement() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" onClick={() => { setResetPwUser(u); setResetPwValue(""); }} title="Reset password" data-testid={`button-reset-pw-${u.id}`}>
+                  <KeyRound className="w-4 h-4" />
+                </Button>
                 <Button variant="ghost" size="icon" onClick={() => openEdit(u)} data-testid={`button-edit-user-${u.id}`}>
                   <Pencil className="w-4 h-4" />
                 </Button>
@@ -219,6 +224,47 @@ export default function UserManagement() {
               data-testid="button-submit-create-user"
             >
               {createMutation.isPending ? "Creating..." : "Create User"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!resetPwUser} onOpenChange={(open) => !open && setResetPwUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset Password: {resetPwUser?.username}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Set a new password for <strong>{resetPwUser?.displayName || resetPwUser?.username}</strong>.
+            </p>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">New Password</label>
+              <Input
+                data-testid="input-reset-password"
+                type="password"
+                value={resetPwValue}
+                onChange={(e) => setResetPwValue(e.target.value)}
+                placeholder="Enter new password"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResetPwUser(null)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                if (!resetPwUser || !resetPwValue) return;
+                if (resetPwValue.length < 6) {
+                  toast({ title: "Password must be at least 6 characters", variant: "destructive" });
+                  return;
+                }
+                updateMutation.mutate({ id: resetPwUser.id, updates: { password: resetPwValue } });
+                setResetPwUser(null);
+              }}
+              disabled={updateMutation.isPending || !resetPwValue}
+              data-testid="button-submit-reset-password"
+            >
+              {updateMutation.isPending ? "Resetting..." : "Reset Password"}
             </Button>
           </DialogFooter>
         </DialogContent>

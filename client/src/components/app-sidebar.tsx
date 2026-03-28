@@ -13,7 +13,13 @@ import {
   LogOut,
   Shield,
   User,
+  KeyRound,
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import {
   Sidebar,
   SidebarContent,
@@ -109,6 +115,35 @@ function NavGroup({ label, icon: Icon, items, defaultOpen, location, testId, lin
 export function AppSidebar() {
   const [location] = useLocation();
   const { user, isAdmin, logout } = useAuth();
+  const { toast } = useToast();
+  const [showChangePw, setShowChangePw] = useState(false);
+  const [pwFields, setPwFields] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
+  const [pwLoading, setPwLoading] = useState(false);
+
+  const handleChangePassword = async () => {
+    if (pwFields.newPassword !== pwFields.confirmPassword) {
+      toast({ title: "Passwords do not match", variant: "destructive" });
+      return;
+    }
+    if (pwFields.newPassword.length < 6) {
+      toast({ title: "Password must be at least 6 characters", variant: "destructive" });
+      return;
+    }
+    setPwLoading(true);
+    try {
+      await apiRequest("POST", "/api/auth/change-password", {
+        currentPassword: pwFields.currentPassword,
+        newPassword: pwFields.newPassword,
+      });
+      toast({ title: "Password changed successfully" });
+      setShowChangePw(false);
+      setPwFields({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    } catch (err: any) {
+      toast({ title: "Failed to change password", description: err.message?.includes("401") ? "Current password is incorrect" : err.message, variant: "destructive" });
+    } finally {
+      setPwLoading(false);
+    }
+  };
 
   const isReconActive = location.startsWith("/recon");
   const isCashflowActive = location.startsWith("/cashflow");
@@ -182,7 +217,7 @@ export function AppSidebar() {
             </SidebarGroup>
           )}
         </SidebarContent>
-        <SidebarFooter className="border-t border-sidebar-border p-3">
+        <SidebarFooter className="border-t border-sidebar-border p-3 space-y-2">
           <div className="flex items-center gap-3">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isAdmin ? "bg-amber-500/15 text-amber-400" : "bg-blue-500/15 text-blue-400"}`}>
               {isAdmin ? <Shield className="w-4 h-4" /> : <User className="w-4 h-4" />}
@@ -196,6 +231,14 @@ export function AppSidebar() {
               </p>
             </div>
             <button
+              onClick={() => setShowChangePw(true)}
+              className="p-1.5 rounded-md hover:bg-sidebar-accent text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors"
+              data-testid="button-change-password"
+              title="Change password"
+            >
+              <KeyRound className="w-4 h-4" />
+            </button>
+            <button
               onClick={() => logout.mutate()}
               className="p-1.5 rounded-md hover:bg-sidebar-accent text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors"
               data-testid="button-logout"
@@ -206,6 +249,56 @@ export function AppSidebar() {
           </div>
         </SidebarFooter>
       </Sidebar>
+
+      <Dialog open={showChangePw} onOpenChange={setShowChangePw}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change Password</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Current Password</label>
+              <Input
+                data-testid="input-current-password"
+                type="password"
+                value={pwFields.currentPassword}
+                onChange={(e) => setPwFields({ ...pwFields, currentPassword: e.target.value })}
+                placeholder="Enter current password"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">New Password</label>
+              <Input
+                data-testid="input-new-password"
+                type="password"
+                value={pwFields.newPassword}
+                onChange={(e) => setPwFields({ ...pwFields, newPassword: e.target.value })}
+                placeholder="Enter new password"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Confirm New Password</label>
+              <Input
+                data-testid="input-confirm-password"
+                type="password"
+                value={pwFields.confirmPassword}
+                onChange={(e) => setPwFields({ ...pwFields, confirmPassword: e.target.value })}
+                placeholder="Confirm new password"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowChangePw(false)}>Cancel</Button>
+            <Button
+              onClick={handleChangePassword}
+              disabled={pwLoading || !pwFields.currentPassword || !pwFields.newPassword || !pwFields.confirmPassword}
+              data-testid="button-submit-change-password"
+            >
+              {pwLoading ? "Changing..." : "Change Password"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
