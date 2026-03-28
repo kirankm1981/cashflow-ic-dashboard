@@ -1,6 +1,5 @@
 node_modules
 dist
-dist-windows
 .DS_Store
 server/public
 vite.config.ts.*
@@ -11,6 +10,7 @@ logs/
 .replit
 replit.nix
 replit_zip_error_log.txt
+replit.md
 generated-icon.*
 .config/
 *.db
