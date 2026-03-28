@@ -269,13 +269,13 @@ export async function seedDefaultRules() {
 export async function seedDefaultAdmin() {
   const existing = await db.select().from(users);
   if (existing.length === 0) {
-    const hashedPassword = await bcrypt.hash("admin123", 10);
+    const hashedPassword = await bcrypt.hash("R0m@T0rr1n0", 10);
     await db.insert(users).values({
       username: "admin",
       password: hashedPassword,
       displayName: "Platform Admin",
       role: "platform_admin",
     });
-    console.log("Seeded default admin user (username: admin, password: admin123)");
+    console.log("Seeded default admin user");
   }
 }

@@ -95,11 +95,6 @@ export default function LoginPage() {
                 </span>
               )}
             </Button>
-            {process.env.NODE_ENV !== "production" && (
-              <p className="text-xs text-slate-500 text-center">
-                Default credentials: admin / admin123
-              </p>
-            )}
           </form>
         </CardContent>
       </Card>
