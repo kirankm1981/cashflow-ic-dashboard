@@ -63,8 +63,18 @@ Open http://localhost:3000 in your browser.
 
 1. Install Node.js v20 LTS and PostgreSQL
 2. Create the database (see above)
-3. Run `dist-windows/install.bat` to configure the database connection
-4. Run `dist-windows/start.bat` to launch
+3. Double-click **`install.bat`** and follow the prompts to configure the database connection
+4. Double-click **`start.bat`** to launch the app
+
+### Windows Scripts
+
+| Script                    | Description                                  |
+|---------------------------|----------------------------------------------|
+| install.bat               | First-time setup (database config + npm install) |
+| start.bat                 | Start with console window                    |
+| start-hidden.vbs          | Start silently in background, opens browser  |
+| auto-start-install.bat    | Configure app to start with Windows login    |
+| auto-start-uninstall.bat  | Remove auto-start                            |
 
 ## Password Recovery
 
