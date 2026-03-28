@@ -19,9 +19,12 @@ import CashflowUpload from "@/pages/cashflow-upload";
 import IcMatrix from "@/pages/ic-matrix";
 import IcMatrixUpload from "@/pages/ic-matrix-upload";
 import RptDataPage from "@/pages/rpt-data";
+import LoginPage from "@/pages/login";
+import UserManagement from "@/pages/user-management";
 import { useLocation } from "wouter";
 import { UploadManagerProvider } from "@/lib/upload-manager";
 import GlobalUploadNotifications from "@/components/global-upload-notifications";
+import { useAuth } from "@/hooks/use-auth";
 
 function PageTitle() {
   const [location] = useLocation();
@@ -39,8 +42,10 @@ function PageTitle() {
     "/cashflow/upload": "Cashflow Upload",
     "/ic-matrix": "IC Matrix",
     "/ic-matrix/upload": "Upload TB Files",
+    "/admin/users": "User Management",
   };
   const module = location === "/" ? "Platform"
+    : location.startsWith("/admin") ? "Admin"
     : location.startsWith("/cashflow") ? "Cashflow"
     : location.startsWith("/ic-matrix") ? "IC Matrix"
     : "IC Recon";
@@ -48,10 +53,11 @@ function PageTitle() {
     "IC Recon": "text-blue-500",
     "Cashflow": "text-emerald-500",
     "IC Matrix": "text-purple-500",
+    "Admin": "text-amber-500",
   };
   return (
     <div className="flex items-center gap-2">
-      <span className={`text-xs font-medium ${colors[module]}`} data-testid="text-active-module">{module}</span>
+      <span className={`text-xs font-medium ${colors[module] || ""}`} data-testid="text-active-module">{module}</span>
       <span className="text-muted-foreground/40">|</span>
       <span className="text-xs text-muted-foreground" data-testid="text-page-title">{titles[location] || "Cashflow & IC Dashboard"}</span>
     </div>
@@ -74,6 +80,7 @@ function Router() {
       <Route path="/cashflow/upload" component={CashflowUpload} />
       <Route path="/ic-matrix" component={IcMatrix} />
       <Route path="/ic-matrix/upload" component={IcMatrixUpload} />
+      <Route path="/admin/users" component={UserManagement} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -84,28 +91,55 @@ const sidebarStyle = {
   "--sidebar-width-icon": "3rem",
 };
 
+function AuthenticatedApp() {
+  return (
+    <UploadManagerProvider>
+      <SidebarProvider style={sidebarStyle as React.CSSProperties}>
+        <div className="flex h-screen w-full">
+          <AppSidebar />
+          <div className="flex flex-col flex-1 min-w-0">
+            <header className="flex items-center gap-2 p-2 border-b shrink-0">
+              <SidebarTrigger data-testid="button-sidebar-toggle" />
+              <PageTitle />
+            </header>
+            <main className="flex-1 overflow-auto">
+              <Router />
+            </main>
+          </div>
+        </div>
+      </SidebarProvider>
+      <GlobalUploadNotifications />
+    </UploadManagerProvider>
+  );
+}
+
+function AppGate() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-900">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-slate-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <LoginPage />;
+  }
+
+  return <AuthenticatedApp />;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <UploadManagerProvider>
-          <SidebarProvider style={sidebarStyle as React.CSSProperties}>
-            <div className="flex h-screen w-full">
-              <AppSidebar />
-              <div className="flex flex-col flex-1 min-w-0">
-                <header className="flex items-center gap-2 p-2 border-b shrink-0">
-                  <SidebarTrigger data-testid="button-sidebar-toggle" />
-                  <PageTitle />
-                </header>
-                <main className="flex-1 overflow-auto">
-                  <Router />
-                </main>
-              </div>
-            </div>
-          </SidebarProvider>
-          <GlobalUploadNotifications />
-          <Toaster />
-        </UploadManagerProvider>
+        <AppGate />
+        <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
   );

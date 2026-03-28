@@ -47,11 +47,21 @@ The platform features a consistent UI/UX across modules, with a sidebar for navi
     -   Upload and manage TB files and mapping files (IC-GL-Mapping, Company_Code sheets).
     -   Provides a dashboard with compiled TB data, KPIs, and mapping summaries.
 
+### Authentication & User Management
+-   **Session-based auth**: Uses `express-session` with `connect-pg-simple` for PostgreSQL session storage.
+-   **Password hashing**: bcryptjs with salt rounds of 10.
+-   **Two roles**: `platform_admin` (manage users + define rules) and `recon_user` (all data operations).
+-   **Default admin**: Seeded on first startup (username: `admin`, password: `admin123`).
+-   **Frontend auth**: `useAuth` hook in `client/src/hooks/use-auth.ts` provides auth state. `App.tsx` gates all routes behind login.
+-   **User management**: Admin-only page at `/admin/users` for creating, editing, and disabling users.
+-   **Routes**: `/api/auth/login`, `/api/auth/logout`, `/api/auth/me`, `/api/auth/change-password`, `/api/users` (CRUD, admin-only).
+-   All `/api/*` routes (except `/api/auth/*`) require authentication via middleware.
+
 ### System Design Choices
--   The application is structured into distinct modules, reflected in the URL routing (`/recon/*`, `/cashflow`, `/ic-matrix`).
+-   The application is structured into distinct modules, reflected in the URL routing (`/recon/*`, `/cashflow`, `/ic-matrix`, `/admin/*`).
 -   Data persistence is handled by PostgreSQL, providing better concurrent access, performance, and production readiness.
 -   Windows deployment is supported with scripts for installation, development, and background execution, ensuring ease of deployment for target users.
 
 ## External Dependencies
 -   **Frontend Libraries**: React, Vite, TanStack Query, Wouter, Recharts, shadcn/ui.
--   **Backend Libraries**: Express.js, pg (node-postgres), Drizzle ORM, multer, csv-parse, xlsx.
+-   **Backend Libraries**: Express.js, pg (node-postgres), Drizzle ORM, multer, csv-parse, xlsx, bcryptjs, express-session, connect-pg-simple.

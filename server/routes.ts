@@ -16,20 +16,32 @@ import path from "path";
 import { existsSync } from "fs";
 import bcrypt from "bcryptjs";
 
-function requireAuth(req: Request, res: Response, next: NextFunction) {
+async function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.session?.userId) {
     return res.status(401).json({ message: "Not authenticated" });
   }
+  const user = await storage.getUserById(req.session.userId);
+  if (!user || !user.active) {
+    req.session.destroy(() => {});
+    return res.status(401).json({ message: "Not authenticated" });
+  }
+  req.session.role = user.role;
   next();
 }
 
-function requireAdmin(req: Request, res: Response, next: NextFunction) {
+async function requireAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.session?.userId) {
     return res.status(401).json({ message: "Not authenticated" });
   }
-  if (req.session.role !== "platform_admin") {
+  const user = await storage.getUserById(req.session.userId);
+  if (!user || !user.active) {
+    req.session.destroy(() => {});
+    return res.status(401).json({ message: "Not authenticated" });
+  }
+  if (user.role !== "platform_admin") {
     return res.status(403).json({ message: "Admin access required" });
   }
+  req.session.role = user.role;
   next();
 }
 
@@ -86,13 +98,19 @@ export async function registerRoutes(
       if (!valid) {
         return res.status(401).json({ message: "Invalid username or password" });
       }
-      req.session.userId = user.id;
-      req.session.role = user.role;
-      res.json({
+      const userData = {
         id: user.id,
         username: user.username,
         displayName: user.displayName,
         role: user.role,
+      };
+      req.session.regenerate((err) => {
+        if (err) {
+          return res.status(500).json({ message: "Session error" });
+        }
+        req.session.userId = user.id;
+        req.session.role = user.role;
+        res.json(userData);
       });
     } catch (error: any) {
       res.status(500).json({ message: error.message });

@@ -9,6 +9,10 @@ import {
   ChevronDown,
   Settings2,
   Database,
+  Users,
+  LogOut,
+  Shield,
+  User,
 } from "lucide-react";
 import {
   Sidebar,
@@ -20,8 +24,10 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarHeader,
+  SidebarFooter,
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
 
 const icReconItems = [
   { title: "Dashboard", url: "/recon", icon: LayoutDashboard },
@@ -102,6 +108,7 @@ function NavGroup({ label, icon: Icon, items, defaultOpen, location, testId, lin
 
 export function AppSidebar() {
   const [location] = useLocation();
+  const { user, isAdmin, logout } = useAuth();
 
   const isReconActive = location.startsWith("/recon");
   const isCashflowActive = location.startsWith("/cashflow");
@@ -151,7 +158,53 @@ export function AppSidebar() {
             testId="group-ic-recon"
             linkPrefix="recon"
           />
+
+          {isAdmin && (
+            <SidebarGroup>
+              <SidebarGroupLabel className="py-2">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-4 h-4" />
+                  <span className="text-[13px] font-bold tracking-wide uppercase">Admin</span>
+                </div>
+              </SidebarGroupLabel>
+              <SidebarGroupContent className="pl-3">
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild data-active={location === "/admin/users"}>
+                      <Link href="/admin/users" data-testid="link-admin-users">
+                        <Users className="w-4 h-4" />
+                        <span>Users</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
         </SidebarContent>
+        <SidebarFooter className="border-t border-sidebar-border p-3">
+          <div className="flex items-center gap-3">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isAdmin ? "bg-amber-500/15 text-amber-400" : "bg-blue-500/15 text-blue-400"}`}>
+              {isAdmin ? <Shield className="w-4 h-4" /> : <User className="w-4 h-4" />}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-sidebar-foreground truncate" data-testid="text-current-user">
+                {user?.displayName || user?.username}
+              </p>
+              <p className="text-[10px] text-sidebar-foreground/50">
+                {isAdmin ? "Admin" : "Recon User"}
+              </p>
+            </div>
+            <button
+              onClick={() => logout.mutate()}
+              className="p-1.5 rounded-md hover:bg-sidebar-accent text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors"
+              data-testid="button-logout"
+              title="Sign out"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        </SidebarFooter>
       </Sidebar>
     </>
   );

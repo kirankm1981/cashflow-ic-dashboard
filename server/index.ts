@@ -41,13 +41,15 @@ app.use(
       tableName: "user_sessions",
       createTableIfMissing: true,
     }),
-    secret: process.env.SESSION_SECRET || "cashflow-ic-dashboard-default-secret",
+    secret: process.env.SESSION_SECRET || (process.env.NODE_ENV === "production"
+      ? (() => { console.warn("WARNING: SESSION_SECRET not set in production!"); return require("crypto").randomBytes(32).toString("hex"); })()
+      : "cashflow-ic-dev-secret"),
     resave: false,
     saveUninitialized: false,
     cookie: {
       maxAge: 24 * 60 * 60 * 1000,
       httpOnly: true,
-      secure: false,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
     },
   })
