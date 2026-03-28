@@ -31,12 +31,12 @@ for /f "usebackq tokens=1,* delims==" %%a in (".env") do (
 )
 
 echo  Starting server...
-echo  Open your browser to: http://localhost:5000
+echo  Open your browser to: http://localhost:3000
 echo.
 echo  Press Ctrl+C to stop the server.
 echo.
 
-set PORT=5000
+set PORT=3000
 set NODE_ENV=production
 node server.cjs
 

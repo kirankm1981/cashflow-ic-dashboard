@@ -42,5 +42,5 @@
     npx tsx server/scripts/reset-admin-password.ts NewPasswordHere
 
 ## Port Conflict
-  If port 5000 is in use, edit start.bat and change PORT=5000
+  If port 3000 is in use, edit start.bat and change PORT=3000
   to another port (e.g., PORT=8080).

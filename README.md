@@ -51,7 +51,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5000 in your browser.
+Open http://localhost:3000 in your browser.
 
 ### 4. Default login
 
@@ -123,7 +123,7 @@ npm start
 
 ## Troubleshooting
 
-### Port 5000 already in use
+### Port 3000 already in use
 Set the PORT environment variable:
 ```bash
 PORT=8080 npm run dev

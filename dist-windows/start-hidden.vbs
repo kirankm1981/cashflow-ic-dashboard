@@ -22,8 +22,8 @@ Do While Not envFile.AtEndOfStream
 Loop
 envFile.Close
 
-WshShell.Environment("Process")("PORT") = "5000"
+WshShell.Environment("Process")("PORT") = "3000"
 WshShell.Environment("Process")("NODE_ENV") = "production"
 WshShell.Run "cmd /c cd /d """ & strPath & """ && node server.cjs", 0, False
 WScript.Sleep 3000
-WshShell.Run "http://localhost:5000", 1, False
+WshShell.Run "http://localhost:3000", 1, False
