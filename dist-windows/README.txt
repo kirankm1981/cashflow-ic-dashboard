@@ -19,18 +19,26 @@
      - Enter your PostgreSQL password
 
 ## How to Run
-  1. Double-click "start.bat"
-  2. Open http://localhost:5000 in your browser
-  3. Login with default admin credentials:
-     Username: admin
-     Password: admin123
-     (Change the password immediately after first login)
+
+| Script                    | Description                                  |
+|---------------------------|----------------------------------------------|
+| start.bat                 | Start with console window (recommended)      |
+| start-hidden.vbs          | Start silently in background, opens browser  |
+| auto-start-install.bat    | Configure app to start with Windows          |
+| auto-start-uninstall.bat  | Remove auto-start from Windows               |
+
+## Default Login
+  Username: admin
+  Password: admin123
+  (Change the password immediately after first login)
 
 ## Stopping the App
-  Press Ctrl+C in the console window
+  - start.bat: Press Ctrl+C in the console window
+  - start-hidden.vbs: Open Task Manager > find "node.exe" > End Task
 
 ## Password Recovery
-  If the admin forgets their password, run from the project folder:
+  If the admin forgets their password, open Command Prompt in the project
+  folder and run:
     npx tsx server/scripts/reset-admin-password.ts NewPasswordHere
 
 ## Port Conflict
