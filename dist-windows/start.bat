@@ -1,8 +1,8 @@
 @echo off
-title IC Recon - Intercompany Reconciliation Platform
+title Cashflow IC Dashboard
 echo.
 echo  ============================================
-echo   IC Recon - Intercompany Reconciliation
+echo   Cashflow IC Dashboard
 echo  ============================================
 echo.
 
@@ -17,7 +17,20 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-echo  Starting IC Recon server...
+for /f "tokens=*" %%v in ('node -v') do echo  Node.js version: %%v
+echo.
+
+if not exist .env (
+    echo  [ERROR] .env file not found. Run install.bat first.
+    pause
+    exit /b 1
+)
+
+for /f "usebackq tokens=1,* delims==" %%a in (".env") do (
+    set "%%a=%%b"
+)
+
+echo  Starting server...
 echo  Open your browser to: http://localhost:5000
 echo.
 echo  Press Ctrl+C to stop the server.
