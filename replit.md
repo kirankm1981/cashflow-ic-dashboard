@@ -54,8 +54,11 @@ The platform features a consistent UI/UX across modules, with a sidebar for navi
 -   **Default admin**: Seeded on first startup (username: `admin`, password: `admin123`).
 -   **Frontend auth**: `useAuth` hook in `client/src/hooks/use-auth.ts` provides auth state. `App.tsx` gates all routes behind login.
 -   **User management**: Admin-only page at `/admin/users` for creating, editing, and disabling users.
+-   **Password management**: All users can change their own password via sidebar key icon. Admins can reset any user's password via the user management page.
+-   **Admin password recovery**: If the admin forgets their password, run: `npx tsx server/scripts/reset-admin-password.ts <new-password>` from the project root (Shell). Optionally specify a username as the first argument.
 -   **Routes**: `/api/auth/login`, `/api/auth/logout`, `/api/auth/me`, `/api/auth/change-password`, `/api/users` (CRUD, admin-only).
 -   All `/api/*` routes (except `/api/auth/*`) require authentication via middleware.
+-   **Rules management**: Only platform admins can view and manage reconciliation rules (both frontend sidebar link and all `/api/rules` endpoints are admin-only).
 
 ### System Design Choices
 -   The application is structured into distinct modules, reflected in the URL routing (`/recon/*`, `/cashflow`, `/ic-matrix`, `/admin/*`).
