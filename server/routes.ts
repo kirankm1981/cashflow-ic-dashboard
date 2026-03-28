@@ -655,7 +655,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/rules", async (_req, res) => {
+  app.get("/api/rules", requireAdmin, async (_req, res) => {
     try {
       const rules = await storage.getRules();
       res.json(rules);
@@ -664,7 +664,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/rules", async (req, res) => {
+  app.post("/api/rules", requireAdmin, async (req, res) => {
     try {
       const { name, ruleType, priority, active, description, ruleId, matchType, dateTolerance, amountTolerance, amountTolerancePct, confidence, classification, params } = req.body;
       if (!name || !ruleType || priority === undefined) {
@@ -691,7 +691,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/rules/:id", async (req, res) => {
+  app.patch("/api/rules/:id", requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ message: "Invalid rule ID" });
@@ -717,7 +717,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/rules/:id", async (req, res) => {
+  app.delete("/api/rules/:id", requireAdmin, async (req, res) => {
     try {
       await storage.deleteRule(parseInt(req.params.id));
       res.json({ success: true });

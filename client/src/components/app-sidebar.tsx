@@ -39,6 +39,9 @@ const icReconItems = [
   { title: "Dashboard", url: "/recon", icon: LayoutDashboard },
   { title: "Upload", url: "/recon/upload", icon: Upload },
   { title: "RPT Data", url: "/recon/rpt-data", icon: Database },
+];
+
+const icReconAdminItems = [
   { title: "Rules", url: "/recon/rules", icon: Settings2 },
 ];
 
@@ -187,7 +190,7 @@ export function AppSidebar() {
           <NavGroup
             label="IC Recon"
             icon={GitCompare}
-            items={icReconItems}
+            items={isAdmin ? [...icReconItems, ...icReconAdminItems] : icReconItems}
             defaultOpen={isReconActive}
             location={location}
             testId="group-ic-recon"
