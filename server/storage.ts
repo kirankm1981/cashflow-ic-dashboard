@@ -1,6 +1,7 @@
 import { eq, and, desc, asc, inArray, or, isNull } from "drizzle-orm";
 import { db } from "./db";
 import {
+  users,
   transactions,
   summarizedLines,
   reconciliationRules,
@@ -12,6 +13,8 @@ import {
   anomalyFlags,
   unmatchedClassifications,
   mlSuggestions,
+  type InsertUser,
+  type User,
   type InsertTransaction,
   type InsertSummarizedLine,
   type InsertRule,
@@ -35,6 +38,13 @@ import {
 } from "@shared/schema";
 
 export interface IStorage {
+  getUserByUsername(username: string): Promise<User | undefined>;
+  getUserById(id: string): Promise<User | undefined>;
+  getUsers(): Promise<User[]>;
+  createUser(user: InsertUser): Promise<User>;
+  updateUser(id: string, updates: Partial<InsertUser & { active: boolean }>): Promise<User | undefined>;
+  deleteUser(id: string): Promise<void>;
+
   getTransactions(filters?: {
     company?: string;
     counterParty?: string;
@@ -143,6 +153,34 @@ function isMatchedStatus(status: string): boolean {
 }
 
 export class DatabaseStorage implements IStorage {
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [row] = await db.select().from(users).where(eq(users.username, username));
+    return row;
+  }
+
+  async getUserById(id: string): Promise<User | undefined> {
+    const [row] = await db.select().from(users).where(eq(users.id, id));
+    return row;
+  }
+
+  async getUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(asc(users.username));
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const [inserted] = await db.insert(users).values(user).returning();
+    return inserted;
+  }
+
+  async updateUser(id: string, updates: Partial<InsertUser & { active: boolean }>): Promise<User | undefined> {
+    const [updated] = await db.update(users).set(updates).where(eq(users.id, id)).returning();
+    return updated;
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    await db.delete(users).where(eq(users.id, id));
+  }
+
   async getTransactions(filters?: {
     company?: string;
     counterParty?: string;

@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { runReconciliation } from "./reconciliation-engine";
@@ -10,10 +10,28 @@ import { parse } from "csv-parse/sync";
 import * as XLSX from "xlsx";
 import { eq } from "drizzle-orm";
 import type { InsertTransaction, InsertSummarizedLine } from "@shared/schema";
-import { icReconGlFiles, icReconGlRawRows, icMatrixMappingGl, icMatrixMappingCompany } from "@shared/schema";
+import { icReconGlFiles, icReconGlRawRows, icMatrixMappingGl, icMatrixMappingCompany, loginSchema } from "@shared/schema";
 import { randomUUID } from "crypto";
 import path from "path";
 import { existsSync } from "fs";
+import bcrypt from "bcryptjs";
+
+function requireAuth(req: Request, res: Response, next: NextFunction) {
+  if (!req.session?.userId) {
+    return res.status(401).json({ message: "Not authenticated" });
+  }
+  next();
+}
+
+function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  if (!req.session?.userId) {
+    return res.status(401).json({ message: "Not authenticated" });
+  }
+  if (req.session.role !== "platform_admin") {
+    return res.status(403).json({ message: "Admin access required" });
+  }
+  next();
+}
 
 function parseFileToRecords(buffer: Buffer, filename: string, selectedSheet?: string): Record<string, string>[] {
   const ext = (filename || "").toLowerCase().split(".").pop();
@@ -49,6 +67,177 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const parsed = loginSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Username and password are required" });
+      }
+      const { username, password } = parsed.data;
+      const user = await storage.getUserByUsername(username);
+      if (!user) {
+        return res.status(401).json({ message: "Invalid username or password" });
+      }
+      if (!user.active) {
+        return res.status(403).json({ message: "Account is disabled. Contact your administrator." });
+      }
+      const valid = await bcrypt.compare(password, user.password);
+      if (!valid) {
+        return res.status(401).json({ message: "Invalid username or password" });
+      }
+      req.session.userId = user.id;
+      req.session.role = user.role;
+      res.json({
+        id: user.id,
+        username: user.username,
+        displayName: user.displayName,
+        role: user.role,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/auth/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) return res.status(500).json({ message: "Logout failed" });
+      res.clearCookie("connect.sid");
+      res.json({ message: "Logged out" });
+    });
+  });
+
+  app.get("/api/auth/me", async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    const user = await storage.getUserById(req.session.userId);
+    if (!user || !user.active) {
+      req.session.destroy(() => {});
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    res.json({
+      id: user.id,
+      username: user.username,
+      displayName: user.displayName,
+      role: user.role,
+    });
+  });
+
+  app.get("/api/users", requireAdmin, async (_req, res) => {
+    try {
+      const allUsers = await storage.getUsers();
+      res.json(allUsers.map(u => ({
+        id: u.id,
+        username: u.username,
+        displayName: u.displayName,
+        role: u.role,
+        active: u.active,
+        createdAt: u.createdAt,
+      })));
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/users", requireAdmin, async (req, res) => {
+    try {
+      const { username, password, displayName, role } = req.body;
+      if (!username || !password) {
+        return res.status(400).json({ message: "Username and password are required" });
+      }
+      if (role && !["platform_admin", "recon_user"].includes(role)) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+      const existing = await storage.getUserByUsername(username);
+      if (existing) {
+        return res.status(409).json({ message: "Username already exists" });
+      }
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const user = await storage.createUser({
+        username,
+        password: hashedPassword,
+        displayName: displayName || username,
+        role: role || "recon_user",
+      });
+      res.json({
+        id: user.id,
+        username: user.username,
+        displayName: user.displayName,
+        role: user.role,
+        active: user.active,
+        createdAt: user.createdAt,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/users/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates: any = {};
+      if (req.body.displayName !== undefined) updates.displayName = req.body.displayName;
+      if (req.body.role !== undefined) {
+        if (!["platform_admin", "recon_user"].includes(req.body.role)) {
+          return res.status(400).json({ message: "Invalid role" });
+        }
+        updates.role = req.body.role;
+      }
+      if (req.body.active !== undefined) updates.active = req.body.active;
+      if (req.body.password) {
+        updates.password = await bcrypt.hash(req.body.password, 10);
+      }
+      const user = await storage.updateUser(id, updates);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      res.json({
+        id: user.id,
+        username: user.username,
+        displayName: user.displayName,
+        role: user.role,
+        active: user.active,
+        createdAt: user.createdAt,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/users/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (id === req.session?.userId) {
+        return res.status(400).json({ message: "Cannot delete your own account" });
+      }
+      await storage.deleteUser(id);
+      res.json({ message: "User deleted" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/auth/change-password", requireAuth, async (req, res) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Current and new password required" });
+      }
+      const user = await storage.getUserById(req.session!.userId!);
+      if (!user) return res.status(401).json({ message: "Not authenticated" });
+      const valid = await bcrypt.compare(currentPassword, user.password);
+      if (!valid) return res.status(401).json({ message: "Current password is incorrect" });
+      const hashed = await bcrypt.hash(newPassword, 10);
+      await storage.updateUser(user.id, { password: hashed });
+      res.json({ message: "Password changed successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.use("/api", (req, res, next) => {
+    if (req.path.startsWith("/auth/")) return next();
+    requireAuth(req, res, next);
+  });
 
   app.get("/api/download-package", (_req, res) => {
     const filePath = path.resolve("ic-recon-full.tar.gz");

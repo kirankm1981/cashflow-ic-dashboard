@@ -1,5 +1,6 @@
 import { db } from "./db";
-import { reconciliationRules } from "@shared/schema";
+import { reconciliationRules, users } from "@shared/schema";
+import bcrypt from "bcryptjs";
 
 export async function seedDefaultRules() {
   const existing = await db.select().from(reconciliationRules);
@@ -262,5 +263,19 @@ export async function seedDefaultRules() {
   if (newRules.length > 0) {
     await db.insert(reconciliationRules).values(newRules);
     console.log(`Seeded ${newRules.length} reconciliation rules: ${newRules.map(r => r.ruleId).join(', ')}`);
+  }
+}
+
+export async function seedDefaultAdmin() {
+  const existing = await db.select().from(users);
+  if (existing.length === 0) {
+    const hashedPassword = await bcrypt.hash("admin123", 10);
+    await db.insert(users).values({
+      username: "admin",
+      password: hashedPassword,
+      displayName: "Platform Admin",
+      role: "platform_admin",
+    });
+    console.log("Seeded default admin user (username: admin, password: admin123)");
   }
 }
