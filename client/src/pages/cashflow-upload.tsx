@@ -19,6 +19,7 @@ import {
   Database,
   AlertCircle,
   CheckCircle,
+  Download,
 } from "lucide-react";
 import {
   Dialog,
@@ -213,6 +214,16 @@ export default function CashflowUpload() {
                 Trial Balance Files
               </CardTitle>
               <div className="flex gap-2">
+                {(tbFiles?.length ?? 0) > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open("/api/cashflow/download-mapped-tb", "_blank")}
+                    data-testid="button-download-mapped"
+                  >
+                    <Download className="w-3 h-3 mr-1" /> Download
+                  </Button>
+                )}
                 <Button variant="outline" size="sm" onClick={addTbSlot} data-testid="button-add-tb-slot">
                   <Plus className="w-3 h-3 mr-1" /> Add
                 </Button>

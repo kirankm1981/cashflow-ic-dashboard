@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { IndianRupee, TrendingUp, TrendingDown, AlertTriangle, ChevronRight, ChevronDown, Download } from "lucide-react";
+import { IndianRupee, TrendingUp, TrendingDown, AlertTriangle, ChevronRight, ChevronDown } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import {
@@ -364,28 +364,12 @@ export default function CashflowDashboard() {
           <h1 className="text-2xl font-bold tracking-tight" data-testid="text-cashflow-title">Cashflow Dashboard</h1>
           <p className="text-muted-foreground text-sm mt-1">Monitor and analyze cashflows across entities</p>
         </div>
-        <div className="flex items-center gap-3 shrink-0">
-          {(periodDisplay || enterpriseDisplay) && (
-            <div className="text-right" data-testid="text-cf-period">
-              {periodDisplay && <p className="text-sm font-semibold">{periodDisplay}</p>}
-              {enterpriseDisplay && <p className="text-xs text-muted-foreground mt-0.5">{enterpriseDisplay}</p>}
-            </div>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              const a = document.createElement("a");
-              a.href = "/api/cashflow/download-mapped-tb";
-              a.download = "Cashflow_Mapped_TB.xlsx";
-              a.click();
-            }}
-            data-testid="btn-download-mapped-tb"
-          >
-            <Download className="w-4 h-4 mr-1.5" />
-            Download Mapped TB
-          </Button>
-        </div>
+        {(periodDisplay || enterpriseDisplay) && (
+          <div className="text-right shrink-0" data-testid="text-cf-period">
+            {periodDisplay && <p className="text-sm font-semibold">{periodDisplay}</p>}
+            {enterpriseDisplay && <p className="text-xs text-muted-foreground mt-0.5">{enterpriseDisplay}</p>}
+          </div>
+        )}
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
