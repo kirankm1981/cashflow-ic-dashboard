@@ -450,6 +450,62 @@ export function registerCashflowRoutes(app: Express) {
     }
   });
 
+  app.get("/api/cashflow/download-mapped-tb", async (_req, res) => {
+    try {
+      const entityMappings = await db.select().from(cashflowMappingEntities);
+      const entityKeys = new Set(entityMappings.map(e => normalizeText(e.companyNameErp || "")));
+
+      const allRows = await db.select().from(cashflowTbData).orderBy(asc(cashflowTbData.id));
+      const mappedRows = allRows.filter(r => entityKeys.has(normalizeText(r.company || "")));
+
+      const sheetData = mappedRows.map(r => ({
+        "Company": r.company,
+        "Business Unit": r.businessUnit,
+        "Group 1": r.group1,
+        "Group 2": r.group2,
+        "Group 3": r.group3,
+        "Group 4": r.group4,
+        "Group 5": r.group5,
+        "Sub Ledger Type": r.subLedgerType,
+        "Code": r.code,
+        "Account Head": r.accountHead,
+        "Sub Account Code": r.subAccountCode,
+        "Sub Account Head": r.subAccountHead,
+        "Opening Debit": r.openingDebit,
+        "Opening Credit": r.openingCredit,
+        "Period Debit": r.periodDebit,
+        "Period Credit": r.periodCredit,
+        "Closing Debit": r.closingDebit,
+        "Closing Credit": r.closingCredit,
+        "Net Opening Balance": r.netOpeningBalance,
+        "Net Closing Balance": r.netClosingBalance,
+        "Cashflow": r.cashflow,
+        "CF Head": r.cfHead,
+        "Structure": r.structure,
+        "Project Name": r.projectName,
+        "Entity Status": r.entityStatus,
+        "TB Source": r.tbSource,
+      }));
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(sheetData);
+
+      const colWidths = Object.keys(sheetData[0] || {}).map(key => ({
+        wch: Math.max(key.length, 15),
+      }));
+      ws["!cols"] = colWidths;
+
+      XLSX.utils.book_append_sheet(wb, ws, "Mapped TB Data");
+
+      const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", "attachment; filename=Cashflow_Mapped_TB.xlsx");
+      res.send(buffer);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/cashflow/unified-data", async (_req, res) => {
     try {
       const entityMappings = await db.select().from(cashflowMappingEntities);
@@ -481,6 +537,7 @@ export function registerCashflowRoutes(app: Express) {
         );
 
       const tbRows = tbAgg
+        .filter(r => entityKeys.has(normalizeText(r.company || "")))
         .map(r => ({
           company: r.company,
           projectName: r.projectName,
@@ -511,7 +568,7 @@ export function registerCashflowRoutes(app: Express) {
       const unified = [...tbRows, ...pastLossRows];
       res.json({
         data: unified,
-        tbCount: totalTbRaw,
+        tbCount: tbMappedEntityRows,
         pastLossesCount: pastLossRows.length,
         totalCount: unified.length,
         excludedCount: excludedTbCount,
