@@ -481,7 +481,6 @@ export function registerCashflowRoutes(app: Express) {
         );
 
       const tbRows = tbAgg
-        .filter(r => entityKeys.has(normalizeText(r.company || "")))
         .map(r => ({
           company: r.company,
           projectName: r.projectName,
@@ -491,8 +490,8 @@ export function registerCashflowRoutes(app: Express) {
           amount: Number(r.amount) || 0,
         }));
       const totalTbRaw = tbAgg.reduce((s, r) => s + Number(r.rowCount || 0), 0);
-      const tbMatchedRows = tbAgg.filter(r => entityKeys.has(normalizeText(r.company || ""))).reduce((s, r) => s + Number(r.rowCount || 0), 0);
-      const excludedTbCount = totalTbRaw - tbMatchedRows;
+      const tbMappedEntityRows = tbAgg.filter(r => entityKeys.has(normalizeText(r.company || ""))).reduce((s, r) => s + Number(r.rowCount || 0), 0);
+      const excludedTbCount = totalTbRaw - tbMappedEntityRows;
 
       const plRows = await db.select().from(cashflowPastLosses);
       const pastLossRows = plRows
@@ -512,7 +511,7 @@ export function registerCashflowRoutes(app: Express) {
       const unified = [...tbRows, ...pastLossRows];
       res.json({
         data: unified,
-        tbCount: tbMatchedRows,
+        tbCount: totalTbRaw,
         pastLossesCount: pastLossRows.length,
         totalCount: unified.length,
         excludedCount: excludedTbCount,
@@ -524,9 +523,6 @@ export function registerCashflowRoutes(app: Express) {
 
   app.get("/api/cashflow/unmapped-items", async (_req, res) => {
     try {
-      const entityMappings = await db.select().from(cashflowMappingEntities);
-      const entityKeys = new Set(entityMappings.map(e => normalizeText(e.companyNameErp || "")));
-
       const unmappedCfAgg = await db.select({
         company: cashflowTbData.company,
         accountHead: cashflowTbData.accountHead,
@@ -535,10 +531,6 @@ export function registerCashflowRoutes(app: Express) {
       }).from(cashflowTbData)
         .where(sql`(${cashflowTbData.cashflow} IS NULL OR ${cashflowTbData.cashflow} = '' OR ${cashflowTbData.cfHead} IS NULL OR ${cashflowTbData.cfHead} = '')`)
         .groupBy(cashflowTbData.company, cashflowTbData.accountHead);
-
-      const filteredCf = entityKeys.size > 0
-        ? unmappedCfAgg.filter(r => entityKeys.has(normalizeText(r.company || "")))
-        : unmappedCfAgg;
 
       const unmappedEntityAgg = await db.select({
         company: cashflowTbData.company,
@@ -549,21 +541,17 @@ export function registerCashflowRoutes(app: Express) {
         .where(sql`(${cashflowTbData.projectName} IS NULL OR ${cashflowTbData.projectName} = '' OR ${cashflowTbData.entityStatus} IS NULL OR ${cashflowTbData.entityStatus} = '')`)
         .groupBy(cashflowTbData.company, cashflowTbData.accountHead);
 
-      const filteredEntity = entityKeys.size > 0
-        ? unmappedEntityAgg.filter(r => entityKeys.has(normalizeText(r.company || "")))
-        : unmappedEntityAgg;
+      const unmappedAccountHeads = [...new Set(unmappedCfAgg.map(r => r.accountHead).filter(Boolean))];
+      const unmappedCompanies = [...new Set(unmappedEntityAgg.map(r => r.company).filter(Boolean))];
 
-      const unmappedAccountHeads = [...new Set(filteredCf.map(r => r.accountHead).filter(Boolean))];
-      const unmappedCompanies = [...new Set(filteredEntity.map(r => r.company).filter(Boolean))];
-
-      const cfTotalCount = filteredCf.reduce((s, r) => s + Number(r.count || 0), 0);
-      const entityTotalCount = filteredEntity.reduce((s, r) => s + Number(r.count || 0), 0);
+      const cfTotalCount = unmappedCfAgg.reduce((s, r) => s + Number(r.count || 0), 0);
+      const entityTotalCount = unmappedEntityAgg.reduce((s, r) => s + Number(r.count || 0), 0);
 
       let idCounter = 0;
       res.json({
         unmappedCashflow: {
           count: cfTotalCount,
-          items: filteredCf.slice(0, 500).map((r) => ({
+          items: unmappedCfAgg.slice(0, 500).map((r) => ({
             id: ++idCounter,
             company: r.company,
             accountHead: r.accountHead,
@@ -577,7 +565,7 @@ export function registerCashflowRoutes(app: Express) {
         },
         unmappedEntity: {
           count: entityTotalCount,
-          items: filteredEntity.slice(0, 500).map((r) => ({
+          items: unmappedEntityAgg.slice(0, 500).map((r) => ({
             id: ++idCounter,
             company: r.company,
             accountHead: r.accountHead,
