@@ -9,7 +9,7 @@ import {
   cashflowMappingEntities,
   cashflowPastLosses,
 } from "@shared/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, asc } from "drizzle-orm";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -368,34 +368,50 @@ export function registerCashflowRoutes(app: Express) {
         });
       }
 
-      const allData = await db.select().from(cashflowTbData);
+      const BATCH = 500;
+      const totalCount = await db.select({ count: sql<number>`count(*)` }).from(cashflowTbData);
+      const total = Number(totalCount[0]?.count || 0);
       let updated = 0;
-      for (const row of allData) {
-        const grouping = groupingMap.get(normalizeText(row.accountHead || ""));
-        const entity = entityMap.get(normalizeText(row.company || ""));
 
-        const newCashflow = grouping?.cashflow || null;
-        const newCfHead = grouping?.cfHead || null;
-        const newStructure = entity?.structure || null;
-        const newProjectName = entity?.projectName || null;
-        const newEntityStatus = entity?.entityStatus || null;
+      for (let offset = 0; offset < total; offset += BATCH) {
+        const batch = await db.select({
+          id: cashflowTbData.id,
+          company: cashflowTbData.company,
+          accountHead: cashflowTbData.accountHead,
+          cashflow: cashflowTbData.cashflow,
+          cfHead: cashflowTbData.cfHead,
+          structure: cashflowTbData.structure,
+          projectName: cashflowTbData.projectName,
+          entityStatus: cashflowTbData.entityStatus,
+        }).from(cashflowTbData).orderBy(asc(cashflowTbData.id)).limit(BATCH).offset(offset);
 
-        if (
-          newCashflow !== row.cashflow ||
-          newCfHead !== row.cfHead ||
-          newStructure !== row.structure ||
-          newProjectName !== row.projectName ||
-          newEntityStatus !== row.entityStatus
-        ) {
+        const updates: { id: number; cashflow: string | null; cfHead: string | null; structure: string | null; projectName: string | null; entityStatus: string | null }[] = [];
+
+        for (const row of batch) {
+          const grouping = groupingMap.get(normalizeText(row.accountHead || ""));
+          const entity = entityMap.get(normalizeText(row.company || ""));
+
+          const newCashflow = grouping?.cashflow || null;
+          const newCfHead = grouping?.cfHead || null;
+          const newStructure = entity?.structure || null;
+          const newProjectName = entity?.projectName || null;
+          const newEntityStatus = entity?.entityStatus || null;
+
+          if (
+            newCashflow !== row.cashflow ||
+            newCfHead !== row.cfHead ||
+            newStructure !== row.structure ||
+            newProjectName !== row.projectName ||
+            newEntityStatus !== row.entityStatus
+          ) {
+            updates.push({ id: row.id, cashflow: newCashflow, cfHead: newCfHead, structure: newStructure, projectName: newProjectName, entityStatus: newEntityStatus });
+          }
+        }
+
+        for (const u of updates) {
           await db.update(cashflowTbData)
-            .set({
-              cashflow: newCashflow,
-              cfHead: newCfHead,
-              structure: newStructure,
-              projectName: newProjectName,
-              entityStatus: newEntityStatus,
-            })
-            .where(eq(cashflowTbData.id, row.id));
+            .set({ cashflow: u.cashflow, cfHead: u.cfHead, structure: u.structure, projectName: u.projectName, entityStatus: u.entityStatus })
+            .where(eq(cashflowTbData.id, u.id));
           updated++;
         }
       }
@@ -447,17 +463,36 @@ export function registerCashflowRoutes(app: Express) {
 
       const entityKeys = new Set(entityMappings.map(e => normalizeText(e.companyNameErp || "")));
 
-      const allTbRows = await db.select({
+      const tbAgg = await db.select({
         company: cashflowTbData.company,
         projectName: cashflowTbData.projectName,
         entityStatus: cashflowTbData.entityStatus,
         cashflow: cashflowTbData.cashflow,
         cfHead: cashflowTbData.cfHead,
-        amount: cashflowTbData.netClosingBalance,
-      }).from(cashflowTbData);
+        amount: sql<number>`sum(${cashflowTbData.netClosingBalance})`,
+        rowCount: sql<number>`count(*)`,
+      }).from(cashflowTbData)
+        .groupBy(
+          cashflowTbData.company,
+          cashflowTbData.projectName,
+          cashflowTbData.entityStatus,
+          cashflowTbData.cashflow,
+          cashflowTbData.cfHead,
+        );
 
-      const tbRows = allTbRows.filter(r => entityKeys.has(normalizeText(r.company || "")));
-      const excludedTbCount = allTbRows.length - tbRows.length;
+      const tbRows = tbAgg
+        .filter(r => entityKeys.has(normalizeText(r.company || "")))
+        .map(r => ({
+          company: r.company,
+          projectName: r.projectName,
+          entityStatus: r.entityStatus,
+          cashflow: r.cashflow,
+          cfHead: r.cfHead,
+          amount: Number(r.amount) || 0,
+        }));
+      const totalTbRaw = tbAgg.reduce((s, r) => s + Number(r.rowCount || 0), 0);
+      const tbMatchedRows = tbAgg.filter(r => entityKeys.has(normalizeText(r.company || ""))).reduce((s, r) => s + Number(r.rowCount || 0), 0);
+      const excludedTbCount = totalTbRaw - tbMatchedRows;
 
       const plRows = await db.select().from(cashflowPastLosses);
       const pastLossRows = plRows
@@ -477,7 +512,7 @@ export function registerCashflowRoutes(app: Express) {
       const unified = [...tbRows, ...pastLossRows];
       res.json({
         data: unified,
-        tbCount: tbRows.length,
+        tbCount: tbMatchedRows,
         pastLossesCount: pastLossRows.length,
         totalCount: unified.length,
         excludedCount: excludedTbCount,
@@ -492,36 +527,66 @@ export function registerCashflowRoutes(app: Express) {
       const entityMappings = await db.select().from(cashflowMappingEntities);
       const entityKeys = new Set(entityMappings.map(e => normalizeText(e.companyNameErp || "")));
 
-      const allDataRaw = await db.select({
-        id: cashflowTbData.id,
+      const unmappedCfAgg = await db.select({
         company: cashflowTbData.company,
         accountHead: cashflowTbData.accountHead,
-        cashflow: cashflowTbData.cashflow,
-        cfHead: cashflowTbData.cfHead,
-        projectName: cashflowTbData.projectName,
-        entityStatus: cashflowTbData.entityStatus,
-        netClosingBalance: cashflowTbData.netClosingBalance,
-      }).from(cashflowTbData);
+        netClosingBalance: sql<number>`sum(${cashflowTbData.netClosingBalance})`,
+        count: sql<number>`count(*)`,
+      }).from(cashflowTbData)
+        .where(sql`(${cashflowTbData.cashflow} IS NULL OR ${cashflowTbData.cashflow} = '' OR ${cashflowTbData.cfHead} IS NULL OR ${cashflowTbData.cfHead} = '')`)
+        .groupBy(cashflowTbData.company, cashflowTbData.accountHead);
 
-      const allData = entityKeys.size > 0
-        ? allDataRaw.filter(r => entityKeys.has(normalizeText(r.company || "")))
-        : allDataRaw;
+      const filteredCf = entityKeys.size > 0
+        ? unmappedCfAgg.filter(r => entityKeys.has(normalizeText(r.company || "")))
+        : unmappedCfAgg;
 
-      const unmappedCashflow = allData.filter(r => !r.cashflow || !r.cfHead);
-      const unmappedEntity = allData.filter(r => !r.projectName || !r.entityStatus);
+      const unmappedEntityAgg = await db.select({
+        company: cashflowTbData.company,
+        accountHead: cashflowTbData.accountHead,
+        netClosingBalance: sql<number>`sum(${cashflowTbData.netClosingBalance})`,
+        count: sql<number>`count(*)`,
+      }).from(cashflowTbData)
+        .where(sql`(${cashflowTbData.projectName} IS NULL OR ${cashflowTbData.projectName} = '' OR ${cashflowTbData.entityStatus} IS NULL OR ${cashflowTbData.entityStatus} = '')`)
+        .groupBy(cashflowTbData.company, cashflowTbData.accountHead);
 
-      const unmappedAccountHeads = [...new Set(unmappedCashflow.map(r => r.accountHead).filter(Boolean))];
-      const unmappedCompanies = [...new Set(unmappedEntity.map(r => r.company).filter(Boolean))];
+      const filteredEntity = entityKeys.size > 0
+        ? unmappedEntityAgg.filter(r => entityKeys.has(normalizeText(r.company || "")))
+        : unmappedEntityAgg;
 
+      const unmappedAccountHeads = [...new Set(filteredCf.map(r => r.accountHead).filter(Boolean))];
+      const unmappedCompanies = [...new Set(filteredEntity.map(r => r.company).filter(Boolean))];
+
+      const cfTotalCount = filteredCf.reduce((s, r) => s + Number(r.count || 0), 0);
+      const entityTotalCount = filteredEntity.reduce((s, r) => s + Number(r.count || 0), 0);
+
+      let idCounter = 0;
       res.json({
         unmappedCashflow: {
-          count: unmappedCashflow.length,
-          items: unmappedCashflow,
+          count: cfTotalCount,
+          items: filteredCf.slice(0, 500).map((r) => ({
+            id: ++idCounter,
+            company: r.company,
+            accountHead: r.accountHead,
+            cashflow: null,
+            cfHead: null,
+            projectName: null,
+            entityStatus: null,
+            netClosingBalance: Number(r.netClosingBalance) || 0,
+          })),
           uniqueAccountHeads: unmappedAccountHeads,
         },
         unmappedEntity: {
-          count: unmappedEntity.length,
-          items: unmappedEntity,
+          count: entityTotalCount,
+          items: filteredEntity.slice(0, 500).map((r) => ({
+            id: ++idCounter,
+            company: r.company,
+            accountHead: r.accountHead,
+            cashflow: null,
+            cfHead: null,
+            projectName: null,
+            entityStatus: null,
+            netClosingBalance: Number(r.netClosingBalance) || 0,
+          })),
           uniqueCompanies: unmappedCompanies,
         },
       });

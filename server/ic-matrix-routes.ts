@@ -3,7 +3,7 @@ import multer from "multer";
 import XLSX from "xlsx";
 import { db } from "./db";
 import { icMatrixTbFiles, icMatrixTbData, icMatrixMappingGl, icMatrixMappingCompany } from "@shared/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, asc } from "drizzle-orm";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -257,24 +257,35 @@ export function registerIcMatrixRoutes(app: Express) {
         companyMap.set(normalizeText(c.companyNameErp), c.companyCode);
       }
 
-      const allData = await db.select().from(icMatrixTbData);
+      const BATCH = 500;
+      const totalCount = await db.select({ count: sql<number>`count(*)` }).from(icMatrixTbData);
+      const total = Number(totalCount[0]?.count || 0);
       let updated = 0;
 
-      for (const row of allData) {
-        let glMatch = row.subAccountHead ? glMap.get(normalizeText(row.subAccountHead)) : undefined;
-        if (!glMatch) {
-          glMatch = row.accountHead ? glMap.get(normalizeText(row.accountHead)) : undefined;
-        }
-        const newCoaGlName = glMatch ? glMatch.newCoaGlName : row.accountHead;
-        const icCounterParty = glMatch ? glMatch.icCounterParty : null;
-        const icCounterPartyCode = glMatch ? glMatch.icCounterPartyCode : null;
-        const icTxnType = glMatch ? glMatch.icTxnType : null;
-        const companyCode = companyMap.get(normalizeText(row.company || "")) || null;
+      for (let offset = 0; offset < total; offset += BATCH) {
+        const batch = await db.select({
+          id: icMatrixTbData.id,
+          company: icMatrixTbData.company,
+          accountHead: icMatrixTbData.accountHead,
+          subAccountHead: icMatrixTbData.subAccountHead,
+        }).from(icMatrixTbData).orderBy(asc(icMatrixTbData.id)).limit(BATCH).offset(offset);
 
-        await db.update(icMatrixTbData)
-          .set({ newCoaGlName, icCounterParty, icCounterPartyCode, icTxnType, companyCode })
-          .where(eq(icMatrixTbData.id, row.id));
-        updated++;
+        for (const row of batch) {
+          let glMatch = row.subAccountHead ? glMap.get(normalizeText(row.subAccountHead)) : undefined;
+          if (!glMatch) {
+            glMatch = row.accountHead ? glMap.get(normalizeText(row.accountHead || "")) : undefined;
+          }
+          const newCoaGlName = glMatch ? glMatch.newCoaGlName : row.accountHead;
+          const icCounterParty = glMatch ? glMatch.icCounterParty : null;
+          const icCounterPartyCode = glMatch ? glMatch.icCounterPartyCode : null;
+          const icTxnType = glMatch ? glMatch.icTxnType : null;
+          const companyCode = companyMap.get(normalizeText(row.company || "")) || null;
+
+          await db.update(icMatrixTbData)
+            .set({ newCoaGlName, icCounterParty, icCounterPartyCode, icTxnType, companyCode })
+            .where(eq(icMatrixTbData.id, row.id));
+          updated++;
+        }
       }
 
       res.json({ updated });
