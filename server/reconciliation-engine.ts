@@ -60,7 +60,20 @@ function dateDiffDays(d1: Date, d2: Date): number {
 }
 
 function normalizeCompanyName(name: string): string {
-  return (name || "").trim().toUpperCase().replace(/\s+/g, " ");
+  let s = (name || "").trim();
+  s = s.replace(/&amp;/gi, "&")
+       .replace(/&lt;/gi, "<")
+       .replace(/&gt;/gi, ">")
+       .replace(/&quot;/gi, '"')
+       .replace(/&#39;/gi, "'")
+       .replace(/&apos;/gi, "'")
+       .replace(/&#(\d+);/g, (_m, code) => String.fromCharCode(parseInt(code)))
+       .replace(/&#x([0-9a-f]+);/gi, (_m, code) => String.fromCharCode(parseInt(code, 16)));
+  s = s.replace(/[\u00A0\u2000-\u200B\u202F\u205F\u3000]/g, " ");
+  s = s.replace(/[\u2018\u2019\u201A\u201B]/g, "'")
+       .replace(/[\u201C\u201D\u201E\u201F]/g, '"')
+       .replace(/[\u2013\u2014]/g, "-");
+  return s.toUpperCase().replace(/\s+/g, " ");
 }
 
 function amountsMatch(a: number, b: number, tolerance: number, tolerancePct: number): boolean {

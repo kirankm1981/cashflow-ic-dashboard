@@ -13,6 +13,24 @@ import type { InsertTransaction, InsertSummarizedLine } from "@shared/schema";
 import { icReconGlFiles, icReconGlRawRows, icMatrixMappingGl, icMatrixMappingCompany, loginSchema } from "@shared/schema";
 import { randomUUID } from "crypto";
 import path from "path";
+
+function normalizeText(val: string): string {
+  let s = (val || "").trim();
+  s = s.replace(/&amp;/gi, "&")
+       .replace(/&lt;/gi, "<")
+       .replace(/&gt;/gi, ">")
+       .replace(/&quot;/gi, '"')
+       .replace(/&#39;/gi, "'")
+       .replace(/&apos;/gi, "'")
+       .replace(/&#(\d+);/g, (_m, code) => String.fromCharCode(parseInt(code)))
+       .replace(/&#x([0-9a-f]+);/gi, (_m, code) => String.fromCharCode(parseInt(code, 16)));
+  s = s.replace(/[\u00A0\u2000-\u200B\u202F\u205F\u3000]/g, " ");
+  s = s.replace(/[\u2018\u2019\u201A\u201B]/g, "'")
+       .replace(/[\u201C\u201D\u201E\u201F]/g, '"')
+       .replace(/[\u2013\u2014]/g, "-");
+  s = s.replace(/\s+/g, " ").trim();
+  return s.toUpperCase();
+}
 import { existsSync } from "fs";
 import bcrypt from "bcryptjs";
 
@@ -1445,11 +1463,11 @@ export async function registerRoutes(
 
       const glMap = new Map<string, typeof glMappings[0]>();
       for (const g of glMappings) {
-        glMap.set(g.glName.trim().toUpperCase(), g);
+        glMap.set(normalizeText(g.glName), g);
       }
       const companyMap = new Map<string, string>();
       for (const c of companyMappings) {
-        companyMap.set(c.companyNameErp.trim().toUpperCase(), c.companyCode);
+        companyMap.set(normalizeText(c.companyNameErp), c.companyCode);
       }
 
       function parseNum(v: any): number {
@@ -1513,14 +1531,14 @@ export async function registerRoutes(
         const accountHead = acHeadIdx >= 0 ? String(r[acHeadIdx] || "").trim() : "";
         const subAccountHead = subAcHeadIdx >= 0 ? String(r[subAcHeadIdx] || "").trim() : "";
 
-        let glMatch = subAccountHead ? glMap.get(subAccountHead.toUpperCase()) : undefined;
+        let glMatch = subAccountHead ? glMap.get(normalizeText(subAccountHead)) : undefined;
         if (!glMatch) {
-          glMatch = accountHead ? glMap.get(accountHead.toUpperCase()) : undefined;
+          glMatch = accountHead ? glMap.get(normalizeText(accountHead)) : undefined;
         }
         const icRptGlName = glMatch ? glMatch.newCoaGlName : accountHead;
         const icCounterParty = glMatch ? glMatch.icCounterParty : null;
         const icCounterPartyCode = glMatch ? glMatch.icCounterPartyCode : null;
-        const companyCode = companyMap.get(company.toUpperCase()) || null;
+        const companyCode = companyMap.get(normalizeText(company)) || null;
 
         const icTxnType = glMatch ? glMatch.icTxnType : null;
         raw["Net Amount"] = parseNum(r[debitIdx]) - parseNum(r[creditIdx]);
@@ -1551,13 +1569,13 @@ export async function registerRoutes(
         const docDate = docDateIdx >= 0 ? (String(r[docDateIdx] || "").trim() || null) : null;
         const narration = narrationIdx >= 0 ? (String(r[narrationIdx] || "").trim() || null) : null;
 
-        let glMatch = subAccountHead ? glMap.get(subAccountHead.toUpperCase()) : undefined;
+        let glMatch = subAccountHead ? glMap.get(normalizeText(subAccountHead)) : undefined;
         if (!glMatch) {
-          glMatch = accountHead ? glMap.get(accountHead.toUpperCase()) : undefined;
+          glMatch = accountHead ? glMap.get(normalizeText(accountHead)) : undefined;
         }
         const icRptGlName = glMatch ? glMatch.newCoaGlName : accountHead;
         const icCounterPartyCode = glMatch ? glMatch.icCounterPartyCode : null;
-        const companyCode = companyMap.get(company.toUpperCase()) || null;
+        const companyCode = companyMap.get(normalizeText(company)) || null;
 
         if (!icRptGlName || !icRptGlName.startsWith("IC_")) continue;
         if (!companyCode || !icCounterPartyCode) continue;

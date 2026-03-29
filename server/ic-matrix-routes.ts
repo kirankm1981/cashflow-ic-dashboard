@@ -7,6 +7,24 @@ import { eq, sql } from "drizzle-orm";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
+function normalizeText(val: string): string {
+  let s = (val || "").trim();
+  s = s.replace(/&amp;/gi, "&")
+       .replace(/&lt;/gi, "<")
+       .replace(/&gt;/gi, ">")
+       .replace(/&quot;/gi, '"')
+       .replace(/&#39;/gi, "'")
+       .replace(/&apos;/gi, "'")
+       .replace(/&#(\d+);/g, (_m, code) => String.fromCharCode(parseInt(code)))
+       .replace(/&#x([0-9a-f]+);/gi, (_m, code) => String.fromCharCode(parseInt(code, 16)));
+  s = s.replace(/[\u00A0\u2000-\u200B\u202F\u205F\u3000]/g, " ");
+  s = s.replace(/[\u2018\u2019\u201A\u201B]/g, "'")
+       .replace(/[\u201C\u201D\u201E\u201F]/g, '"')
+       .replace(/[\u2013\u2014]/g, "-");
+  s = s.replace(/\s+/g, " ").trim();
+  return s.toUpperCase();
+}
+
 function parsePeriodFromCell(val: string): { period: string; start: string; end: string } {
   const raw = (val || "").trim();
   const match = raw.match(/From\s+(\S+)\s+To\s+(\S+)/i);
@@ -81,12 +99,12 @@ export function registerIcMatrixRoutes(app: Express) {
 
       const glMap = new Map<string, typeof glMappings[0]>();
       for (const g of glMappings) {
-        glMap.set(g.glName.trim().toUpperCase(), g);
+        glMap.set(normalizeText(g.glName), g);
       }
 
       const companyMap = new Map<string, string>();
       for (const c of companyMappings) {
-        companyMap.set(c.companyNameErp.trim().toUpperCase(), c.companyCode);
+        companyMap.set(normalizeText(c.companyNameErp), c.companyCode);
       }
 
       const batchSize = 500;
@@ -102,16 +120,16 @@ export function registerIcMatrixRoutes(app: Express) {
           const closingCredit = parseNum(r[17]);
           const netBalance = closingDebit - closingCredit;
 
-          let glMatch = subAccountHead ? glMap.get(subAccountHead.toUpperCase()) : undefined;
+          let glMatch = subAccountHead ? glMap.get(normalizeText(subAccountHead)) : undefined;
           if (!glMatch) {
-            glMatch = accountHead ? glMap.get(accountHead.toUpperCase()) : undefined;
+            glMatch = accountHead ? glMap.get(normalizeText(accountHead)) : undefined;
           }
           const newCoaGlName = glMatch ? glMatch.newCoaGlName : accountHead;
           const icCounterParty = glMatch ? glMatch.icCounterParty : null;
           const icCounterPartyCode = glMatch ? glMatch.icCounterPartyCode : null;
           const icTxnType = glMatch ? glMatch.icTxnType : null;
 
-          const companyCode = companyMap.get(company.toUpperCase()) || null;
+          const companyCode = companyMap.get(normalizeText(company)) || null;
 
           return {
             tbFileId: tbFile.id,
@@ -231,27 +249,27 @@ export function registerIcMatrixRoutes(app: Express) {
 
       const glMap = new Map<string, typeof glMappings[0]>();
       for (const g of glMappings) {
-        glMap.set(g.glName.trim().toUpperCase(), g);
+        glMap.set(normalizeText(g.glName), g);
       }
 
       const companyMap = new Map<string, string>();
       for (const c of companyMappings) {
-        companyMap.set(c.companyNameErp.trim().toUpperCase(), c.companyCode);
+        companyMap.set(normalizeText(c.companyNameErp), c.companyCode);
       }
 
       const allData = await db.select().from(icMatrixTbData);
       let updated = 0;
 
       for (const row of allData) {
-        let glMatch = row.subAccountHead ? glMap.get(row.subAccountHead.toUpperCase()) : undefined;
+        let glMatch = row.subAccountHead ? glMap.get(normalizeText(row.subAccountHead)) : undefined;
         if (!glMatch) {
-          glMatch = row.accountHead ? glMap.get(row.accountHead.toUpperCase()) : undefined;
+          glMatch = row.accountHead ? glMap.get(normalizeText(row.accountHead)) : undefined;
         }
         const newCoaGlName = glMatch ? glMatch.newCoaGlName : row.accountHead;
         const icCounterParty = glMatch ? glMatch.icCounterParty : null;
         const icCounterPartyCode = glMatch ? glMatch.icCounterPartyCode : null;
         const icTxnType = glMatch ? glMatch.icTxnType : null;
-        const companyCode = companyMap.get((row.company || "").toUpperCase()) || null;
+        const companyCode = companyMap.get(normalizeText(row.company || "")) || null;
 
         await db.update(icMatrixTbData)
           .set({ newCoaGlName, icCounterParty, icCounterPartyCode, icTxnType, companyCode })

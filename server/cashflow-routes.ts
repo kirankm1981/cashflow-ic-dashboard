@@ -13,6 +13,24 @@ import { eq, sql } from "drizzle-orm";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
+function normalizeText(val: string): string {
+  let s = (val || "").trim();
+  s = s.replace(/&amp;/gi, "&")
+       .replace(/&lt;/gi, "<")
+       .replace(/&gt;/gi, ">")
+       .replace(/&quot;/gi, '"')
+       .replace(/&#39;/gi, "'")
+       .replace(/&apos;/gi, "'")
+       .replace(/&#(\d+);/g, (_m, code) => String.fromCharCode(parseInt(code)))
+       .replace(/&#x([0-9a-f]+);/gi, (_m, code) => String.fromCharCode(parseInt(code, 16)));
+  s = s.replace(/[\u00A0\u2000-\u200B\u202F\u205F\u3000]/g, " ");
+  s = s.replace(/[\u2018\u2019\u201A\u201B]/g, "'")
+       .replace(/[\u201C\u201D\u201E\u201F]/g, '"')
+       .replace(/[\u2013\u2014]/g, "-");
+  s = s.replace(/\s+/g, " ").trim();
+  return s.toUpperCase();
+}
+
 function parseNum(v: any): number {
   if (v === null || v === undefined || v === "") return 0;
   const n = Number(v);
@@ -57,7 +75,7 @@ export function registerCashflowRoutes(app: Express) {
 
       const groupingMap = new Map<string, { cashflow: string | null; cfHead: string | null }>();
       for (const g of groupingMappings) {
-        groupingMap.set((g.accountHead || "").trim().toUpperCase(), {
+        groupingMap.set(normalizeText(g.accountHead || ""), {
           cashflow: g.cashflow,
           cfHead: g.cfHead,
         });
@@ -65,7 +83,7 @@ export function registerCashflowRoutes(app: Express) {
 
       const entityMap = new Map<string, { structure: string | null; projectName: string | null; entityStatus: string | null }>();
       for (const e of entityMappings) {
-        entityMap.set((e.companyNameErp || "").trim().toUpperCase(), {
+        entityMap.set(normalizeText(e.companyNameErp || ""), {
           structure: e.structure,
           projectName: e.projectName,
           entityStatus: e.entityStatus,
@@ -94,8 +112,8 @@ export function registerCashflowRoutes(app: Express) {
           const closingDebit = parseNum(r[16]);
           const closingCredit = parseNum(r[17]);
 
-          const grouping = groupingMap.get(accountHead.toUpperCase());
-          const entity = entityMap.get(company.toUpperCase());
+          const grouping = groupingMap.get(normalizeText(accountHead));
+          const entity = entityMap.get(normalizeText(company));
 
           return {
             tbFileId: tbFile.id,
@@ -335,7 +353,7 @@ export function registerCashflowRoutes(app: Express) {
 
       const groupingMap = new Map<string, { cashflow: string | null; cfHead: string | null }>();
       for (const g of groupingMappings) {
-        groupingMap.set((g.accountHead || "").trim().toUpperCase(), {
+        groupingMap.set(normalizeText(g.accountHead || ""), {
           cashflow: g.cashflow,
           cfHead: g.cfHead,
         });
@@ -343,7 +361,7 @@ export function registerCashflowRoutes(app: Express) {
 
       const entityMap = new Map<string, { structure: string | null; projectName: string | null; entityStatus: string | null }>();
       for (const e of entityMappings) {
-        entityMap.set((e.companyNameErp || "").trim().toUpperCase(), {
+        entityMap.set(normalizeText(e.companyNameErp || ""), {
           structure: e.structure,
           projectName: e.projectName,
           entityStatus: e.entityStatus,
@@ -353,8 +371,8 @@ export function registerCashflowRoutes(app: Express) {
       const allData = await db.select().from(cashflowTbData);
       let updated = 0;
       for (const row of allData) {
-        const grouping = groupingMap.get((row.accountHead || "").trim().toUpperCase());
-        const entity = entityMap.get((row.company || "").trim().toUpperCase());
+        const grouping = groupingMap.get(normalizeText(row.accountHead || ""));
+        const entity = entityMap.get(normalizeText(row.company || ""));
 
         const newCashflow = grouping?.cashflow || null;
         const newCfHead = grouping?.cfHead || null;
@@ -421,13 +439,13 @@ export function registerCashflowRoutes(app: Express) {
       const entityMappings = await db.select().from(cashflowMappingEntities);
       const entityMap = new Map<string, { projectName: string | null; entityStatus: string | null }>();
       for (const e of entityMappings) {
-        entityMap.set((e.companyNameErp || "").trim().toUpperCase(), {
+        entityMap.set(normalizeText(e.companyNameErp || ""), {
           projectName: e.projectName,
           entityStatus: e.entityStatus,
         });
       }
 
-      const entityKeys = new Set(entityMappings.map(e => (e.companyNameErp || "").trim().toUpperCase()));
+      const entityKeys = new Set(entityMappings.map(e => normalizeText(e.companyNameErp || "")));
 
       const allTbRows = await db.select({
         company: cashflowTbData.company,
@@ -438,14 +456,14 @@ export function registerCashflowRoutes(app: Express) {
         amount: cashflowTbData.netClosingBalance,
       }).from(cashflowTbData);
 
-      const tbRows = allTbRows.filter(r => entityKeys.has((r.company || "").trim().toUpperCase()));
+      const tbRows = allTbRows.filter(r => entityKeys.has(normalizeText(r.company || "")));
       const excludedTbCount = allTbRows.length - tbRows.length;
 
       const plRows = await db.select().from(cashflowPastLosses);
       const pastLossRows = plRows
-        .filter(pl => entityKeys.has((pl.company || "").trim().toUpperCase()))
+        .filter(pl => entityKeys.has(normalizeText(pl.company || "")))
         .map(pl => {
-          const entity = entityMap.get((pl.company || "").trim().toUpperCase());
+          const entity = entityMap.get(normalizeText(pl.company || ""));
           return {
             company: pl.company || "",
             projectName: entity?.projectName || pl.project || null,
@@ -472,7 +490,7 @@ export function registerCashflowRoutes(app: Express) {
   app.get("/api/cashflow/unmapped-items", async (_req, res) => {
     try {
       const entityMappings = await db.select().from(cashflowMappingEntities);
-      const entityKeys = new Set(entityMappings.map(e => (e.companyNameErp || "").trim().toUpperCase()));
+      const entityKeys = new Set(entityMappings.map(e => normalizeText(e.companyNameErp || "")));
 
       const allDataRaw = await db.select({
         id: cashflowTbData.id,
@@ -486,7 +504,7 @@ export function registerCashflowRoutes(app: Express) {
       }).from(cashflowTbData);
 
       const allData = entityKeys.size > 0
-        ? allDataRaw.filter(r => entityKeys.has((r.company || "").trim().toUpperCase()))
+        ? allDataRaw.filter(r => entityKeys.has(normalizeText(r.company || "")))
         : allDataRaw;
 
       const unmappedCashflow = allData.filter(r => !r.cashflow || !r.cfHead);
