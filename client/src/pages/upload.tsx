@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useUploadManager } from "@/lib/upload-manager";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -12,12 +13,13 @@ import {
   FileSpreadsheet,
   Trash2,
   Loader2,
-  CheckCircle,
   Plus,
   X,
   Database,
-  LinkIcon,
   Download,
+  AlertCircle,
+  CheckCircle,
+  LinkIcon,
 } from "lucide-react";
 import {
   Dialog,
@@ -150,7 +152,7 @@ export default function UploadPage() {
   };
 
   const removeGlSlot = (id: string) => {
-    if (glSlots.length <= 2) return;
+    if (glSlots.length <= 1) return;
     setGlSlots(glSlots.filter(s => s.id !== id));
   };
 
@@ -174,161 +176,114 @@ export default function UploadPage() {
             Upload GL Dump files and mapping data for intercompany reconciliation
           </p>
         </div>
-        <div className="flex gap-2">
-          {hasGlFiles && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                window.open("/api/recon/download-mapped-data", "_blank");
-              }}
-              data-testid="button-download-mapped"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Download Mapped Data
-            </Button>
-          )}
-          {hasGlFiles && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-destructive hover:text-destructive"
-              onClick={() => setClearGlDialogOpen(true)}
-              data-testid="button-clear-gl"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Delete GL Data
-            </Button>
-          )}
-          {hasMappings && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-destructive hover:text-destructive"
-              onClick={() => setClearMappingDialogOpen(true)}
-              data-testid="button-clear-mapping"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Delete Mapping File
-            </Button>
-          )}
-        </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card data-testid="card-gl-files-count">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">GL Files</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{glFiles?.length || 0}</p>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">GL Files</p>
+            <p className="text-2xl font-bold mt-1" data-testid="text-gl-files-count">{glFiles?.length || 0}</p>
           </CardContent>
         </Card>
-        <Card data-testid="card-total-transactions">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Transactions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{formatNum(totalTransactions)}</p>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Transactions</p>
+            <p className="text-2xl font-bold mt-1" data-testid="text-total-transactions">{formatNum(totalTransactions)}</p>
           </CardContent>
         </Card>
-        <Card data-testid="card-ic-records">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">IC Records</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{formatNum(totalIcRecords)}</p>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">IC Records</p>
+            <p className="text-2xl font-bold mt-1" data-testid="text-ic-records">{formatNum(totalIcRecords)}</p>
           </CardContent>
         </Card>
-        <Card data-testid="card-mapping-status">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Mapping Status</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{hasMappings ? "Ready" : "Not Loaded"}</p>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">Mapping Status</p>
+            <p className="text-2xl font-bold mt-1" data-testid="text-mapping-status">{hasMappings ? "Ready" : "Not Loaded"}</p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">GL Dump Files</h2>
-            <Button variant="outline" size="sm" onClick={addGlSlot} data-testid="button-add-gl">
-              <Plus className="w-4 h-4 mr-1" />
-              Add GL Dump
-            </Button>
-          </div>
-
-          {glSlots.map((slot) => (
-            <Card key={slot.id} data-testid={`card-gl-slot-${slot.id}`}>
-              <CardContent className="pt-4 space-y-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <FileSpreadsheet className="w-4 h-4" />
+                GL Dump Files
+              </CardTitle>
+              <div className="flex gap-2">
+                {hasGlFiles && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open("/api/recon/download-mapped-data", "_blank")}
+                    data-testid="button-download-mapped"
+                  >
+                    <Download className="w-3 h-3 mr-1" /> Download
+                  </Button>
+                )}
+                <Button variant="outline" size="sm" onClick={addGlSlot} data-testid="button-add-gl">
+                  <Plus className="w-3 h-3 mr-1" /> Add
+                </Button>
+                {hasGlFiles && (
+                  <Button variant="outline" size="sm" onClick={() => setClearGlDialogOpen(true)} data-testid="button-clear-gl">
+                    <Trash2 className="w-3 h-3 mr-1" /> Clear All
+                  </Button>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {glSlots.map((slot) => (
+              <div key={slot.id} className="border rounded-lg p-3 space-y-2" data-testid={`slot-gl-${slot.id}`}>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <FileSpreadsheet className="w-5 h-5 text-blue-500" />
-                    <Input
-                      value={slot.label}
-                      onChange={(e) => updateSlot(slot.id, { label: e.target.value })}
-                      className="h-8 w-36 text-sm font-medium"
-                      data-testid={`input-gl-label-${slot.id}`}
-                    />
-                  </div>
-                  {glSlots.length > 2 && (
-                    <Button variant="ghost" size="sm" onClick={() => removeGlSlot(slot.id)} data-testid={`button-remove-gl-${slot.id}`}>
-                      <X className="w-4 h-4" />
+                  <Label className="text-sm font-medium">{slot.label}</Label>
+                  {glSlots.length > 1 && (
+                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => removeGlSlot(slot.id)}>
+                      <X className="w-3 h-3" />
                     </Button>
                   )}
                 </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">Excel File (.xlsx)</Label>
+                <div className="flex gap-2">
                   <Input
                     type="file"
                     accept=".xlsx,.xls"
+                    className="flex-1 text-xs"
                     onChange={(e) => updateSlot(slot.id, { file: e.target.files?.[0] || null })}
-                    className="mt-1"
                     data-testid={`input-gl-file-${slot.id}`}
                   />
+                  <Button
+                    size="sm"
+                    disabled={!slot.file || uploadingSlots.has(slot.id) || !hasMappings}
+                    onClick={() => wrappedGlUpload(slot)}
+                    data-testid={`button-upload-gl-${slot.id}`}
+                  >
+                    {uploadingSlots.has(slot.id) ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3 mr-1" />}
+                    Upload
+                  </Button>
                 </div>
-                <Button
-                  onClick={() => wrappedGlUpload(slot)}
-                  disabled={!slot.file || uploadingSlots.has(slot.id) || !hasMappings}
-                  size="sm"
-                  data-testid={`button-upload-gl-${slot.id}`}
-                >
-                  {uploadingSlots.has(slot.id) ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-4 h-4 mr-2" />
-                      Upload & Process
-                    </>
-                  )}
-                </Button>
                 {!hasMappings && slot.file && (
-                  <p className="text-xs text-amber-600 dark:text-amber-400">Upload or link the mapping file first before uploading GL dumps.</p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400">Upload the mapping file first before uploading GL dumps.</p>
                 )}
-              </CardContent>
-            </Card>
-          ))}
+              </div>
+            ))}
 
-          {hasGlFiles && (
-            <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-muted-foreground">Uploaded GL Files</h3>
-              {glFiles!.map((f: any) => (
-                <Card key={f.id} className="border-green-200 dark:border-green-800 bg-green-50/30 dark:bg-green-950/10" data-testid={`card-gl-file-${f.id}`}>
-                  <CardContent className="py-3 px-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
-                      <div>
-                        <p className="text-sm font-medium">{f.label}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {f.fileName} — {formatNum(f.icRecords)} IC records from {formatNum(f.totalRecords)} transactions
+            {hasGlFiles && (
+              <div className="mt-4 space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Uploaded Files</p>
+                {glFiles!.map((f: any) => (
+                  <div key={f.id} className="flex items-center justify-between border rounded p-2" data-testid={`uploaded-gl-${f.id}`}>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <CheckCircle className="w-3.5 h-3.5 text-green-500 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium truncate">{f.label}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {f.fileName} — {formatNum(f.icRecords)} IC / {formatNum(f.totalRecords)} total
                         </p>
                         {(f.enterpriseName || f.reportPeriod) && (
-                          <p className="text-xs text-muted-foreground mt-0.5">
+                          <p className="text-[10px] text-muted-foreground">
                             {f.enterpriseName && <span className="font-medium">{f.enterpriseName}</span>}
                             {f.enterpriseName && f.reportPeriod && <span> · </span>}
                             {f.reportPeriod && <span>{f.reportPeriod}</span>}
@@ -339,143 +294,135 @@ export default function UploadPage() {
                     <Button
                       variant="ghost"
                       size="sm"
+                      className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
                       onClick={() => deleteGlFileMutation.mutate(f.id)}
                       disabled={deleteGlFileMutation.isPending}
                       data-testid={`button-delete-gl-file-${f.id}`}
                     >
-                      <Trash2 className="w-4 h-4 text-destructive" />
+                      <Trash2 className="w-3 h-3" />
                     </Button>
-                  </CardContent>
-                </Card>
-              ))}
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Database className="w-4 h-4" />
+                IC Mapping File
+              </CardTitle>
+              {hasMappings && (
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setClearMappingDialogOpen(true)} data-testid="button-clear-mapping">
+                    <Trash2 className="w-3 h-3 mr-1" /> Clear
+                  </Button>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="border rounded-lg p-3 space-y-2">
+              <Label className="text-sm font-medium">Upload Mapping File</Label>
+              <p className="text-xs text-muted-foreground">
+                Excel file with sheets: "IC-GL-Mapping", "Company_Code"
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  ref={mappingInputRef}
+                  type="file"
+                  accept=".xlsx,.xls"
+                  className="flex-1 text-xs"
+                  data-testid="input-mapping-file"
+                />
+                <Button
+                  size="sm"
+                  disabled={mappingUploading}
+                  onClick={wrappedMappingUpload}
+                  data-testid="button-upload-mapping"
+                >
+                  {mappingUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3 mr-1" />}
+                  Upload
+                </Button>
+              </div>
+            </div>
 
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Mapping File</h2>
-
-          {hasMappings ? (
-            <Card className="border-green-200 dark:border-green-800 bg-green-50/30 dark:bg-green-950/10">
-              <CardContent className="pt-4 space-y-3">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                  <span className="text-sm font-semibold">Mapping Loaded</span>
-                </div>
-                <div className="text-xs text-muted-foreground space-y-1">
-                  <div className="flex justify-between">
-                    <span>GL Mappings</span>
-                    <span className="font-medium">{mappingStatus?.glMappings || 0}</span>
+            {mappingStatus && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Mapping Status</p>
+                <div className="grid grid-cols-1 gap-2">
+                  <div className="flex items-center justify-between border rounded p-2">
+                    <div className="flex items-center gap-2">
+                      {(mappingStatus.glMappings || 0) > 0 ? (
+                        <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                      ) : (
+                        <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                      )}
+                      <span className="text-xs">GL Mappings</span>
+                    </div>
+                    <Badge variant={(mappingStatus.glMappings || 0) > 0 ? "default" : "secondary"} className="text-[10px]">
+                      {formatNum(mappingStatus.glMappings || 0)} mappings
+                    </Badge>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Company Codes</span>
-                    <span className="font-medium">{mappingStatus?.companyMappings || 0}</span>
+                  <div className="flex items-center justify-between border rounded p-2">
+                    <div className="flex items-center gap-2">
+                      {(mappingStatus.companyMappings || 0) > 0 ? (
+                        <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                      ) : (
+                        <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                      )}
+                      <span className="text-xs">Company Codes</span>
+                    </div>
+                    <Badge variant={(mappingStatus.companyMappings || 0) > 0 ? "default" : "secondary"} className="text-[10px]">
+                      {formatNum(mappingStatus.companyMappings || 0)} codes
+                    </Badge>
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400">
+                <div className="flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 mt-2">
                   <LinkIcon className="w-3 h-3" />
                   <span>Shared with IC Matrix module</span>
                 </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardContent className="pt-4 space-y-3">
-                <div className="flex items-center gap-2">
-                  <Database className="w-5 h-5 text-orange-500" />
-                  <span className="text-sm font-semibold">IC Mapping File</span>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Upload the mapping file with IC-GL-Mapping and Company_Code sheets. This is shared with the IC Matrix module.
-                </p>
-                <div>
-                  <Label className="text-xs text-muted-foreground">Excel File (.xlsx)</Label>
-                  <Input
-                    type="file"
-                    accept=".xlsx,.xls"
-                    ref={mappingInputRef}
-                    className="mt-1"
-                    data-testid="input-mapping-file"
-                  />
-                </div>
-                <Button
-                  onClick={wrappedMappingUpload}
-                  disabled={mappingUploading}
-                  size="sm"
-                  className="w-full"
-                  data-testid="button-upload-mapping"
-                >
-                  {mappingUploading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-4 h-4 mr-2" />
-                      Upload Mapping
-                    </>
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-
-          {hasMappings && (
-            <Card>
-              <CardContent className="pt-4 space-y-3">
-                <div className="flex items-center gap-2">
-                  <Database className="w-5 h-5 text-blue-500" />
-                  <span className="text-sm font-semibold">Update Mapping</span>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Upload a new mapping file to replace the existing one.
-                </p>
-                <div>
-                  <Label className="text-xs text-muted-foreground">Excel File (.xlsx)</Label>
-                  <Input
-                    type="file"
-                    accept=".xlsx,.xls"
-                    ref={mappingInputRef}
-                    className="mt-1"
-                    data-testid="input-mapping-file"
-                  />
-                </div>
-                <Button
-                  onClick={wrappedMappingUpload}
-                  disabled={mappingUploading}
-                  size="sm"
-                  variant="outline"
-                  className="w-full"
-                  data-testid="button-upload-mapping"
-                >
-                  {mappingUploading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-4 h-4 mr-2" />
-                      Replace Mapping
-                    </>
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
+
+      {reconNotifications.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Upload Activity</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {reconNotifications.map(n => (
+              <div key={n.id} className="flex items-center gap-3 text-xs">
+                {n.status === "uploading" || n.status === "processing" ? (
+                  <Loader2 className="w-3 h-3 animate-spin text-blue-500" />
+                ) : n.status === "success" ? (
+                  <CheckCircle className="w-3 h-3 text-green-500" />
+                ) : (
+                  <AlertCircle className="w-3 h-3 text-red-500" />
+                )}
+                <span className="font-medium">{n.label}</span>
+                <span className="text-muted-foreground">{n.message}</span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <Dialog open={clearGlDialogOpen} onOpenChange={setClearGlDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete GL Data</DialogTitle>
+            <DialogTitle>Clear All GL Data</DialogTitle>
             <DialogDescription>
               This will permanently delete all uploaded GL dump data, transactions, and reconciliation results. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter>
             <Button variant="outline" onClick={() => setClearGlDialogOpen(false)} data-testid="button-clear-cancel">
               Cancel
             </Button>
@@ -485,17 +432,8 @@ export default function UploadPage() {
               disabled={clearAllGlMutation.isPending}
               data-testid="button-clear-confirm"
             >
-              {clearAllGlMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete All GL Data
-                </>
-              )}
+              {clearAllGlMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+              Clear All
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -504,12 +442,12 @@ export default function UploadPage() {
       <Dialog open={clearMappingDialogOpen} onOpenChange={setClearMappingDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Mapping File</DialogTitle>
+            <DialogTitle>Clear Mapping Data</DialogTitle>
             <DialogDescription>
               This will permanently delete all GL mapping and Company Code mapping data. This mapping is shared with the IC Matrix module. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter>
             <Button variant="outline" onClick={() => setClearMappingDialogOpen(false)} data-testid="button-clear-mapping-cancel">
               Cancel
             </Button>
@@ -519,17 +457,8 @@ export default function UploadPage() {
               disabled={clearMappingMutation.isPending}
               data-testid="button-clear-mapping-confirm"
             >
-              {clearMappingMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete Mapping
-                </>
-              )}
+              {clearMappingMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+              Clear All
             </Button>
           </DialogFooter>
         </DialogContent>

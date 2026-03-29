@@ -163,7 +163,7 @@ export default function IcMatrixUpload() {
   };
 
   const removeTbSlot = (id: string) => {
-    if (tbSlots.length <= 2) return;
+    if (tbSlots.length <= 1) return;
     setTbSlots(tbSlots.filter(s => s.id !== id));
   };
 
@@ -174,6 +174,9 @@ export default function IcMatrixUpload() {
   const handleDownload = () => {
     window.open("/api/ic-matrix/download", "_blank");
   };
+
+  const hasTbData = (summary?.totalRecords || 0) > 0;
+  const hasMappings = (mappingSummary?.glMappings || 0) > 0 || (mappingSummary?.companyMappings || 0) > 0;
 
   return (
     <div className="p-6 space-y-6" data-testid="page-ic-matrix-upload">
@@ -186,40 +189,33 @@ export default function IcMatrixUpload() {
             Upload Trial Balance files and mapping data for IC Matrix compilation
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDownload}
-            disabled={!summary?.totalRecords}
-            data-testid="button-download-compiled"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Download Compiled TB
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-destructive hover:text-destructive"
-            onClick={() => setClearTbDialogOpen(true)}
-            disabled={!summary?.totalRecords}
-            data-testid="button-clear-tb"
-          >
-            <Trash2 className="w-4 h-4 mr-2" />
-            Delete TB Data
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-destructive hover:text-destructive"
-            onClick={() => setClearMappingDialogOpen(true)}
-            disabled={!mappingSummary?.glMappings && !mappingSummary?.companyMappings}
-            data-testid="button-clear-mapping"
-          >
-            <Trash2 className="w-4 h-4 mr-2" />
-            Delete Mapping File
-          </Button>
-        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">TB Files</p>
+            <p className="text-2xl font-bold mt-1" data-testid="text-tb-files-count">{summary?.tbFiles || 0}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Records</p>
+            <p className="text-2xl font-bold mt-1" data-testid="text-total-records">{formatNum(summary?.totalRecords || 0)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">GL Mappings</p>
+            <p className="text-2xl font-bold mt-1" data-testid="text-gl-mappings">{formatNum(mappingSummary?.glMappings || 0)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">Company Codes</p>
+            <p className="text-2xl font-bold mt-1" data-testid="text-company-codes">{formatNum(mappingSummary?.companyMappings || 0)}</p>
+          </CardContent>
+        </Card>
       </div>
 
       {summary && summary.period && (
@@ -233,235 +229,239 @@ export default function IcMatrixUpload() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card data-testid="card-tb-files-count">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">TB Files</CardTitle>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <FileSpreadsheet className="w-4 h-4" />
+                Trial Balance Files
+              </CardTitle>
+              <div className="flex gap-2">
+                {hasTbData && (
+                  <Button variant="outline" size="sm" onClick={handleDownload} data-testid="button-download-compiled">
+                    <Download className="w-3 h-3 mr-1" /> Download
+                  </Button>
+                )}
+                <Button variant="outline" size="sm" onClick={addTbSlot} data-testid="button-add-tb">
+                  <Plus className="w-3 h-3 mr-1" /> Add
+                </Button>
+                {hasTbData && (
+                  <Button variant="outline" size="sm" onClick={() => setClearTbDialogOpen(true)} data-testid="button-clear-tb">
+                    <Trash2 className="w-3 h-3 mr-1" /> Clear All
+                  </Button>
+                )}
+              </div>
+            </div>
           </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{summary?.tbFiles || 0}</p>
-          </CardContent>
-        </Card>
-        <Card data-testid="card-total-records">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Records</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{formatNum(summary?.totalRecords || 0)}</p>
-          </CardContent>
-        </Card>
-        <Card data-testid="card-gl-mappings">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">GL Mappings</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{formatNum(mappingSummary?.glMappings || 0)}</p>
-          </CardContent>
-        </Card>
-        <Card data-testid="card-company-mappings">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Company Codes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{formatNum(mappingSummary?.companyMappings || 0)}</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Trial Balance Files</h2>
-            <Button variant="outline" size="sm" onClick={addTbSlot} data-testid="button-add-tb">
-              <Plus className="w-4 h-4 mr-1" />
-              Add TB
-            </Button>
-          </div>
-
-          {tbSlots.map((slot) => (
-            <Card key={slot.id} data-testid={`card-tb-slot-${slot.id}`}>
-              <CardContent className="pt-4 space-y-3">
+          <CardContent className="space-y-4">
+            {tbSlots.map((slot) => (
+              <div key={slot.id} className="border rounded-lg p-3 space-y-2" data-testid={`slot-tb-${slot.id}`}>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <FileSpreadsheet className="w-5 h-5 text-blue-500" />
-                    <Input
-                      value={slot.label}
-                      onChange={(e) => updateSlot(slot.id, { label: e.target.value })}
-                      className="h-8 w-32 text-sm font-medium"
-                      data-testid={`input-tb-label-${slot.id}`}
-                    />
-                  </div>
-                  {tbSlots.length > 2 && (
-                    <Button variant="ghost" size="sm" onClick={() => removeTbSlot(slot.id)} data-testid={`button-remove-tb-${slot.id}`}>
-                      <X className="w-4 h-4" />
+                  <Label className="text-sm font-medium">{slot.label}</Label>
+                  {tbSlots.length > 1 && (
+                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => removeTbSlot(slot.id)}>
+                      <X className="w-3 h-3" />
                     </Button>
                   )}
                 </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">Excel File (.xlsx)</Label>
+                <div className="flex gap-2">
                   <Input
                     type="file"
                     accept=".xlsx,.xls"
+                    className="flex-1 text-xs"
                     onChange={(e) => updateSlot(slot.id, { file: e.target.files?.[0] || null })}
-                    className="mt-1"
                     data-testid={`input-tb-file-${slot.id}`}
                   />
+                  <Button
+                    size="sm"
+                    disabled={!slot.file || uploadingSlots.has(slot.id)}
+                    onClick={() => wrappedTbUpload(slot)}
+                    data-testid={`button-upload-tb-${slot.id}`}
+                  >
+                    {uploadingSlots.has(slot.id) ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3 mr-1" />}
+                    Upload
+                  </Button>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <Label className="text-xs text-muted-foreground">Period Start (optional override)</Label>
+                    <Label className="text-[10px] text-muted-foreground">Period Start (optional)</Label>
                     <Input
                       type="text"
                       placeholder="e.g. 1/4/2025"
                       value={slot.periodStart}
                       onChange={(e) => updateSlot(slot.id, { periodStart: e.target.value })}
-                      className="mt-1 h-8 text-sm"
+                      className="h-7 text-xs"
                       data-testid={`input-tb-period-start-${slot.id}`}
                     />
                   </div>
                   <div>
-                    <Label className="text-xs text-muted-foreground">Period End (optional override)</Label>
+                    <Label className="text-[10px] text-muted-foreground">Period End (optional)</Label>
                     <Input
                       type="text"
                       placeholder="e.g. 31/12/2025"
                       value={slot.periodEnd}
                       onChange={(e) => updateSlot(slot.id, { periodEnd: e.target.value })}
-                      className="mt-1 h-8 text-sm"
+                      className="h-7 text-xs"
                       data-testid={`input-tb-period-end-${slot.id}`}
                     />
                   </div>
                 </div>
-                <Button
-                  size="sm"
-                  onClick={() => wrappedTbUpload(slot)}
-                  disabled={!slot.file || uploadingSlots.has(slot.id)}
-                  data-testid={`button-upload-tb-${slot.id}`}
-                >
-                  {uploadingSlots.has(slot.id) ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Upload className="w-4 h-4 mr-2" />
-                  )}
-                  Upload {slot.label}
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Mapping File</h2>
-          <Card>
-            <CardContent className="pt-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <Database className="w-5 h-5 text-purple-500" />
-                <span className="text-sm font-medium">IC Mapping File</span>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Upload Excel file with "IC-GL-Mapping" and "Company_Code" sheets
-              </p>
-              <Input
-                ref={mappingInputRef}
-                type="file"
-                accept=".xlsx,.xls"
-                className="mt-1"
-                data-testid="input-mapping-file"
-              />
-              <Button
-                size="sm"
-                onClick={wrappedMappingUpload}
-                disabled={mappingUploading}
-                data-testid="button-upload-mapping"
-              >
-                {mappingUploading ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Upload className="w-4 h-4 mr-2" />
-                )}
-                Upload Mapping
-              </Button>
-              {mappingSummary && (mappingSummary.glMappings > 0 || mappingSummary.companyMappings > 0) && (
-                <div className="pt-2 space-y-1">
-                  <div className="flex items-center gap-2 text-xs">
-                    <CheckCircle className="w-3.5 h-3.5 text-green-500" />
-                    <span>{formatNum(mappingSummary.glMappings)} GL mappings loaded</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs">
-                    <CheckCircle className="w-3.5 h-3.5 text-green-500" />
-                    <span>{formatNum(mappingSummary.companyMappings)} company codes loaded</span>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+            ))}
 
-          {(summary?.totalRecords > 0 && (mappingSummary?.glMappings > 0 || mappingSummary?.companyMappings > 0)) && (
-            <Card>
-              <CardContent className="pt-4 space-y-3">
-                <div className="flex items-center gap-2">
-                  <RefreshCw className="w-5 h-5 text-orange-500" />
-                  <span className="text-sm font-medium">Reprocess Data</span>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Re-apply mapping lookups to all existing TB data after uploading updated mappings
-                </p>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => reprocessMutation.mutate()}
-                  disabled={reprocessMutation.isPending}
-                  data-testid="button-reprocess"
-                >
-                  {reprocessMutation.isPending ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                  )}
-                  Reprocess All Data
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-
-          {summary?.files && summary.files.length > 0 && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Uploaded TB Files</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
+            {summary?.files && summary.files.length > 0 && (
+              <div className="mt-4 space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Uploaded Files</p>
                 {summary.files.map((f: any) => (
-                  <div key={f.id} className="flex items-center justify-between p-2 rounded-md bg-muted/50">
-                    <div>
-                      <p className="text-sm font-medium">{f.label}</p>
-                      <p className="text-xs text-muted-foreground">{f.fileName} - {formatNum(f.records)} records</p>
+                  <div key={f.id} className="flex items-center justify-between border rounded p-2" data-testid={`uploaded-tb-${f.id}`}>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <CheckCircle className="w-3.5 h-3.5 text-green-500 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium truncate">{f.label}</p>
+                        <p className="text-[10px] text-muted-foreground">{f.fileName} — {formatNum(f.records)} records</p>
+                      </div>
                     </div>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-destructive hover:text-destructive h-7 w-7 p-0"
+                      className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
                       onClick={() => deleteTbMutation.mutate(f.id)}
                       disabled={deleteTbMutation.isPending}
                       data-testid={`button-delete-tb-${f.id}`}
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-3 h-3" />
                     </Button>
                   </div>
                 ))}
-              </CardContent>
-            </Card>
-          )}
-        </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Database className="w-4 h-4" />
+                IC Mapping File
+              </CardTitle>
+              {hasMappings && (
+                <div className="flex gap-2">
+                  {hasTbData && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => reprocessMutation.mutate()}
+                      disabled={reprocessMutation.isPending}
+                      data-testid="button-reprocess"
+                    >
+                      {reprocessMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <RefreshCw className="w-3 h-3 mr-1" />}
+                      Reprocess
+                    </Button>
+                  )}
+                  <Button variant="outline" size="sm" onClick={() => setClearMappingDialogOpen(true)} data-testid="button-clear-mapping">
+                    <Trash2 className="w-3 h-3 mr-1" /> Clear
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="border rounded-lg p-3 space-y-2">
+              <Label className="text-sm font-medium">Upload Mapping File</Label>
+              <p className="text-xs text-muted-foreground">
+                Excel file with sheets: "IC-GL-Mapping", "Company_Code"
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  ref={mappingInputRef}
+                  type="file"
+                  accept=".xlsx,.xls"
+                  className="flex-1 text-xs"
+                  data-testid="input-mapping-file"
+                />
+                <Button
+                  size="sm"
+                  disabled={mappingUploading}
+                  onClick={wrappedMappingUpload}
+                  data-testid="button-upload-mapping"
+                >
+                  {mappingUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3 mr-1" />}
+                  Upload
+                </Button>
+              </div>
+            </div>
+
+            {mappingSummary && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Mapping Status</p>
+                <div className="grid grid-cols-1 gap-2">
+                  <div className="flex items-center justify-between border rounded p-2">
+                    <div className="flex items-center gap-2">
+                      {(mappingSummary.glMappings || 0) > 0 ? (
+                        <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                      ) : (
+                        <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                      )}
+                      <span className="text-xs">GL Mappings (IC Counter Party / Txn Type)</span>
+                    </div>
+                    <Badge variant={(mappingSummary.glMappings || 0) > 0 ? "default" : "secondary"} className="text-[10px]">
+                      {formatNum(mappingSummary.glMappings || 0)} mappings
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between border rounded p-2">
+                    <div className="flex items-center gap-2">
+                      {(mappingSummary.companyMappings || 0) > 0 ? (
+                        <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                      ) : (
+                        <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                      )}
+                      <span className="text-xs">Company Codes</span>
+                    </div>
+                    <Badge variant={(mappingSummary.companyMappings || 0) > 0 ? "default" : "secondary"} className="text-[10px]">
+                      {formatNum(mappingSummary.companyMappings || 0)} codes
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
+
+      {matrixNotifications.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Upload Activity</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {matrixNotifications.map(n => (
+              <div key={n.id} className="flex items-center gap-3 text-xs">
+                {n.status === "uploading" || n.status === "processing" ? (
+                  <Loader2 className="w-3 h-3 animate-spin text-blue-500" />
+                ) : n.status === "success" ? (
+                  <CheckCircle className="w-3 h-3 text-green-500" />
+                ) : (
+                  <AlertCircle className="w-3 h-3 text-red-500" />
+                )}
+                <span className="font-medium">{n.label}</span>
+                <span className="text-muted-foreground">{n.message}</span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <Dialog open={clearTbDialogOpen} onOpenChange={setClearTbDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete TB Data</DialogTitle>
+            <DialogTitle>Clear All TB Data</DialogTitle>
             <DialogDescription>
               This will permanently delete all uploaded Trial Balance files and their compiled data. Mapping data will be preserved. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter>
             <Button variant="outline" onClick={() => setClearTbDialogOpen(false)} data-testid="button-clear-tb-cancel">
               Cancel
             </Button>
@@ -471,8 +471,8 @@ export default function IcMatrixUpload() {
               disabled={clearTbMutation.isPending}
               data-testid="button-clear-tb-confirm"
             >
-              {clearTbMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
-              Delete TB Data
+              {clearTbMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+              Clear All
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -481,12 +481,12 @@ export default function IcMatrixUpload() {
       <Dialog open={clearMappingDialogOpen} onOpenChange={setClearMappingDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Mapping File</DialogTitle>
+            <DialogTitle>Clear Mapping Data</DialogTitle>
             <DialogDescription>
               This will permanently delete all GL mappings and company code mappings. TB data will be preserved but will need remapping. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter>
             <Button variant="outline" onClick={() => setClearMappingDialogOpen(false)} data-testid="button-clear-mapping-cancel">
               Cancel
             </Button>
@@ -496,8 +496,8 @@ export default function IcMatrixUpload() {
               disabled={clearMappingMutation.isPending}
               data-testid="button-clear-mapping-confirm"
             >
-              {clearMappingMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
-              Delete Mapping File
+              {clearMappingMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+              Clear All
             </Button>
           </DialogFooter>
         </DialogContent>
