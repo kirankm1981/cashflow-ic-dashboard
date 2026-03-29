@@ -30,7 +30,7 @@ if not exist node_modules (
     echo  [STEP 1/3] Installing dependencies...
     call npm install
     if %errorlevel% neq 0 (
-        echo  [ERROR] npm install failed. See error above.
+        echo  [ERROR] npm install failed.
         pause
         exit /b 1
     )
@@ -40,17 +40,25 @@ if not exist node_modules (
     echo  [STEP 1/3] Dependencies already installed.
 )
 
-echo  [STEP 2/3] Setting up database tables...
-call npx drizzle-kit push --force
+echo  [STEP 2/3] Checking database tables...
+call npx drizzle-kit push --force 2>&1
 if %errorlevel% neq 0 (
     echo.
-    echo  [ERROR] Database setup failed. Check your .env file:
-    echo    - Is PostgreSQL running?
-    echo    - Is the DATABASE_URL correct?
-    echo    - Does the database exist?
+    echo  [ERROR] Database setup failed.
     echo.
-    echo  Your .env should contain:
-    echo    DATABASE_URL=postgresql://postgres:PASSWORD@localhost:5432/cashflow_ic_dashboard
+    echo  Common causes:
+    echo    1. PostgreSQL is not running
+    echo       - Open Services (Win+R, type services.msc)
+    echo       - Find "postgresql" and make sure it says "Running"
+    echo.
+    echo    2. Database does not exist
+    echo       - Open Command Prompt and run:
+    echo         psql -U postgres
+    echo         CREATE DATABASE cashflow_ic_dashboard;
+    echo         \q
+    echo.
+    echo    3. Wrong password in .env file
+    echo       - Open .env in Notepad and check DATABASE_URL
     echo.
     pause
     exit /b 1
