@@ -372,56 +372,6 @@ export default function CashflowDashboard() {
         )}
       </div>
 
-      <div className="flex items-center gap-2 flex-wrap" data-testid="status-filter-buttons">
-        {STATUS_OPTIONS.map(status => (
-          <Button
-            key={status}
-            variant={statusFilter === status ? "default" : "outline"}
-            size="sm"
-            onClick={() => setStatusFilter(status)}
-            data-testid={`btn-filter-${status.toLowerCase().replace(/\s+/g, "-")}`}
-          >
-            {status}
-          </Button>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card data-testid="card-total-inflows">
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between gap-2">
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Total Inflow</p>
-                <p className="text-2xl font-bold text-green-600">{formatCrores(totalInflow)}</p>
-              </div>
-              <div className="p-2 rounded-md bg-green-500/10"><TrendingUp className="w-5 h-5 text-green-500" /></div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card data-testid="card-total-outflows">
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between gap-2">
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Total Outflow</p>
-                <p className="text-2xl font-bold text-red-600">{formatCrores(totalOutflow)}</p>
-              </div>
-              <div className="p-2 rounded-md bg-red-500/10"><TrendingDown className="w-5 h-5 text-red-500" /></div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card data-testid="card-cash-bank">
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between gap-2">
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Cash & Bank</p>
-                <p className="text-2xl font-bold">{formatCrores(totalCashBank)}</p>
-              </div>
-              <div className="p-2 rounded-md bg-blue-500/10"><IndianRupee className="w-5 h-5 text-blue-500" /></div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList data-testid="tabs-cashflow-dashboard">
           <TabsTrigger value="dashboard" data-testid="tab-cf-dashboard">Dashboard</TabsTrigger>
@@ -441,6 +391,55 @@ export default function CashflowDashboard() {
         </TabsList>
 
         <TabsContent value="dashboard" className="space-y-4">
+          <div className="flex items-center gap-2 flex-wrap" data-testid="status-filter-buttons">
+            {STATUS_OPTIONS.map(status => (
+              <Button
+                key={status}
+                variant={statusFilter === status ? "default" : "outline"}
+                size="sm"
+                onClick={() => setStatusFilter(status)}
+                data-testid={`btn-filter-${status.toLowerCase().replace(/\s+/g, "-")}`}
+              >
+                {status}
+              </Button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card data-testid="card-total-inflows">
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Total Inflow</p>
+                    <p className="text-2xl font-bold text-green-600">{formatCrores(totalInflow)}</p>
+                  </div>
+                  <div className="p-2 rounded-md bg-green-500/10"><TrendingUp className="w-5 h-5 text-green-500" /></div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card data-testid="card-total-outflows">
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Total Outflow</p>
+                    <p className="text-2xl font-bold text-red-600">{formatCrores(totalOutflow)}</p>
+                  </div>
+                  <div className="p-2 rounded-md bg-red-500/10"><TrendingDown className="w-5 h-5 text-red-500" /></div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card data-testid="card-cash-bank">
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Cash & Bank</p>
+                    <p className="text-2xl font-bold">{formatCrores(totalCashBank)}</p>
+                  </div>
+                  <div className="p-2 rounded-md bg-blue-500/10"><IndianRupee className="w-5 h-5 text-blue-500" /></div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <Card className="overflow-hidden border-0 shadow-sm bg-white dark:bg-zinc-900">
               <CardHeader className="pb-0 pt-5 px-6">

@@ -128,6 +128,67 @@ function KPICard({
   );
 }
 
+function EntitySummaryContent({ stats, nameMap }: { stats: DashboardStats; nameMap: Record<string, string> }) {
+  const displayName = (code: string) => nameMap[code] ? `${nameMap[code]} (${code})` : code;
+
+  if (!stats.companySummary || stats.companySummary.length === 0) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-16">
+          <p className="text-sm text-muted-foreground">No entity data available. Upload GL files and run reconciliation.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">Entity Summary</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm" data-testid="table-entity-summary">
+            <thead>
+              <tr className="border-b">
+                <th className="text-left py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">Entity</th>
+                <th className="text-right py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">Total</th>
+                <th className="text-right py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">Matched</th>
+                <th className="text-right py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">Reversal</th>
+                <th className="text-right py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">Review</th>
+                <th className="text-right py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">Suggested</th>
+                <th className="text-right py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">Unmatched</th>
+                <th className="text-right py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">Rate</th>
+              </tr>
+            </thead>
+            <tbody>
+              {stats.companySummary.map((cs) => {
+                const reconciled = cs.matched + cs.reversal + cs.review + cs.suggested;
+                return (
+                  <tr key={cs.company} className="border-b last:border-0" data-testid={`row-entity-${cs.company}`}>
+                    <td className="py-2.5 px-3 font-medium">{displayName(cs.company)}</td>
+                    <td className="py-2.5 px-3 text-right">{formatNumber(cs.total)}</td>
+                    <td className="py-2.5 px-3 text-right text-emerald-600">{formatNumber(cs.matched)}</td>
+                    <td className="py-2.5 px-3 text-right text-purple-600">{formatNumber(cs.reversal)}</td>
+                    <td className="py-2.5 px-3 text-right text-teal-600">{formatNumber(cs.review)}</td>
+                    <td className="py-2.5 px-3 text-right text-orange-600">{formatNumber(cs.suggested)}</td>
+                    <td className="py-2.5 px-3 text-right text-red-600">{formatNumber(cs.unmatched)}</td>
+                    <td className="py-2.5 px-3 text-right">
+                      <Badge variant={cs.total > 0 && reconciled / cs.total > 0.9 ? "default" : "secondary"}>
+                        {cs.total > 0 ? ((reconciled / cs.total) * 100).toFixed(1) : 0}%
+                      </Badge>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function OverviewContent({ stats, nameMap }: { stats: DashboardStats; nameMap: Record<string, string> }) {
   const displayName = (code: string) => nameMap[code] ? `${nameMap[code]} (${code})` : code;
   const pieData = (stats.statusBreakdown || [])
@@ -144,6 +205,8 @@ function OverviewContent({ stats, nameMap }: { stats: DashboardStats; nameMap: R
       { name: "Unmatched", value: stats.unmatchedTransactions, fill: STATUS_COLORS.unmatched },
     );
   }
+
+  const barChartHeight = Math.max(350, stats.companySummary.length * 40 + 60);
 
   return (
     <div className="space-y-4">
@@ -176,25 +239,88 @@ function OverviewContent({ stats, nameMap }: { stats: DashboardStats; nameMap: R
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader className="pb-2">
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
             <CardTitle className="text-base">Company Reconciliation Status</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {stats.companySummary.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={stats.companySummary.map(cs => ({ ...cs, displayCompany: displayName(cs.company) }))} margin={{ top: 5, right: 20, bottom: 60, left: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(210, 5%, 85%)" />
-                  <XAxis
-                    dataKey="displayCompany"
-                    tick={{ fontSize: 10 }}
-                    angle={-45}
-                    textAnchor="end"
-                    height={80}
-                    interval={0}
-                  />
-                  <YAxis tick={{ fontSize: 11 }} />
+            <div className="flex items-center gap-3 flex-wrap">
+              {[
+                { label: "Matched", color: "hsl(145, 55%, 40%)" },
+                { label: "Reversal", color: "hsl(280, 55%, 50%)" },
+                { label: "Review", color: "hsl(185, 60%, 40%)" },
+                { label: "Suggested", color: "hsl(30, 80%, 50%)" },
+                { label: "Unmatched", color: "hsl(0, 72%, 50%)" },
+              ].map(item => (
+                <div key={item.label} className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: item.color }} />
+                  <span className="text-[11px] text-muted-foreground">{item.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {stats.companySummary.length > 0 ? (
+            <ResponsiveContainer width="100%" height={barChartHeight}>
+              <BarChart
+                data={stats.companySummary.map(cs => ({ ...cs, displayCompany: displayName(cs.company) }))}
+                layout="vertical"
+                margin={{ top: 5, right: 30, bottom: 5, left: 10 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(210, 5%, 85%)" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 11 }} />
+                <YAxis
+                  type="category"
+                  dataKey="displayCompany"
+                  tick={{ fontSize: 12, fontWeight: 500 }}
+                  width={200}
+                  interval={0}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "hsl(210, 5%, 96%)",
+                    border: "1px solid hsl(210, 5%, 88%)",
+                    borderRadius: "6px",
+                    fontSize: "12px",
+                  }}
+                />
+                <Bar dataKey="matched" stackId="a" fill="hsl(145, 55%, 40%)" name="Matched" />
+                <Bar dataKey="reversal" stackId="a" fill="hsl(280, 55%, 50%)" name="Reversal" />
+                <Bar dataKey="review" stackId="a" fill="hsl(185, 60%, 40%)" name="Review" />
+                <Bar dataKey="suggested" stackId="a" fill="hsl(30, 80%, 50%)" name="Suggested" />
+                <Bar dataKey="unmatched" stackId="a" fill="hsl(0, 72%, 50%)" name="Unmatched" radius={[0, 3, 3, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-64 text-sm text-muted-foreground">
+              No data available
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Match Distribution</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <ResponsiveContainer width="100%" height={240}>
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={55}
+                    outerRadius={80}
+                    paddingAngle={4}
+                    dataKey="value"
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={index} fill={entry.fill} />
+                    ))}
+                  </Pie>
                   <Tooltip
                     contentStyle={{
                       backgroundColor: "hsl(210, 5%, 96%)",
@@ -203,140 +329,47 @@ function OverviewContent({ stats, nameMap }: { stats: DashboardStats; nameMap: R
                       fontSize: "12px",
                     }}
                   />
-                  <Bar dataKey="matched" stackId="a" fill="hsl(145, 55%, 40%)" name="Matched" />
-                  <Bar dataKey="reversal" stackId="a" fill="hsl(280, 55%, 50%)" name="Reversal" />
-                  <Bar dataKey="review" stackId="a" fill="hsl(185, 60%, 40%)" name="Review" />
-                  <Bar dataKey="suggested" stackId="a" fill="hsl(30, 80%, 50%)" name="Suggested" />
-                  <Bar dataKey="unmatched" stackId="a" fill="hsl(0, 72%, 50%)" name="Unmatched" radius={[3, 3, 0, 0]} />
-                </BarChart>
+                </PieChart>
               </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-64 text-sm text-muted-foreground">
-                No data available
+              <div className="flex items-center justify-center gap-3 mt-2 flex-wrap">
+                {pieData.map((entry) => (
+                  <div key={entry.name} className="flex items-center gap-1.5">
+                    <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: entry.fill }} />
+                    <span className="text-xs">{entry.name}</span>
+                  </div>
+                ))}
               </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Match Distribution</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <ResponsiveContainer width="100%" height={240}>
-                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={55}
-                      outerRadius={80}
-                      paddingAngle={4}
-                      dataKey="value"
-                    >
-                      {pieData.map((entry, index) => (
-                        <Cell key={index} fill={entry.fill} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "hsl(210, 5%, 96%)",
-                        border: "1px solid hsl(210, 5%, 88%)",
-                        borderRadius: "6px",
-                        fontSize: "12px",
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="flex items-center justify-center gap-3 mt-2 flex-wrap">
-                  {pieData.map((entry) => (
-                    <div key={entry.name} className="flex items-center gap-1.5">
-                      <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: entry.fill }} />
-                      <span className="text-xs">{entry.name}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="space-y-3 pt-4">
-                <h4 className="text-sm font-medium mb-2">Rule Breakdown</h4>
-                {stats.ruleBreakdown.length > 0 ? (
-                  stats.ruleBreakdown.map((rb, i) => {
-                    const badge = CLASSIFICATION_BADGE[rb.matchType] || CLASSIFICATION_BADGE.AUTO_MATCH;
-                    return (
-                      <div key={rb.rule} className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div
-                            className="w-2 h-2 rounded-full shrink-0"
-                            style={{ backgroundColor: COLORS[i % COLORS.length] }}
-                          />
-                          <span className="text-xs truncate">{rb.rule}</span>
-                          <Badge variant={badge.variant} className={`text-[10px] px-1.5 py-0 shrink-0 ${badge.className}`}>
-                            {badge.label}
-                          </Badge>
-                        </div>
-                        <Badge variant="secondary" className="text-xs shrink-0">
-                          {rb.count}
+            </div>
+            <div className="space-y-3 pt-4">
+              <h4 className="text-sm font-medium mb-2">Rule Breakdown</h4>
+              {stats.ruleBreakdown.length > 0 ? (
+                stats.ruleBreakdown.map((rb, i) => {
+                  const badge = CLASSIFICATION_BADGE[rb.matchType] || CLASSIFICATION_BADGE.AUTO_MATCH;
+                  return (
+                    <div key={rb.rule} className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div
+                          className="w-2 h-2 rounded-full shrink-0"
+                          style={{ backgroundColor: COLORS[i % COLORS.length] }}
+                        />
+                        <span className="text-xs truncate">{rb.rule}</span>
+                        <Badge variant={badge.variant} className={`text-[10px] px-1.5 py-0 shrink-0 ${badge.className}`}>
+                          {badge.label}
                         </Badge>
                       </div>
-                    );
-                  })
-                ) : (
-                  <p className="text-xs text-muted-foreground">Run reconciliation to see rule breakdown</p>
-                )}
-              </div>
+                      <Badge variant="secondary" className="text-xs shrink-0">
+                        {rb.count}
+                      </Badge>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-xs text-muted-foreground">Run reconciliation to see rule breakdown</p>
+              )}
             </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {stats.companySummary.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Entity Summary</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm" data-testid="table-entity-summary">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">Entity</th>
-                    <th className="text-right py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">Total</th>
-                    <th className="text-right py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">Matched</th>
-                    <th className="text-right py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">Reversal</th>
-                    <th className="text-right py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">Review</th>
-                    <th className="text-right py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">Suggested</th>
-                    <th className="text-right py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">Unmatched</th>
-                    <th className="text-right py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">Rate</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stats.companySummary.map((cs) => {
-                    const reconciled = cs.matched + cs.reversal + cs.review + cs.suggested;
-                    return (
-                    <tr key={cs.company} className="border-b last:border-0" data-testid={`row-entity-${cs.company}`}>
-                      <td className="py-2.5 px-3 font-medium">{displayName(cs.company)}</td>
-                      <td className="py-2.5 px-3 text-right">{formatNumber(cs.total)}</td>
-                      <td className="py-2.5 px-3 text-right text-emerald-600">{formatNumber(cs.matched)}</td>
-                      <td className="py-2.5 px-3 text-right text-purple-600">{formatNumber(cs.reversal)}</td>
-                      <td className="py-2.5 px-3 text-right text-teal-600">{formatNumber(cs.review)}</td>
-                      <td className="py-2.5 px-3 text-right text-orange-600">{formatNumber(cs.suggested)}</td>
-                      <td className="py-2.5 px-3 text-right text-red-600">{formatNumber(cs.unmatched)}</td>
-                      <td className="py-2.5 px-3 text-right">
-                        <Badge variant={cs.total > 0 && reconciled / cs.total > 0.9 ? "default" : "secondary"}>
-                          {cs.total > 0 ? ((reconciled / cs.total) * 100).toFixed(1) : 0}%
-                        </Badge>
-                      </td>
-                    </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -386,6 +419,7 @@ export default function Dashboard() {
           <TabsList data-testid="tabs-recon-dashboard">
             <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
             <TabsTrigger value="workspace" data-testid="tab-workspace">Workspace</TabsTrigger>
+            <TabsTrigger value="entitySummary" data-testid="tab-entity-summary">Entity Summary</TabsTrigger>
             <TabsTrigger value="reports" data-testid="tab-reports">Detailed Recon Summary</TabsTrigger>
             <TabsTrigger value="insights" data-testid="tab-insights">Insights</TabsTrigger>
           </TabsList>
@@ -403,6 +437,13 @@ export default function Dashboard() {
             </Card>
           </TabsContent>
           <TabsContent value="workspace"><Workspace embedded /></TabsContent>
+          <TabsContent value="entitySummary">
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-16">
+                <p className="text-sm text-muted-foreground">No entity data available. Upload GL files and run reconciliation.</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
           <TabsContent value="reports"><Reports embedded /></TabsContent>
           <TabsContent value="insights"><AiInsights embedded /></TabsContent>
         </Tabs>
@@ -447,6 +488,7 @@ export default function Dashboard() {
         <TabsList data-testid="tabs-recon-dashboard">
           <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
           <TabsTrigger value="workspace" data-testid="tab-workspace">Workspace</TabsTrigger>
+          <TabsTrigger value="entitySummary" data-testid="tab-entity-summary">Entity Summary</TabsTrigger>
           <TabsTrigger value="reports" data-testid="tab-reports">Detailed Recon Summary</TabsTrigger>
           <TabsTrigger value="insights" data-testid="tab-insights">Insights</TabsTrigger>
         </TabsList>
@@ -454,6 +496,9 @@ export default function Dashboard() {
           <OverviewContent stats={stats} nameMap={nameMap || {}} />
         </TabsContent>
         <TabsContent value="workspace"><Workspace embedded /></TabsContent>
+        <TabsContent value="entitySummary">
+          <EntitySummaryContent stats={stats} nameMap={nameMap || {}} />
+        </TabsContent>
         <TabsContent value="reports"><Reports embedded /></TabsContent>
         <TabsContent value="insights"><AiInsights embedded /></TabsContent>
       </Tabs>
