@@ -161,6 +161,7 @@ export default function RptDataPage() {
                       <th className="text-left p-2 font-medium whitespace-nowrap">Document No</th>
                       <th className="text-left p-2 font-medium whitespace-nowrap">Doc Date</th>
                       <th className="text-left p-2 font-medium whitespace-nowrap">Account Head</th>
+                      <th className="text-left p-2 font-medium whitespace-nowrap">Sub Account Head</th>
                       <th className="text-left p-2 font-medium whitespace-nowrap">IC-RPT GL Name</th>
                       <th className="text-left p-2 font-medium whitespace-nowrap">IC Txn Type</th>
                       <th className="text-left p-2 font-medium whitespace-nowrap">RPT Type</th>
@@ -175,6 +176,7 @@ export default function RptDataPage() {
                         <td className="p-2 whitespace-nowrap font-mono">{row.documentNo}</td>
                         <td className="p-2 whitespace-nowrap">{row.docDate}</td>
                         <td className="p-2 max-w-[200px] truncate" title={row.accountHead}>{row.accountHead}</td>
+                        <td className="p-2 max-w-[200px] truncate" title={row.subAccountHead}>{row.subAccountHead}</td>
                         <td className="p-2 max-w-[180px] truncate" title={row.icRptGlName}>{row.icRptGlName}</td>
                         <td className="p-2 whitespace-nowrap">{row.icTxnType}</td>
                         <td className="p-2 whitespace-nowrap">
