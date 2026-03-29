@@ -164,8 +164,6 @@ export default function RptDataPage() {
                       <th className="text-left p-2 font-medium whitespace-nowrap">IC-RPT GL Name</th>
                       <th className="text-left p-2 font-medium whitespace-nowrap">IC Txn Type</th>
                       <th className="text-left p-2 font-medium whitespace-nowrap">RPT Type</th>
-                      <th className="text-right p-2 font-medium whitespace-nowrap">Debit</th>
-                      <th className="text-right p-2 font-medium whitespace-nowrap">Credit</th>
                       <th className="text-right p-2 font-medium whitespace-nowrap">Net Amount</th>
                     </tr>
                   </thead>
@@ -186,8 +184,6 @@ export default function RptDataPage() {
                             </Badge>
                           )}
                         </td>
-                        <td className="p-2 text-right whitespace-nowrap">{formatNum(Number(row.debit))}</td>
-                        <td className="p-2 text-right whitespace-nowrap">{formatNum(Number(row.credit))}</td>
                         <td className="p-2 text-right whitespace-nowrap font-medium">{formatNum(Number(row.netAmount))}</td>
                       </tr>
                     ))}

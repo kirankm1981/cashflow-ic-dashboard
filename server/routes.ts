@@ -1886,7 +1886,7 @@ export async function registerRoutes(
         return res.status(404).json({ message: "No RPT data available for download." });
       }
 
-      const rptHeaders = ["Company", "Company Code", "Document No", "Doc Date", "Account Head", "Debit", "Credit", "Net Amount", "IC-RPT GL Name", "IC Txn Type", "RPT Type"];
+      const rptHeaders = ["Company", "Company Code", "Document No", "Doc Date", "Account Head", "Net Amount", "IC-RPT GL Name", "IC Txn Type", "RPT Type"];
       const lines: string[] = [];
       lines.push(rptHeaders.map(h => `"${h}"`).join(","));
 
