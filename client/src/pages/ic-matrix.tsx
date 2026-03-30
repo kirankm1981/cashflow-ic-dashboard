@@ -30,6 +30,9 @@ import {
   Check,
 } from "lucide-react";
 import { Link } from "wouter";
+import { useDashboardSettings } from "@/hooks/use-dashboard-settings";
+import { formatAmount } from "@/lib/number-format";
+import { ChartFormatSettings } from "@/components/chart-format-settings";
 
 function MultiSelectDropdown({
   label,
@@ -155,13 +158,6 @@ function formatNum(val: number | null | undefined): string {
   return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 }).format(val);
 }
 
-function formatCompact(val: number): string {
-  const abs = Math.abs(val);
-  if (abs >= 1e7) return (val / 1e7).toFixed(2) + " Cr";
-  if (abs >= 1e5) return (val / 1e5).toFixed(2) + " L";
-  if (abs >= 1e3) return (val / 1e3).toFixed(1) + " K";
-  return formatNum(val);
-}
 
 export default function IcMatrix() {
   const [page, setPage] = useState(1);
@@ -172,6 +168,8 @@ export default function IcMatrix() {
   const [selectedCounterParties, setSelectedCounterParties] = useState<string[]>([]);
   const [selectedIcTxnTypes, setSelectedIcTxnTypes] = useState<string[]>([]);
   const limit = 100;
+  const { getFormat } = useDashboardSettings();
+  const matrixFmt = getFormat("ic-matrix");
 
   const { data: summary } = useQuery<any>({
     queryKey: ["/api/ic-matrix/summary"],
@@ -504,9 +502,12 @@ export default function IcMatrix() {
                       Company Codes (rows) × IC Counter Party Codes (columns) — Net Balance summarized
                     </p>
                   </div>
-                  <Badge variant="secondary">
-                    {filteredCompanyCodes.length} Companies × {filteredCounterPartyCodes.length} Counter Parties
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <ChartFormatSettings chartId="ic-matrix" />
+                    <Badge variant="secondary">
+                      {filteredCompanyCodes.length} Companies × {filteredCounterPartyCodes.length} Counter Parties
+                    </Badge>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -564,14 +565,14 @@ export default function IcMatrix() {
                                   style={bgColor ? { backgroundColor: bgColor } : undefined}
                                   title={val !== 0 ? formatNum(val) : ""}
                                 >
-                                  {val === 0 ? "-" : formatCompact(val)}
+                                  {val === 0 ? "-" : formatAmount(val, matrixFmt)}
                                 </td>
                               );
                             })}
                             <td className={`p-2 text-right whitespace-nowrap font-semibold bg-muted/30 ${
                               row.total < 0 ? "text-red-600" : row.total > 0 ? "text-green-700" : ""
                             }`}>
-                              {formatCompact(hasCpFilter ? filteredCounterPartyCodes.reduce((s: number, cp: string) => s + (row.balances[cp] || 0), 0) : row.total)}
+                              {formatAmount(hasCpFilter ? filteredCounterPartyCodes.reduce((s: number, cp: string) => s + (row.balances[cp] || 0), 0) : row.total, matrixFmt)}
                             </td>
                           </tr>
                         ))}
@@ -587,12 +588,12 @@ export default function IcMatrix() {
                                   val < 0 ? "text-red-600" : val > 0 ? "text-green-700" : "text-muted-foreground/40"
                                 }`}
                               >
-                                {val === 0 ? "-" : formatCompact(val)}
+                                {val === 0 ? "-" : formatAmount(val, matrixFmt)}
                               </td>
                             );
                           })}
                           <td className="p-2 text-right whitespace-nowrap bg-muted/60">
-                            {formatCompact(Object.values(filteredColumnTotals).reduce((s: number, v: any) => s + (v || 0), 0))}
+                            {formatAmount(Object.values(filteredColumnTotals).reduce((s: number, v: any) => s + (v || 0), 0), matrixFmt)}
                           </td>
                         </tr>
                       </tbody>
@@ -673,14 +674,14 @@ export default function IcMatrix() {
                                   style={bgColor ? { backgroundColor: bgColor } : undefined}
                                   title={val !== 0 ? formatNum(val) : ""}
                                 >
-                                  {val === 0 ? "-" : formatCompact(val)}
+                                  {val === 0 ? "-" : formatAmount(val, matrixFmt)}
                                 </td>
                               );
                             })}
                             <td className={`p-2 text-right whitespace-nowrap font-semibold bg-muted/30 ${
                               row.total < 0 ? "text-red-600" : row.total > 0 ? "text-green-700" : ""
                             }`}>
-                              {formatCompact(hasCpFilter ? filteredCounterPartyCodes.reduce((s: number, cp: string) => s + (row.balances[cp] || 0), 0) : row.total)}
+                              {formatAmount(hasCpFilter ? filteredCounterPartyCodes.reduce((s: number, cp: string) => s + (row.balances[cp] || 0), 0) : row.total, matrixFmt)}
                             </td>
                           </tr>
                         ))}
@@ -696,12 +697,12 @@ export default function IcMatrix() {
                                   val < 0 ? "text-red-600" : val > 0 ? "text-green-700" : "text-muted-foreground/40"
                                 }`}
                               >
-                                {val === 0 ? "-" : formatCompact(val)}
+                                {val === 0 ? "-" : formatAmount(val, matrixFmt)}
                               </td>
                             );
                           })}
                           <td className="p-2 text-right whitespace-nowrap bg-muted/60">
-                            {formatCompact(Object.values(filteredNetOffColumnTotals).reduce((s: number, v: any) => s + (v || 0), 0))}
+                            {formatAmount(Object.values(filteredNetOffColumnTotals).reduce((s: number, v: any) => s + (v || 0), 0), matrixFmt)}
                           </td>
                         </tr>
                       </tbody>
@@ -754,7 +755,7 @@ export default function IcMatrix() {
                       <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-3">
                         <p className="text-xs text-red-600 dark:text-red-400 font-medium">Total Absolute Difference</p>
                         <p className="text-lg font-bold text-red-700 dark:text-red-300" data-testid="text-total-diff">
-                          {formatNum(filteredNetOffSummary.reduce((s: number, r: any) => s + Math.abs(r.difference), 0))}
+                          {formatAmount(filteredNetOffSummary.reduce((s: number, r: any) => s + Math.abs(r.difference), 0), matrixFmt)}
                         </p>
                       </div>
                       <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
@@ -766,7 +767,7 @@ export default function IcMatrix() {
                       <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
                         <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Largest Mismatch</p>
                         <p className="text-lg font-bold text-blue-700 dark:text-blue-300" data-testid="text-largest-diff">
-                          {filteredNetOffSummary.length > 0 ? formatNum(Math.abs(filteredNetOffSummary[0].difference)) : "0"}
+                          {filteredNetOffSummary.length > 0 ? formatAmount(Math.abs(filteredNetOffSummary[0].difference), matrixFmt) : "0"}
                         </p>
                       </div>
                     </div>
@@ -792,17 +793,17 @@ export default function IcMatrix() {
                               <td className={`p-2 text-right whitespace-nowrap ${
                                 row.companyBalance < 0 ? "text-red-600" : row.companyBalance > 0 ? "text-green-700" : ""
                               }`}>
-                                {formatNum(row.companyBalance)}
+                                {formatAmount(row.companyBalance, matrixFmt)}
                               </td>
                               <td className={`p-2 text-right whitespace-nowrap ${
                                 row.counterPartyBalance < 0 ? "text-red-600" : row.counterPartyBalance > 0 ? "text-green-700" : ""
                               }`}>
-                                {formatNum(row.counterPartyBalance)}
+                                {formatAmount(row.counterPartyBalance, matrixFmt)}
                               </td>
                               <td className={`p-2 text-right whitespace-nowrap font-semibold ${
                                 row.difference < 0 ? "text-red-600" : "text-red-600"
                               }`}>
-                                {formatNum(row.difference)}
+                                {formatAmount(row.difference, matrixFmt)}
                               </td>
                               <td className="p-2 text-center">
                                 <Badge variant="destructive" className="text-[10px] px-1.5">

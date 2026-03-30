@@ -27,35 +27,10 @@ import {
   Cell,
   LabelList,
 } from "recharts";
+import { useDashboardSettings } from "@/hooks/use-dashboard-settings";
+import { formatAmount, SCALE_SUFFIXES } from "@/lib/number-format";
+import { ChartFormatSettings } from "@/components/chart-format-settings";
 
-function formatCrores(value: number): string {
-  if (value === 0) return "₹0 Cr";
-  const sign = value < 0 ? "-" : "";
-  const crores = Math.abs(value) / 10000000;
-  if (crores >= 100) return `${sign}₹${crores.toFixed(0)} Cr`;
-  if (crores >= 10) return `${sign}₹${crores.toFixed(1)} Cr`;
-  return `${sign}₹${crores.toFixed(2)} Cr`;
-}
-
-function formatCroresShort(value: number): string {
-  if (value === 0) return "0";
-  const sign = value < 0 ? "-" : "";
-  const crores = Math.abs(value) / 10000000;
-  if (crores >= 100) return `${sign}${crores.toFixed(0)}`;
-  if (crores >= 10) return `${sign}${crores.toFixed(0)}`;
-  if (crores >= 1) return `${sign}${crores.toFixed(1)}`;
-  return `${sign}${crores.toFixed(2)}`;
-}
-
-function formatBarLabel(value: number): string {
-  if (!value || value === 0) return "";
-  const sign = value < 0 ? "-" : "";
-  const crores = Math.abs(value) / 10000000;
-  if (crores >= 100) return `${sign}₹${crores.toFixed(0)} Cr`;
-  if (crores >= 10) return `${sign}₹${crores.toFixed(0)} Cr`;
-  if (crores >= 1) return `${sign}₹${crores.toFixed(1)} Cr`;
-  return `${sign}₹${crores.toFixed(2)} Cr`;
-}
 
 interface UnifiedRow {
   company: string;
@@ -117,6 +92,8 @@ export default function CashflowDashboard() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const { getFormat } = useDashboardSettings();
+  const cfFmt = getFormat("cf-amounts");
 
   const { data: summary, isLoading: loadingSummary } = useQuery<any>({
     queryKey: ["/api/cashflow/summary"],
@@ -331,7 +308,7 @@ export default function CashflowDashboard() {
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
                     <span className="text-xs text-gray-600 dark:text-zinc-300">{p.name || "Amount"}</span>
                   </div>
-                  <span className="text-xs font-semibold text-gray-900 dark:text-zinc-100 tabular-nums">{formatCrores(displayValue)}</span>
+                  <span className="text-xs font-semibold text-gray-900 dark:text-zinc-100 tabular-nums">₹{formatAmount(displayValue, cfFmt)}</span>
                 </div>
               );
             })}
@@ -411,9 +388,12 @@ export default function CashflowDashboard() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="space-y-1">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Total Inflow</p>
-                    <p className="text-2xl font-bold text-green-600">{formatCrores(totalInflow)}</p>
+                    <p className="text-2xl font-bold text-green-600">₹{formatAmount(totalInflow, cfFmt)}</p>
                   </div>
-                  <div className="p-2 rounded-md bg-green-500/10"><TrendingUp className="w-5 h-5 text-green-500" /></div>
+                  <div className="flex items-center gap-1">
+                    <ChartFormatSettings chartId="cf-amounts" />
+                    <div className="p-2 rounded-md bg-green-500/10"><TrendingUp className="w-5 h-5 text-green-500" /></div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -422,7 +402,7 @@ export default function CashflowDashboard() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="space-y-1">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Total Outflow</p>
-                    <p className="text-2xl font-bold text-red-600">{formatCrores(totalOutflow)}</p>
+                    <p className="text-2xl font-bold text-red-600">₹{formatAmount(totalOutflow, cfFmt)}</p>
                   </div>
                   <div className="p-2 rounded-md bg-red-500/10"><TrendingDown className="w-5 h-5 text-red-500" /></div>
                 </div>
@@ -433,7 +413,7 @@ export default function CashflowDashboard() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="space-y-1">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Cash & Bank</p>
-                    <p className="text-2xl font-bold">{formatCrores(totalCashBank)}</p>
+                    <p className="text-2xl font-bold">₹{formatAmount(totalCashBank, cfFmt)}</p>
                   </div>
                   <div className="p-2 rounded-md bg-blue-500/10"><IndianRupee className="w-5 h-5 text-blue-500" /></div>
                 </div>
@@ -446,7 +426,7 @@ export default function CashflowDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-sm font-semibold text-gray-900 dark:text-zinc-100">Cashflow by Type</CardTitle>
-                    <p className="text-[11px] text-gray-400 dark:text-zinc-500 mt-0.5">Amount in ₹ Crores</p>
+                    <p className="text-[11px] text-gray-400 dark:text-zinc-500 mt-0.5">Amount in ₹{SCALE_SUFFIXES[cfFmt.scale] ? ` ${SCALE_SUFFIXES[cfFmt.scale]}` : ""}</p>
                   </div>
                   <div className="flex items-center gap-4">
                     {cashflowByType.map((entry) => (
@@ -485,7 +465,7 @@ export default function CashflowDashboard() {
                         dy={8}
                       />
                       <YAxis
-                        tickFormatter={(v: number) => formatCroresShort(v)}
+                        tickFormatter={(v: number) => formatAmount(v, cfFmt)}
                         axisLine={false}
                         tickLine={false}
                         tick={{ fontSize: 10, fill: CHART_COLORS.axis }}
@@ -498,7 +478,7 @@ export default function CashflowDashboard() {
                           const gradId = entry.name === "Inflow" ? "url(#gradInflow)" : entry.name === "Outflow" ? "url(#gradOutflow)" : "url(#gradCashBank)";
                           return <Cell key={idx} fill={gradId} />;
                         })}
-                        <LabelList dataKey="value" position="top" formatter={formatBarLabel} style={{ fontSize: 10, fontWeight: 600, fill: CHART_COLORS.axisLabel }} />
+                        <LabelList dataKey="value" position="top" formatter={(v: number) => v ? `₹${formatAmount(v, cfFmt)}` : ""} style={{ fontSize: 10, fontWeight: 600, fill: CHART_COLORS.axisLabel }} />
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
@@ -529,7 +509,7 @@ export default function CashflowDashboard() {
                         dy={8}
                       />
                       <YAxis
-                        tickFormatter={(v: number) => formatCroresShort(v)}
+                        tickFormatter={(v: number) => formatAmount(v, cfFmt)}
                         axisLine={false}
                         tickLine={false}
                         tick={{ fontSize: 10, fill: CHART_COLORS.axis }}
@@ -590,10 +570,10 @@ export default function CashflowDashboard() {
                             </TableCell>
                             {pivotData.projectList.map(proj => (
                               <TableCell key={proj} className="text-right text-xs font-medium">
-                                {row.projects[proj] ? formatCrores(row.projects[proj]) : "—"}
+                                {row.projects[proj] ? `₹${formatAmount(row.projects[proj], cfFmt)}` : "—"}
                               </TableCell>
                             ))}
-                            <TableCell className="text-right text-sm font-bold">{formatCrores(row.total)}</TableCell>
+                            <TableCell className="text-right text-sm font-bold">₹{formatAmount(row.total, cfFmt)}</TableCell>
                           </TableRow>
                         );
                       }
@@ -604,10 +584,10 @@ export default function CashflowDashboard() {
                           <TableCell className="sticky left-0 bg-background z-10 text-xs pl-8">{row.cfHead}</TableCell>
                           {pivotData.projectList.map(proj => (
                             <TableCell key={proj} className="text-right text-xs">
-                              {row.projects[proj] ? formatCrores(row.projects[proj]) : "—"}
+                              {row.projects[proj] ? `₹${formatAmount(row.projects[proj], cfFmt)}` : "—"}
                             </TableCell>
                           ))}
-                          <TableCell className="text-right text-xs font-medium">{formatCrores(row.total)}</TableCell>
+                          <TableCell className="text-right text-xs font-medium">₹{formatAmount(row.total, cfFmt)}</TableCell>
                         </TableRow>
                       );
                     })}
@@ -659,7 +639,7 @@ export default function CashflowDashboard() {
                                 <TableRow key={item.id} data-testid={`unmapped-cf-${item.id}`}>
                                   <TableCell className="text-xs">{item.company}</TableCell>
                                   <TableCell className="text-xs">{item.accountHead}</TableCell>
-                                  <TableCell className="text-right text-xs">{formatCrores(item.netClosingBalance || 0)}</TableCell>
+                                  <TableCell className="text-right text-xs">₹{formatAmount(item.netClosingBalance || 0, cfFmt)}</TableCell>
                                 </TableRow>
                               ))}
                             </TableBody>
@@ -705,7 +685,7 @@ export default function CashflowDashboard() {
                                 <TableRow key={item.id} data-testid={`unmapped-entity-${item.id}`}>
                                   <TableCell className="text-xs">{item.company}</TableCell>
                                   <TableCell className="text-xs">{item.accountHead}</TableCell>
-                                  <TableCell className="text-right text-xs">{formatCrores(item.netClosingBalance || 0)}</TableCell>
+                                  <TableCell className="text-right text-xs">₹{formatAmount(item.netClosingBalance || 0, cfFmt)}</TableCell>
                                 </TableRow>
                               ))}
                             </TableBody>
@@ -759,7 +739,7 @@ export default function CashflowDashboard() {
                           <TableCell className="max-w-[200px] truncate" title={row.project || ""}>{row.project || "-"}</TableCell>
                           <TableCell>{row.cashflow || "-"}</TableCell>
                           <TableCell className="max-w-[180px] truncate" title={row.cfHead || ""}>{row.cfHead || "-"}</TableCell>
-                          <TableCell className="text-right tabular-nums font-medium">{row.amount != null ? formatCrores(row.amount) : "-"}</TableCell>
+                          <TableCell className="text-right tabular-nums font-medium">{row.amount != null ? `₹${formatAmount(row.amount, cfFmt)}` : "-"}</TableCell>
                           <TableCell>{row.asPerFs || "-"}</TableCell>
                           <TableCell>{row.lossesUpto || "-"}</TableCell>
                         </TableRow>

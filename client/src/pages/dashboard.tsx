@@ -27,6 +27,9 @@ import {
 import Workspace from "@/pages/workspace";
 import Reports from "@/pages/reports";
 import AiInsights from "@/pages/ai-insights";
+import { useDashboardSettings } from "@/hooks/use-dashboard-settings";
+import { formatAmount } from "@/lib/number-format";
+import { ChartFormatSettings } from "@/components/chart-format-settings";
 
 interface DashboardStats {
   totalTransactions: number;
@@ -76,12 +79,6 @@ const CLASSIFICATION_BADGE: Record<string, { variant: "default" | "outline" | "s
   SUGGESTED_MATCH: { variant: "outline", className: "border-orange-500 text-orange-600 dark:text-orange-400", label: "Suggested" },
 };
 
-function formatCurrency(value: number): string {
-  if (value >= 10000000) return `₹${(value / 10000000).toFixed(2)} Cr`;
-  if (value >= 100000) return `₹${(value / 100000).toFixed(2)} L`;
-  if (value >= 1000) return `₹${(value / 1000).toFixed(1)} K`;
-  return `₹${value.toFixed(2)}`;
-}
 
 function formatNumber(value: number): string {
   return new Intl.NumberFormat("en-IN").format(value);
@@ -94,6 +91,7 @@ function KPICard({
   icon: Icon,
   trend,
   className,
+  extra,
 }: {
   title: string;
   value: string;
@@ -101,6 +99,7 @@ function KPICard({
   icon: any;
   trend?: "up" | "down";
   className?: string;
+  extra?: React.ReactNode;
 }) {
   return (
     <Card className={className}>
@@ -119,8 +118,11 @@ function KPICard({
               </p>
             )}
           </div>
-          <div className="p-2 rounded-md bg-primary/10">
-            <Icon className="w-5 h-5 text-primary" />
+          <div className="flex items-center gap-1">
+            {extra}
+            <div className="p-2 rounded-md bg-primary/10">
+              <Icon className="w-5 h-5 text-primary" />
+            </div>
           </div>
         </div>
       </CardContent>
@@ -190,6 +192,8 @@ function EntitySummaryContent({ stats, nameMap }: { stats: DashboardStats; nameM
 }
 
 function OverviewContent({ stats, nameMap }: { stats: DashboardStats; nameMap: Record<string, string> }) {
+  const { getFormat } = useDashboardSettings();
+  const volumeFmt = getFormat("recon-volume");
   const displayName = (code: string) => nameMap[code] ? `${nameMap[code]} (${code})` : code;
   const pieData = (stats.statusBreakdown || [])
     .filter(s => s.count > 0)
@@ -233,9 +237,10 @@ function OverviewContent({ stats, nameMap }: { stats: DashboardStats; nameMap: R
         <KPICard
           title="Reconciliation Rate"
           value={`${stats.matchRate.toFixed(1)}%`}
-          subtitle={`${formatCurrency(stats.totalDebit)} total volume`}
+          subtitle={`₹${formatAmount(stats.totalDebit, volumeFmt)} total volume`}
           icon={TrendingUp}
           trend="up"
+          extra={<ChartFormatSettings chartId="recon-volume" />}
         />
       </div>
 

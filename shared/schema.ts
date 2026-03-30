@@ -406,6 +406,21 @@ export const cashflowMappingEntities = pgTable("cashflow_mapping_entities", {
 
 export type CashflowMappingEntity = typeof cashflowMappingEntities.$inferSelect;
 
+export const dashboardSettings = pgTable("dashboard_settings", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  chartId: text("chart_id").notNull(),
+  numberScale: text("number_scale").notNull().default("absolute"),
+  decimalPlaces: integer("decimal_places").notNull().default(0),
+});
+
+export const insertDashboardSettingSchema = createInsertSchema(dashboardSettings).omit({
+  id: true,
+});
+
+export type InsertDashboardSetting = z.infer<typeof insertDashboardSettingSchema>;
+export type DashboardSetting = typeof dashboardSettings.$inferSelect;
+
 export const cashflowPastLosses = pgTable("cashflow_past_losses", {
   id: serial("id").primaryKey(),
   company: text("company"),

@@ -1905,6 +1905,32 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/dashboard-settings", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const settings = await storage.getDashboardSettings(req.session.userId!);
+      res.json(settings);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/dashboard-settings/:chartId", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { chartId } = req.params;
+      const { numberScale, decimalPlaces } = req.body;
+      if (!["absolute", "thousands", "lakhs", "crores"].includes(numberScale)) {
+        return res.status(400).json({ message: "Invalid numberScale" });
+      }
+      if (![0, 1, 2].includes(decimalPlaces)) {
+        return res.status(400).json({ message: "Invalid decimalPlaces" });
+      }
+      await storage.upsertDashboardSetting(req.session.userId!, chartId, numberScale, decimalPlaces);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   registerIcMatrixRoutes(app);
   registerCashflowRoutes(app);
 

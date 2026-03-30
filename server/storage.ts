@@ -13,6 +13,7 @@ import {
   anomalyFlags,
   unmatchedClassifications,
   mlSuggestions,
+  dashboardSettings,
   type InsertUser,
   type User,
   type InsertTransaction,
@@ -628,6 +629,22 @@ export class DatabaseStorage implements IStorage {
 
   async clearMlSuggestions(): Promise<void> {
     await db.delete(mlSuggestions);
+  }
+
+  async getDashboardSettings(userId: string): Promise<typeof dashboardSettings.$inferSelect[]> {
+    return await db.select().from(dashboardSettings).where(eq(dashboardSettings.userId, userId));
+  }
+
+  async upsertDashboardSetting(userId: string, chartId: string, numberScale: string, decimalPlaces: number): Promise<void> {
+    const existing = await db.select().from(dashboardSettings)
+      .where(and(eq(dashboardSettings.userId, userId), eq(dashboardSettings.chartId, chartId)));
+    if (existing.length > 0) {
+      await db.update(dashboardSettings)
+        .set({ numberScale, decimalPlaces })
+        .where(and(eq(dashboardSettings.userId, userId), eq(dashboardSettings.chartId, chartId)));
+    } else {
+      await db.insert(dashboardSettings).values({ userId, chartId, numberScale, decimalPlaces });
+    }
   }
 }
 
