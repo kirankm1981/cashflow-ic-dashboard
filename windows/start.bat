@@ -40,13 +40,10 @@ if not exist node_modules (
     echo  [STEP 1/3] Dependencies already installed.
 )
 
-echo  [STEP 2/3] Checking database connection...
-
-if exist "windows\.db-ok" del "windows\.db-ok" >nul 2>nul
-
-call node windows\check-db.js
-
-if not exist "windows\.db-ok" (
+echo  [STEP 2/3] Checking database and syncing tables...
+node windows\sync-db.js
+if exist "windows\.db-fail" (
+    del "windows\.db-fail" >nul 2>nul
     echo.
     echo  ============================================
     echo   [ERROR] Database connection failed.
@@ -70,12 +67,6 @@ if not exist "windows\.db-ok" (
     pause
     exit /b 1
 )
-
-del "windows\.db-ok" >nul 2>nul
-
-echo  Syncing database tables...
-echo y| call npx drizzle-kit push >nul 2>nul
-echo  [OK] Database tables ready.
 echo.
 
 echo  [STEP 3/3] Starting server...
