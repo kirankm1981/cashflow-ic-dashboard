@@ -41,9 +41,16 @@ if not exist node_modules (
 )
 
 echo  [STEP 2/3] Syncing database tables...
-call npx drizzle-kit push --force
+call npx drizzle-kit push --force >"%TEMP%\drizzle_output.txt" 2>&1
 set DB_RESULT=%errorlevel%
-if %DB_RESULT% neq 0 (
+
+findstr /i "error refused ECONNREFUSED ENOTFOUND authentication password does not exist" "%TEMP%\drizzle_output.txt" >nul 2>nul
+set HAS_REAL_ERROR=%errorlevel%
+
+type "%TEMP%\drizzle_output.txt"
+del "%TEMP%\drizzle_output.txt" >nul 2>nul
+
+if %HAS_REAL_ERROR% equ 0 (
     echo.
     echo  ============================================
     echo   [ERROR] Database connection failed.
