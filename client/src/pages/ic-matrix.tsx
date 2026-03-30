@@ -170,6 +170,7 @@ export default function IcMatrix() {
   const limit = 100;
   const { getFormat } = useDashboardSettings();
   const matrixFmt = getFormat("ic-matrix");
+  const netoffDetailFmt = getFormat("ic-netoff-details");
 
   const { data: summary } = useQuery<any>({
     queryKey: ["/api/ic-matrix/summary"],
@@ -755,7 +756,7 @@ export default function IcMatrix() {
                       <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-3">
                         <p className="text-xs text-red-600 dark:text-red-400 font-medium">Total Absolute Difference</p>
                         <p className="text-lg font-bold text-red-700 dark:text-red-300" data-testid="text-total-diff">
-                          {formatAmount(filteredNetOffSummary.reduce((s: number, r: any) => s + Math.abs(r.difference), 0), matrixFmt)}
+                          {formatAmount(filteredNetOffSummary.reduce((s: number, r: any) => s + Math.abs(r.difference), 0), netoffDetailFmt)}
                         </p>
                       </div>
                       <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
@@ -767,7 +768,7 @@ export default function IcMatrix() {
                       <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
                         <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Largest Mismatch</p>
                         <p className="text-lg font-bold text-blue-700 dark:text-blue-300" data-testid="text-largest-diff">
-                          {filteredNetOffSummary.length > 0 ? formatAmount(Math.abs(filteredNetOffSummary[0].difference), matrixFmt) : "0"}
+                          {filteredNetOffSummary.length > 0 ? formatAmount(Math.abs(filteredNetOffSummary[0].difference), netoffDetailFmt) : "0"}
                         </p>
                       </div>
                     </div>
@@ -793,17 +794,17 @@ export default function IcMatrix() {
                               <td className={`p-2 text-right whitespace-nowrap ${
                                 row.companyBalance < 0 ? "text-red-600" : row.companyBalance > 0 ? "text-green-700" : ""
                               }`}>
-                                {formatAmount(row.companyBalance, matrixFmt)}
+                                {formatAmount(row.companyBalance, netoffDetailFmt)}
                               </td>
                               <td className={`p-2 text-right whitespace-nowrap ${
                                 row.counterPartyBalance < 0 ? "text-red-600" : row.counterPartyBalance > 0 ? "text-green-700" : ""
                               }`}>
-                                {formatAmount(row.counterPartyBalance, matrixFmt)}
+                                {formatAmount(row.counterPartyBalance, netoffDetailFmt)}
                               </td>
                               <td className={`p-2 text-right whitespace-nowrap font-semibold ${
                                 row.difference < 0 ? "text-red-600" : "text-red-600"
                               }`}>
-                                {formatAmount(row.difference, matrixFmt)}
+                                {formatAmount(row.difference, netoffDetailFmt)}
                               </td>
                               <td className="p-2 text-center">
                                 <Badge variant="destructive" className="text-[10px] px-1.5">

@@ -1,7 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { NumberScale, FormatConfig } from "@/lib/number-format";
-import { DEFAULT_FORMAT } from "@/lib/number-format";
+import { DEFAULT_FORMAT, CHART_DEFAULTS } from "@/lib/number-format";
 
 interface DashboardSetting {
   id: number;
@@ -57,7 +57,7 @@ export function useDashboardSettings() {
 
   function getFormat(chartId: string): FormatConfig {
     const setting = settings.find((s) => s.chartId === chartId);
-    if (!setting) return DEFAULT_FORMAT;
+    if (!setting) return CHART_DEFAULTS[chartId] || DEFAULT_FORMAT;
     return {
       scale: setting.numberScale as NumberScale,
       decimals: setting.decimalPlaces,

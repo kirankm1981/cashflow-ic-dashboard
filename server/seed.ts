@@ -237,7 +237,7 @@ export async function seedDefaultRules() {
       name: "Reversal Transactions",
       ruleType: "reversal_match",
       matchType: "1:M",
-      priority: 100,
+      priority: 16,
       dateTolerance: 5,
       amountTolerance: 5,
       amountTolerancePct: 0,
@@ -269,7 +269,7 @@ export async function seedDefaultRules() {
 export async function seedDefaultAdmin() {
   const existing = await db.select().from(users);
   if (existing.length === 0) {
-    const hashedPassword = await bcrypt.hash("R0m@T0rr1n0", 10);
+    const hashedPassword = await bcrypt.hash("admin123", 10);
     await db.insert(users).values({
       username: "admin",
       password: hashedPassword,

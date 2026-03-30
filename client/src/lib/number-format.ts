@@ -55,3 +55,8 @@ export function formatAmountWithSign(
 }
 
 export const DEFAULT_FORMAT: FormatConfig = { scale: "absolute", decimals: 0 };
+
+export const CHART_DEFAULTS: Record<string, FormatConfig> = {
+  "cf-amounts": { scale: "crores", decimals: 2 },
+  "ic-matrix": { scale: "crores", decimals: 2 },
+};
