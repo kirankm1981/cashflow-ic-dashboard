@@ -26,49 +26,52 @@ if not exist .env (
     exit /b 1
 )
 
-if not exist node_modules (
-    echo  [STEP 1/3] Installing dependencies...
-    call npm install
-    if %errorlevel% neq 0 (
-        echo  [ERROR] npm install failed.
-        pause
-        exit /b 1
-    )
-    echo  [OK] Dependencies installed.
-    echo.
-) else (
-    echo  [STEP 1/3] Dependencies already installed.
-)
+if not exist node_modules goto INSTALL_DEPS
+echo  [STEP 1/3] Dependencies already installed.
+goto STEP2
 
-echo  [STEP 2/3] Checking database and syncing tables...
-node windows\sync-db.cjs
-if exist "windows\.db-fail" (
-    del "windows\.db-fail" >nul 2>nul
-    echo.
-    echo  ============================================
-    echo   [ERROR] Database connection failed.
-    echo  ============================================
-    echo.
-    echo  Possible causes:
-    echo.
-    echo    1. PostgreSQL is not running
-    echo       - Open Services (Win+R, type services.msc)
-    echo       - Find "postgresql" and make sure it says "Running"
-    echo.
-    echo    2. Database does not exist
-    echo       - Open Command Prompt and run:
-    echo         psql -U postgres
-    echo         CREATE DATABASE cashflow_ic_dashboard;
-    echo         \q
-    echo.
-    echo    3. Wrong password in .env file
-    echo       - Open .env in Notepad and check DATABASE_URL
-    echo.
+:INSTALL_DEPS
+echo  [STEP 1/3] Installing dependencies...
+call npm install
+if %errorlevel% neq 0 (
+    echo  [ERROR] npm install failed.
     pause
     exit /b 1
 )
+echo  [OK] Dependencies installed.
 echo.
 
+:STEP2
+echo  [STEP 2/3] Checking database and syncing tables...
+if exist "windows\.db-fail" del "windows\.db-fail" >nul 2>nul
+node windows\sync-db.cjs
+if not exist "windows\.db-fail" goto DB_OK
+
+del "windows\.db-fail" >nul 2>nul
+echo.
+echo  ============================================
+echo   [ERROR] Database connection failed.
+echo  ============================================
+echo.
+echo  Possible causes:
+echo.
+echo    1. PostgreSQL is not running
+echo       - Open Services - Win+R, type services.msc
+echo       - Find "postgresql" and make sure it says "Running"
+echo.
+echo    2. Database does not exist
+echo       - Open Command Prompt and run:
+echo         psql -U postgres
+echo         CREATE DATABASE cashflow_ic_dashboard;
+echo.
+echo    3. Wrong password in .env file
+echo       - Open .env in Notepad and check DATABASE_URL
+echo.
+pause
+exit /b 1
+
+:DB_OK
+echo.
 echo  [STEP 3/3] Starting server...
 echo.
 echo  ============================================
