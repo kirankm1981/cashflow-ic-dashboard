@@ -5,7 +5,7 @@ import { db } from "./db";
 import { icMatrixTbFiles, icMatrixTbData, icMatrixMappingGl, icMatrixMappingCompany } from "@shared/schema";
 import { eq, sql, asc } from "drizzle-orm";
 
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
 
 function normalizeText(val: string): string {
   let s = (val || "").trim();
@@ -54,6 +54,8 @@ function parseNum(v: any): number {
 
 export function registerIcMatrixRoutes(app: Express) {
   app.post("/api/ic-matrix/upload-tb", upload.single("file"), async (req, res) => {
+    req.setTimeout(600000);
+    res.setTimeout(600000);
     try {
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
@@ -182,6 +184,8 @@ export function registerIcMatrixRoutes(app: Express) {
   });
 
   app.post("/api/ic-matrix/upload-mapping", upload.single("file"), async (req, res) => {
+    req.setTimeout(600000);
+    res.setTimeout(600000);
     try {
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 

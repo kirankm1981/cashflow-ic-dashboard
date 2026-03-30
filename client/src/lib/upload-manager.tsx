@@ -36,6 +36,7 @@ function formatNum(val: number | null | undefined): string {
 function xhrUpload(url: string, formData: FormData, onProgress: (pct: number) => void): Promise<any> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
+    xhr.timeout = 600000;
     xhr.open("POST", url);
     xhr.upload.addEventListener("progress", (e) => {
       if (e.lengthComputable) {
@@ -54,6 +55,7 @@ function xhrUpload(url: string, formData: FormData, onProgress: (pct: number) =>
         reject(new Error("Invalid response"));
       }
     });
+    xhr.addEventListener("timeout", () => reject(new Error("Upload timed out — the file may be too large. Try splitting it into smaller files.")));
     xhr.addEventListener("error", () => reject(new Error("Network error")));
     xhr.addEventListener("abort", () => reject(new Error("Upload cancelled")));
     xhr.send(formData);

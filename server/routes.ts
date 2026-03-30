@@ -91,7 +91,7 @@ function parseFileToRecords(buffer: Buffer, filename: string, selectedSheet?: st
   });
 }
 
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
 
 export async function registerRoutes(
   httpServer: Server,
@@ -1337,6 +1337,8 @@ export async function registerRoutes(
   });
 
   app.post("/api/recon/upload-gl", upload.single("file"), async (req, res) => {
+    req.setTimeout(600000);
+    res.setTimeout(600000);
     try {
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 

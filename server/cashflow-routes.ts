@@ -11,7 +11,7 @@ import {
 } from "@shared/schema";
 import { eq, sql, asc } from "drizzle-orm";
 
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
 
 function normalizeText(val: string): string {
   let s = (val || "").trim();
@@ -48,6 +48,8 @@ function excelDateToString(val: any): string {
 
 export function registerCashflowRoutes(app: Express) {
   app.post("/api/cashflow/upload-tb", upload.single("file"), async (req, res) => {
+    req.setTimeout(600000);
+    res.setTimeout(600000);
     try {
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
@@ -163,6 +165,8 @@ export function registerCashflowRoutes(app: Express) {
   });
 
   app.post("/api/cashflow/upload-mapping", upload.single("file"), async (req, res) => {
+    req.setTimeout(600000);
+    res.setTimeout(600000);
     try {
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
