@@ -41,7 +41,7 @@ if not exist node_modules (
 )
 
 echo  [STEP 2/3] Checking database and syncing tables...
-node windows\sync-db.js
+node windows\sync-db.cjs
 if exist "windows\.db-fail" (
     del "windows\.db-fail" >nul 2>nul
     echo.
