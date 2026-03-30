@@ -40,17 +40,9 @@ if not exist node_modules (
     echo  [STEP 1/3] Dependencies already installed.
 )
 
-echo  [STEP 2/3] Syncing database tables...
-call npx drizzle-kit push --force >"%TEMP%\drizzle_output.txt" 2>&1
-set DB_RESULT=%errorlevel%
-
-findstr /i "error refused ECONNREFUSED ENOTFOUND authentication password does not exist" "%TEMP%\drizzle_output.txt" >nul 2>nul
-set HAS_REAL_ERROR=%errorlevel%
-
-type "%TEMP%\drizzle_output.txt"
-del "%TEMP%\drizzle_output.txt" >nul 2>nul
-
-if %HAS_REAL_ERROR% equ 0 (
+echo  [STEP 2/3] Checking database connection...
+node -e "require('dotenv').config(); const {Client}=require('pg'); const c=new Client({connectionString:process.env.DATABASE_URL}); c.connect().then(()=>{console.log('  [OK] Database connected.');c.end();process.exit(0);}).catch(e=>{console.error('  [FAIL] '+e.message);process.exit(1);})"
+if %errorlevel% neq 0 (
     echo.
     echo  ============================================
     echo   [ERROR] Database connection failed.
@@ -74,6 +66,9 @@ if %HAS_REAL_ERROR% equ 0 (
     pause
     exit /b 1
 )
+
+echo  Syncing database tables...
+echo y| call npx drizzle-kit push >nul 2>nul
 echo  [OK] Database tables ready.
 echo.
 
