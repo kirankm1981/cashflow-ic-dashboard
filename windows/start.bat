@@ -6,7 +6,7 @@ echo   Cashflow IC Dashboard
 echo  ============================================
 echo.
 
-cd /d "%~dp0"
+cd /d "%~dp0\.."
 
 where node >nul 2>nul
 if %errorlevel% neq 0 (
@@ -21,7 +21,7 @@ for /f "tokens=*" %%v in ('node -v') do echo  Node.js version: %%v
 echo.
 
 if not exist .env (
-    echo  [ERROR] .env file not found. Run install.bat first.
+    echo  [ERROR] .env file not found. Run windows\install.bat first.
     pause
     exit /b 1
 )
@@ -40,13 +40,17 @@ if not exist node_modules (
     echo  [STEP 1/3] Dependencies already installed.
 )
 
-echo  [STEP 2/3] Checking database tables...
-call npx drizzle-kit push --force 2>&1
-if %errorlevel% neq 0 (
+echo  [STEP 2/3] Syncing database tables...
+call npx drizzle-kit push --force
+set DB_RESULT=%errorlevel%
+if %DB_RESULT% neq 0 (
     echo.
-    echo  [ERROR] Database setup failed.
+    echo  ============================================
+    echo   [ERROR] Database connection failed.
+    echo  ============================================
     echo.
-    echo  Common causes:
+    echo  Possible causes:
+    echo.
     echo    1. PostgreSQL is not running
     echo       - Open Services (Win+R, type services.msc)
     echo       - Find "postgresql" and make sure it says "Running"
@@ -67,7 +71,11 @@ echo  [OK] Database tables ready.
 echo.
 
 echo  [STEP 3/3] Starting server...
-echo  Open your browser to: http://localhost:3000
+echo.
+echo  ============================================
+echo   Server is starting...
+echo   Open your browser to: http://localhost:3000
+echo  ============================================
 echo.
 echo  Press Ctrl+C to stop the server.
 echo.

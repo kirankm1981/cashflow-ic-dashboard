@@ -6,7 +6,7 @@ echo   Cashflow IC Dashboard - Setup
 echo  ============================================
 echo.
 
-cd /d "%~dp0"
+cd /d "%~dp0\.."
 
 echo  [STEP 1/6] Checking Node.js...
 where node >nul 2>nul
@@ -63,7 +63,7 @@ if %errorlevel% neq 0 (
         echo  [WARNING] Could not auto-create database. Please create it manually:
         echo    1. Open Command Prompt
         echo    2. Run: psql -U %PG_USER%
-        echo    3. Enter password: %PG_PASS%
+        echo    3. Enter password when prompted
         echo    4. Run: CREATE DATABASE %PG_DB%;
         echo    5. Run: \q
         echo    6. Then run install.bat again
@@ -95,8 +95,9 @@ echo  [OK] Dependencies installed.
 echo.
 
 echo  [STEP 5/6] Creating database tables...
-call npx drizzle-kit push --force 2>&1
-if %errorlevel% neq 0 (
+call npx drizzle-kit push --force
+set DB_RESULT=%errorlevel%
+if %DB_RESULT% neq 0 (
     echo.
     echo  [ERROR] Database table setup failed.
     echo  Check that PostgreSQL is running and the database exists.
@@ -121,7 +122,7 @@ echo   Setup Complete!
 echo  ============================================
 echo.
 echo  To start the application:
-echo    Double-click start.bat
+echo    Double-click windows\start.bat
 echo.
 echo  Then open http://localhost:3000 in your browser.
 echo.

@@ -1,10 +1,10 @@
 Set WshShell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
-strPath = fso.GetParentFolderName(WScript.ScriptFullName)
+strPath = fso.GetParentFolderName(fso.GetParentFolderName(WScript.ScriptFullName))
 WshShell.CurrentDirectory = strPath
 
 If Not fso.FileExists(strPath & "\.env") Then
-    MsgBox "Error: .env file not found." & vbCrLf & vbCrLf & "Run install.bat first to configure the database connection.", vbCritical, "Cashflow IC Dashboard"
+    MsgBox "Error: .env file not found." & vbCrLf & vbCrLf & "Run windows\install.bat first to configure the database connection.", vbCritical, "Cashflow IC Dashboard"
     WScript.Quit 1
 End If
 
