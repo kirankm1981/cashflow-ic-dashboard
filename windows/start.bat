@@ -41,8 +41,12 @@ if not exist node_modules (
 )
 
 echo  [STEP 2/3] Checking database connection...
-node -e "require('dotenv').config(); const {Client}=require('pg'); const c=new Client({connectionString:process.env.DATABASE_URL}); c.connect().then(()=>{console.log('  [OK] Database connected.');c.end();process.exit(0);}).catch(e=>{console.error('  [FAIL] '+e.message);process.exit(1);})"
-if %errorlevel% neq 0 (
+
+if exist "windows\.db-ok" del "windows\.db-ok" >nul 2>nul
+
+call node windows\check-db.js
+
+if not exist "windows\.db-ok" (
     echo.
     echo  ============================================
     echo   [ERROR] Database connection failed.
@@ -66,6 +70,8 @@ if %errorlevel% neq 0 (
     pause
     exit /b 1
 )
+
+del "windows\.db-ok" >nul 2>nul
 
 echo  Syncing database tables...
 echo y| call npx drizzle-kit push >nul 2>nul
