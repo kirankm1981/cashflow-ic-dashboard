@@ -135,6 +135,12 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/recon/mapping-status"] });
       queryClient.invalidateQueries({ queryKey: ["/api/ic-matrix/mapping-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/ic-matrix/summary"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/ic-matrix/dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/ic-matrix/tb-data"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/summarized-lines"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/company-pairs"] });
       setTimeout(() => removeNotification(notifId), 8000);
     } catch (err: any) {
       updateNotification(notifId, { progress: 100, status: "error", message: err.message || "Upload failed" });
@@ -169,6 +175,7 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ["/api/ic-matrix/tb-files"] });
       queryClient.invalidateQueries({ queryKey: ["/api/ic-matrix/tb-data"] });
       queryClient.invalidateQueries({ queryKey: ["/api/ic-matrix/dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/ic-matrix/mapping-summary"] });
       setTimeout(() => removeNotification(notifId), 8000);
     } catch (err: any) {
       updateNotification(notifId, { progress: 100, status: "error", message: err.message || "Upload failed" });
@@ -200,6 +207,9 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ["/api/cashflow/tb-files"] });
       queryClient.invalidateQueries({ queryKey: ["/api/cashflow/summary"] });
       queryClient.invalidateQueries({ queryKey: ["/api/cashflow/compiled-data"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/unified-data"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/unmapped-items"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/past-losses"] });
       setTimeout(() => removeNotification(notifId), 8000);
     } catch (err: any) {
       updateNotification(notifId, { progress: 100, status: "error", message: err.message || "Upload failed" });
@@ -229,6 +239,10 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/cashflow/mapping-summary"] });
       queryClient.invalidateQueries({ queryKey: ["/api/cashflow/past-losses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/summary"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/compiled-data"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/unified-data"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/unmapped-items"] });
       setTimeout(() => removeNotification(notifId), 8000);
     } catch (err: any) {
       updateNotification(notifId, { progress: 100, status: "error", message: err.message || "Upload failed" });

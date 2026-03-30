@@ -140,6 +140,12 @@ export default function UploadPage() {
       setClearMappingDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: ["/api/recon/mapping-status"] });
       queryClient.invalidateQueries({ queryKey: ["/api/ic-matrix/mapping-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/ic-matrix/summary"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/ic-matrix/dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/ic-matrix/tb-data"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/summarized-lines"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/company-pairs"] });
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });

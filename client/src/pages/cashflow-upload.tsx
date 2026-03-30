@@ -99,6 +99,9 @@ export default function CashflowUpload() {
       toast({ title: "Reprocessed", description: `${formatNum(data.updated)} records updated with latest mappings` });
       queryClient.invalidateQueries({ queryKey: ["/api/cashflow/compiled-data"] });
       queryClient.invalidateQueries({ queryKey: ["/api/cashflow/summary"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/unified-data"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/unmapped-items"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/past-losses"] });
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -116,6 +119,9 @@ export default function CashflowUpload() {
       queryClient.invalidateQueries({ queryKey: ["/api/cashflow/tb-files"] });
       queryClient.invalidateQueries({ queryKey: ["/api/cashflow/summary"] });
       queryClient.invalidateQueries({ queryKey: ["/api/cashflow/compiled-data"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/unified-data"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/unmapped-items"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/past-losses"] });
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -133,6 +139,9 @@ export default function CashflowUpload() {
       queryClient.invalidateQueries({ queryKey: ["/api/cashflow/tb-files"] });
       queryClient.invalidateQueries({ queryKey: ["/api/cashflow/summary"] });
       queryClient.invalidateQueries({ queryKey: ["/api/cashflow/compiled-data"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/unified-data"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/unmapped-items"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/past-losses"] });
       setClearTbDialogOpen(false);
     },
   });
@@ -147,6 +156,10 @@ export default function CashflowUpload() {
       toast({ title: "Cleared", description: "Mapping data removed" });
       queryClient.invalidateQueries({ queryKey: ["/api/cashflow/mapping-summary"] });
       queryClient.invalidateQueries({ queryKey: ["/api/cashflow/past-losses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/summary"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/compiled-data"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/unified-data"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cashflow/unmapped-items"] });
       setClearMappingDialogOpen(false);
     },
   });
