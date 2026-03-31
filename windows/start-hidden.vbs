@@ -22,6 +22,15 @@ Do While Not envFile.AtEndOfStream
 Loop
 envFile.Close
 
-WshShell.Run "cmd /c cd /d """ & strPath & """ && node windows\sync-db.cjs 2>nul & set NODE_ENV=development & npx tsx server/index.ts", 0, False
-WScript.Sleep 5000
+Dim cmd
+cmd = "cmd /c cd /d """ & strPath & """ & node windows\sync-db.cjs 2>nul"
+
+If Not fso.FileExists(strPath & "\dist\public\index.html") Then
+    cmd = cmd & " & npx vite build >nul 2>nul"
+End If
+
+cmd = cmd & " & set NODE_ENV=development & npx tsx server/index.ts"
+
+WshShell.Run cmd, 0, False
+WScript.Sleep 8000
 WshShell.Run "http://localhost:3000", 1, False

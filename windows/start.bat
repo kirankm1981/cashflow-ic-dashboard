@@ -76,11 +76,12 @@ echo.
 if exist "dist\public\index.html" goto SKIP_BUILD
 echo  [STEP 3/4] Building frontend for first time...
 call npx vite build >nul 2>nul
-if exist "dist\public\index.html" (
-    echo  [OK] Frontend built.
-) else (
-    echo  [WARN] Frontend build failed - will try Vite dev server instead.
-)
+if exist "dist\public\index.html" goto BUILD_DONE
+echo  [WARN] Frontend build issue - server will use Vite dev mode.
+goto START_SERVER
+
+:BUILD_DONE
+echo  [OK] Frontend built.
 echo.
 goto START_SERVER
 

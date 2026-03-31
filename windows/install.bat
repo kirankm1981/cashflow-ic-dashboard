@@ -53,7 +53,7 @@ echo.
 echo  [OK] .env file created.
 echo.
 
-echo  [STEP 3/6] Creating database "%PG_DB%" (if it does not exist)...
+echo  [STEP 3/6] Creating database "%PG_DB%" if it does not exist...
 set PGPASSWORD=%PG_PASS%
 psql -h %PG_HOST% -p %PG_PORT% -U %PG_USER% -tc "SELECT 1 FROM pg_database WHERE datname='%PG_DB%'" 2>nul | findstr "1" >nul
 if %errorlevel% neq 0 (
@@ -78,7 +78,7 @@ if %errorlevel% neq 0 (
 set PGPASSWORD=
 echo.
 
-echo  [STEP 4/6] Installing dependencies (this may take a few minutes)...
+echo  [STEP 4/6] Installing dependencies - this may take a few minutes...
 call npm install
 if %errorlevel% neq 0 (
     echo.
@@ -95,19 +95,22 @@ echo  [OK] Dependencies installed.
 echo.
 
 echo  [STEP 5/6] Creating database tables...
-call npx drizzle-kit push --force
-set DB_RESULT=%errorlevel%
-if %DB_RESULT% neq 0 (
-    echo.
-    echo  [ERROR] Database table setup failed.
-    echo  Check that PostgreSQL is running and the database exists.
-    echo.
-    pause
-    exit /b 1
-)
+node windows\sync-db.cjs
+if exist "windows\.db-fail" goto INSTALL_DB_FAIL
 echo  [OK] Database tables created.
 echo.
+goto INSTALL_SEED
 
+:INSTALL_DB_FAIL
+del "windows\.db-fail" >nul 2>nul
+echo.
+echo  [ERROR] Database table setup failed.
+echo  Check that PostgreSQL is running and the database exists.
+echo.
+pause
+exit /b 1
+
+:INSTALL_SEED
 echo  [STEP 6/6] Seeding default data...
 call npx tsx -e "import 'dotenv/config'; import {seedDefaultRules,seedDefaultAdmin} from './server/seed'; (async()=>{await seedDefaultRules();await seedDefaultAdmin();console.log('Seed complete');process.exit(0)})()"
 if %errorlevel% neq 0 (
@@ -115,6 +118,11 @@ if %errorlevel% neq 0 (
 ) else (
     echo  [OK] Default admin user and reconciliation rules created.
 )
+echo.
+
+echo  Building frontend...
+call npx vite build >nul 2>nul
+echo  [OK] Frontend built.
 echo.
 
 echo  ============================================
@@ -129,6 +137,5 @@ echo.
 echo  Default login:
 echo    Username: admin
 echo    Password: admin123
-echo    (Change this immediately after first login)
 echo.
 pause

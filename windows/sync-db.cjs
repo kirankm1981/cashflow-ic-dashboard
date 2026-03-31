@@ -23,13 +23,22 @@ async function main() {
   try {
     console.log('  Syncing database tables...');
     execSync('npx drizzle-kit push', {
+      cwd: path.join(__dirname, '..'),
       stdio: ['pipe', 'pipe', 'pipe'],
-      input: 'y\ny\ny\ny\ny\n',
-      timeout: 30000,
+      input: 'y\ny\ny\ny\ny\ny\ny\ny\ny\ny\n',
+      timeout: 60000,
+      env: { ...process.env, NODE_ENV: '' },
     });
-    console.log('  [OK] Database tables ready.');
+    console.log('  [OK] Database tables synced.');
   } catch (e) {
-    console.log('  [OK] Database tables ready (no changes needed).');
+    const stderr = e.stderr ? e.stderr.toString() : '';
+    const stdout = e.stdout ? e.stdout.toString() : '';
+    if (stderr.includes('ECONNREFUSED') || stderr.includes('authentication') || stderr.includes('does not exist')) {
+      console.error('  [FAIL] Database sync failed: ' + stderr.trim());
+      fs.writeFileSync(failFlag, 'fail');
+      process.exit(1);
+    }
+    console.log('  [OK] Database tables ready.');
   }
 }
 
