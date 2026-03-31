@@ -22,6 +22,6 @@ Do While Not envFile.AtEndOfStream
 Loop
 envFile.Close
 
-WshShell.Run "cmd /c cd /d """ & strPath & """ && npx drizzle-kit push --force >nul 2>&1 && set NODE_ENV=development && npx tsx server/index.ts", 0, False
-WScript.Sleep 4000
+WshShell.Run "cmd /c cd /d """ & strPath & """ && node windows\sync-db.cjs 2>nul & set NODE_ENV=development & npx tsx server/index.ts", 0, False
+WScript.Sleep 5000
 WshShell.Run "http://localhost:3000", 1, False

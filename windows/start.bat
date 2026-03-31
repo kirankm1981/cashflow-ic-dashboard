@@ -27,11 +27,11 @@ if not exist .env (
 )
 
 if not exist node_modules goto INSTALL_DEPS
-echo  [STEP 1/3] Dependencies already installed.
+echo  [STEP 1/4] Dependencies already installed.
 goto STEP2
 
 :INSTALL_DEPS
-echo  [STEP 1/3] Installing dependencies...
+echo  [STEP 1/4] Installing dependencies...
 call npm install
 if %errorlevel% neq 0 (
     echo  [ERROR] npm install failed.
@@ -42,7 +42,7 @@ echo  [OK] Dependencies installed.
 echo.
 
 :STEP2
-echo  [STEP 2/3] Checking database and syncing tables...
+echo  [STEP 2/4] Checking database and syncing tables...
 if exist "windows\.db-fail" del "windows\.db-fail" >nul 2>nul
 node windows\sync-db.cjs
 if not exist "windows\.db-fail" goto DB_OK
@@ -72,7 +72,24 @@ exit /b 1
 
 :DB_OK
 echo.
-echo  [STEP 3/3] Starting server...
+
+if exist "dist\public\index.html" goto SKIP_BUILD
+echo  [STEP 3/4] Building frontend for first time...
+call npx vite build >nul 2>nul
+if exist "dist\public\index.html" (
+    echo  [OK] Frontend built.
+) else (
+    echo  [WARN] Frontend build failed - will try Vite dev server instead.
+)
+echo.
+goto START_SERVER
+
+:SKIP_BUILD
+echo  [STEP 3/4] Frontend build found.
+echo.
+
+:START_SERVER
+echo  [STEP 4/4] Starting server...
 echo.
 echo  ============================================
 echo   Server is starting...
