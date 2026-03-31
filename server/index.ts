@@ -100,6 +100,11 @@ app.use((req, res, next) => {
   const { seedDefaultAdmin } = await import("./seed");
   await seedDefaultAdmin();
 
+  try {
+    const { fixReversalStatuses } = await import("./seed");
+    await fixReversalStatuses();
+  } catch {}
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {

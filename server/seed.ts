@@ -266,6 +266,33 @@ export async function seedDefaultRules() {
   }
 }
 
+export async function fixReversalStatuses() {
+  const { eq, and, sql } = await import("drizzle-orm");
+  const reversalRules = await db.select().from(reconciliationRules)
+    .where(eq(reconciliationRules.ruleType, "reversal_match"));
+  if (reversalRules.length === 0) return;
+
+  const ruleNames = reversalRules.map(r => r.name);
+  for (const ruleName of ruleNames) {
+    const result = await db.execute(sql`
+      UPDATE summarized_lines 
+      SET recon_status = 'reversal' 
+      WHERE recon_rule = ${ruleName} 
+      AND recon_status = 'matched'
+    `);
+    const count = (result as any).rowCount || 0;
+    if (count > 0) {
+      console.log(`Fixed ${count} reversal transactions (rule: ${ruleName}) from 'matched' to 'reversal'`);
+      await db.execute(sql`
+        UPDATE reconciliation_groups
+        SET status = 'reversal'
+        WHERE rule_name = ${ruleName}
+        AND status = 'matched'
+      `);
+    }
+  }
+}
+
 export async function seedDefaultAdmin() {
   const existing = await db.select().from(users);
   if (existing.length === 0) {
