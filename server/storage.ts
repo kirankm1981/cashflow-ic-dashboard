@@ -308,14 +308,22 @@ export class DatabaseStorage implements IStorage {
     const totalTransactions = allLines.length;
     const matchedTransactions = allLines.filter((t) => isMatchedStatus(t.reconStatus || "")).length;
     const unmatchedTransactions = totalTransactions - matchedTransactions;
-    const matchRate = totalTransactions > 0 ? (matchedTransactions / totalTransactions) * 100 : 0;
+
+    const icLines = allLines.filter(t => t.company !== t.counterParty && (t.reconStatus || "unmatched") !== "reversal");
+    const icTotal = icLines.length;
+    const icReconciled = icLines.filter(t => {
+      const s = t.reconStatus || "unmatched";
+      return s === "matched" || s === "manual" || s === "review_match" || s === "suggested_match";
+    }).length;
+    const matchRate = icTotal > 0 ? (icReconciled / icTotal) * 100 : 0;
+
     const totalDebit = allLines.reduce((sum, t) => sum + Math.max(t.netAmount || 0, 0), 0);
     const totalCredit = allLines.reduce((sum, t) => sum + Math.abs(Math.min(t.netAmount || 0, 0)), 0);
 
-    const companyMap = new Map<string, { total: number; matched: number; reversal: number; review: number; suggested: number; unmatched: number }>();
+    const companyMap = new Map<string, { total: number; matched: number; reversal: number; review: number; suggested: number; unmatched: number; icTotal: number; icReconciled: number }>();
     for (const t of allLines) {
       const key = t.company;
-      if (!companyMap.has(key)) companyMap.set(key, { total: 0, matched: 0, reversal: 0, review: 0, suggested: 0, unmatched: 0 });
+      if (!companyMap.has(key)) companyMap.set(key, { total: 0, matched: 0, reversal: 0, review: 0, suggested: 0, unmatched: 0, icTotal: 0, icReconciled: 0 });
       const entry = companyMap.get(key)!;
       entry.total++;
       const s = t.reconStatus || "unmatched";
@@ -324,6 +332,14 @@ export class DatabaseStorage implements IStorage {
       else if (s === "review_match") entry.review++;
       else if (s === "suggested_match") entry.suggested++;
       else entry.unmatched++;
+
+      const isSameEntity = t.company === t.counterParty;
+      if (!isSameEntity && s !== "reversal") {
+        entry.icTotal++;
+        if (s === "matched" || s === "manual" || s === "review_match" || s === "suggested_match") {
+          entry.icReconciled++;
+        }
+      }
     }
     const companySummary = Array.from(companyMap.entries()).map(([company, stats]) => ({
       company,

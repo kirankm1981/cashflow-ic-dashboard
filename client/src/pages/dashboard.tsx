@@ -37,7 +37,7 @@ interface DashboardStats {
   matchRate: number;
   totalDebit: number;
   totalCredit: number;
-  companySummary: { company: string; total: number; matched: number; reversal: number; review: number; suggested: number; unmatched: number }[];
+  companySummary: { company: string; total: number; matched: number; reversal: number; review: number; suggested: number; unmatched: number; icTotal: number; icReconciled: number }[];
   ruleBreakdown: { rule: string; count: number; matchType: string }[];
   statusBreakdown: { status: string; count: number }[];
   glSources?: { label: string; enterpriseName: string | null; reportPeriod: string | null; icRecords: number }[];
@@ -164,7 +164,7 @@ function EntitySummaryContent({ stats, nameMap }: { stats: DashboardStats; nameM
             </thead>
             <tbody>
               {stats.companySummary.map((cs) => {
-                const reconciled = cs.matched + cs.reversal + cs.review + cs.suggested;
+                const rate = cs.icTotal > 0 ? (cs.icReconciled / cs.icTotal) * 100 : 0;
                 return (
                   <tr key={cs.company} className="border-b last:border-0" data-testid={`row-entity-${cs.company}`}>
                     <td className="py-2.5 px-3 font-medium">{displayName(cs.company)}</td>
@@ -175,8 +175,8 @@ function EntitySummaryContent({ stats, nameMap }: { stats: DashboardStats; nameM
                     <td className="py-2.5 px-3 text-right text-orange-600">{formatNumber(cs.suggested)}</td>
                     <td className="py-2.5 px-3 text-right text-red-600">{formatNumber(cs.unmatched)}</td>
                     <td className="py-2.5 px-3 text-right">
-                      <Badge variant={cs.total > 0 && reconciled / cs.total > 0.9 ? "default" : "secondary"}>
-                        {cs.total > 0 ? ((reconciled / cs.total) * 100).toFixed(1) : 0}%
+                      <Badge variant={rate > 90 ? "default" : "secondary"}>
+                        {rate.toFixed(1)}%
                       </Badge>
                     </td>
                   </tr>
