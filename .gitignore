@@ -17,5 +17,7 @@ generated-icon.*
 *.db-wal
 *.db-shm
 windows/server.pid
+windows/.start-hidden-run.bat
+windows/.db-fail
 .env
 attached_assets/

@@ -122,8 +122,16 @@ echo.
 
 echo  Building frontend...
 call npx vite build >nul 2>nul
+if exist "dist\public\index.html" goto INSTALL_BUILD_OK
+echo  [WARNING] Frontend build had issues. It will be retried on first start.
+echo.
+goto INSTALL_DONE
+
+:INSTALL_BUILD_OK
 echo  [OK] Frontend built.
 echo.
+
+:INSTALL_DONE
 
 echo  ============================================
 echo   Setup Complete!
