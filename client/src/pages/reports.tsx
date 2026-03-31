@@ -133,7 +133,7 @@ export default function Reports({ embedded = false }: { embedded?: boolean } = {
             <CardTitle className="text-sm font-medium text-muted-foreground">Overall Matched</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-emerald-600" data-testid="text-total-matched">{isLoading ? <Skeleton className="h-8 w-16" /> : totals.matched.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-emerald-600" data-testid="text-total-matched">{isLoading ? <Skeleton className="h-8 w-16" /> : (totals.matched + totals.reversal + totals.review + totals.suggested).toLocaleString()}</div>
           </CardContent>
         </Card>
         <Card>
