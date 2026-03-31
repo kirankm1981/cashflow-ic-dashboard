@@ -195,6 +195,11 @@ function EntityPanel({
         </h3>
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
           <span className="inline-flex items-center gap-1 text-xs">
+            <span className="font-bold">{filtered.length}</span>
+            <span className="text-muted-foreground">Total</span>
+          </span>
+          <span className="text-muted-foreground text-xs">|</span>
+          <span className="inline-flex items-center gap-1 text-xs">
             <span className="font-bold text-emerald-600">{recCount}</span>
             <span className="text-muted-foreground">Auto</span>
           </span>
