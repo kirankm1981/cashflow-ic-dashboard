@@ -13,7 +13,6 @@ import Workspace from "@/pages/workspace";
 import RuleConfig from "@/pages/rule-config";
 import AuditTrail from "@/pages/audit-trail";
 import Reports from "@/pages/reports";
-import AiInsights from "@/pages/ai-insights";
 import CashflowDashboard from "@/pages/cashflow-dashboard";
 import CashflowUpload from "@/pages/cashflow-upload";
 import IcMatrix from "@/pages/ic-matrix";
@@ -33,7 +32,6 @@ function PageTitle() {
     "/recon": "IC Recon",
     "/recon/upload": "Upload Transactions",
     "/recon/workspace": "Reconciliation Workspace",
-    "/recon/ai-insights": "AI Insights",
     "/recon/reports": "Reports",
     "/recon/rpt-data": "RPT Data",
     "/recon/rules": "Rule Configuration",
@@ -75,7 +73,6 @@ function Router() {
       <Route path="/recon/rules" component={RuleConfig} />
       <Route path="/recon/audit" component={AuditTrail} />
       <Route path="/recon/reports" component={Reports} />
-      <Route path="/recon/ai-insights" component={AiInsights} />
       <Route path="/cashflow" component={CashflowDashboard} />
       <Route path="/cashflow/upload" component={CashflowUpload} />
       <Route path="/ic-matrix" component={IcMatrix} />

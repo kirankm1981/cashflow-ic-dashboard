@@ -26,7 +26,6 @@ import {
 } from "lucide-react";
 import Workspace from "@/pages/workspace";
 import Reports from "@/pages/reports";
-import AiInsights from "@/pages/ai-insights";
 import { useDashboardSettings } from "@/hooks/use-dashboard-settings";
 import { formatAmount } from "@/lib/number-format";
 import { ChartFormatSettings } from "@/components/chart-format-settings";
@@ -426,7 +425,6 @@ export default function Dashboard() {
             <TabsTrigger value="workspace" data-testid="tab-workspace">Workspace</TabsTrigger>
             <TabsTrigger value="entitySummary" data-testid="tab-entity-summary">Entity Summary</TabsTrigger>
             <TabsTrigger value="reports" data-testid="tab-reports">Entity Counter-Party Summary</TabsTrigger>
-            <TabsTrigger value="insights" data-testid="tab-insights">Insights</TabsTrigger>
           </TabsList>
           <TabsContent value="overview">
             <Card>
@@ -450,7 +448,6 @@ export default function Dashboard() {
             </Card>
           </TabsContent>
           <TabsContent value="reports"><Reports embedded /></TabsContent>
-          <TabsContent value="insights"><AiInsights embedded /></TabsContent>
         </Tabs>
       </div>
     );
@@ -495,7 +492,6 @@ export default function Dashboard() {
           <TabsTrigger value="workspace" data-testid="tab-workspace">Workspace</TabsTrigger>
           <TabsTrigger value="entitySummary" data-testid="tab-entity-summary">Entity Summary</TabsTrigger>
           <TabsTrigger value="reports" data-testid="tab-reports">Entity Counter-Party Summary</TabsTrigger>
-          <TabsTrigger value="insights" data-testid="tab-insights">Insights</TabsTrigger>
         </TabsList>
         <TabsContent value="overview">
           <OverviewContent stats={stats} nameMap={nameMap || {}} />
@@ -505,7 +501,6 @@ export default function Dashboard() {
           <EntitySummaryContent stats={stats} nameMap={nameMap || {}} />
         </TabsContent>
         <TabsContent value="reports"><Reports embedded /></TabsContent>
-        <TabsContent value="insights"><AiInsights embedded /></TabsContent>
       </Tabs>
     </div>
   );
