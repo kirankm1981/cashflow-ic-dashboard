@@ -526,9 +526,9 @@ export default function Workspace({ embedded = false }: { embedded?: boolean } =
   const entityBJoined = entityBList.join(",");
 
   const { data: linesA, isLoading: loadingA } = useQuery<SummarizedLine[]>({
-    queryKey: ["/api/summarized-lines", "partyA", entityAJoined, entityBJoined],
+    queryKey: ["/api/summarized-lines", "partyA", entityAJoined],
     queryFn: async () => {
-      const res = await fetch(`/api/summarized-lines?companies=${encodeURIComponent(entityAJoined)}&counterParty=${encodeURIComponent(entityBJoined)}`);
+      const res = await fetch(`/api/summarized-lines?companies=${encodeURIComponent(entityAJoined)}`);
       if (!res.ok) throw new Error("Failed");
       return res.json();
     },
@@ -536,17 +536,11 @@ export default function Workspace({ embedded = false }: { embedded?: boolean } =
   });
 
   const { data: linesB, isLoading: loadingB } = useQuery<SummarizedLine[]>({
-    queryKey: ["/api/summarized-lines", "partyB", entityAJoined, entityBJoined],
+    queryKey: ["/api/summarized-lines", "partyB", entityBJoined],
     queryFn: async () => {
-      const allLines: SummarizedLine[] = [];
-      for (const cp of entityBList) {
-        const res = await fetch(`/api/summarized-lines?company=${encodeURIComponent(cp)}&counterParty=${encodeURIComponent(entityAJoined)}`);
-        if (res.ok) {
-          const data = await res.json();
-          allLines.push(...data);
-        }
-      }
-      return allLines;
+      const res = await fetch(`/api/summarized-lines?companies=${encodeURIComponent(entityBJoined)}`);
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
     },
     enabled: !!hasPairSelected,
   });
@@ -642,9 +636,9 @@ export default function Workspace({ embedded = false }: { embedded?: boolean } =
 
   const handleExportExcel = () => {
     if (!hasPairSelected) return;
+    const allCompanies = [...new Set([...entityAList, ...entityBList])].join(",");
     const params = new URLSearchParams();
-    if (entityAList.length > 0) params.set("companies", entityAJoined);
-    params.set("counterParty", entityBJoined);
+    params.set("companies", allCompanies);
     const link = document.createElement("a");
     link.href = `/api/export/excel?${params.toString()}`;
     link.click();
