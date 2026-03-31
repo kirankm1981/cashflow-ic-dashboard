@@ -55,7 +55,7 @@ export default function Landing() {
             Cashflow & IC Dashboard
           </h1>
           <p className="text-muted-foreground text-sm md:text-base max-w-xl mx-auto">
-            Enterprise platform for intercompany reconciliation, cashflow monitoring, and balance matrix management
+            Intercompany reconciliation, cashflow reporting, IC Balance matrix and IC Net off
           </p>
         </div>
 
