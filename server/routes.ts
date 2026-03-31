@@ -1255,6 +1255,7 @@ export async function registerRoutes(
       for (const line of lines) {
         const s = line.reconStatus || "unmatched";
         if (s === "reversal") continue;
+        if (line.company === line.counterParty) continue;
         const key = `${line.company}||${line.counterParty}`;
         if (!pairMap.has(key)) {
           pairMap.set(key, {
