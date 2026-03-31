@@ -59,7 +59,7 @@ export default function Reports({ embedded = false }: { embedded?: boolean } = {
     }),
     { total: 0, matched: 0, reversal: 0, review: 0, suggested: 0, unmatched: 0 }
   );
-  const overallRate = totals.total > 0 ? Math.round(((totals.matched + totals.reversal) / totals.total) * 10000) / 100 : 0;
+  const overallRate = totals.total > 0 ? Math.round(((totals.matched + totals.reversal + totals.review + totals.suggested) / totals.total) * 10000) / 100 : 0;
 
   const handleExportReport = () => {
     if (!filtered || filtered.length === 0) return;

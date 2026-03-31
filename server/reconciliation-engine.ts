@@ -588,12 +588,19 @@ async function matchLines(
     }
   }
 
-  const finalStatus = confidenceData
-    ? classificationToStatus(adjustedClassification(
-        status === "matched" ? "AUTO_MATCH" : status === "suggested_match" ? "SUGGESTED_MATCH" : status === "review_match" ? "REVIEW_MATCH" : "AUTO_MATCH",
-        confidenceData.score
-      ))
-    : status;
+  let finalStatus = status;
+  if (confidenceData) {
+    if (status === "reversal") {
+      finalStatus = "reversal";
+    } else {
+      const baseClassification =
+        status === "matched" ? "AUTO_MATCH" :
+        status === "suggested_match" ? "SUGGESTED_MATCH" :
+        status === "review_match" ? "REVIEW_MATCH" :
+        "AUTO_MATCH";
+      finalStatus = classificationToStatus(adjustedClassification(baseClassification, confidenceData.score));
+    }
+  }
 
   await storage.updateSummarizedLineRecon(lineIds, reconId, ruleName, finalStatus, confidenceData);
 

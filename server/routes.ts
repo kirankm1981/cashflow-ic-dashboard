@@ -1274,7 +1274,7 @@ export async function registerRoutes(
       const result = Array.from(pairMap.values())
         .map(p => ({
           ...p,
-          rate: p.total > 0 ? Math.round(((p.matched + p.reversal) / p.total) * 10000) / 100 : 0,
+          rate: p.total > 0 ? Math.round(((p.matched + p.reversal + p.review + p.suggested) / p.total) * 10000) / 100 : 0,
         }))
         .sort((a, b) => a.entity.localeCompare(b.entity) || a.counterParty.localeCompare(b.counterParty));
 
