@@ -1178,6 +1178,8 @@ async function reversalMatch(
     const [normCompany, normCounter] = groupKey.split("||");
     const isSameEntity = normCompany === normCounter;
 
+    if (isSameEntity) continue;
+
     const positive = lines.filter(t => (t.netAmount || 0) > 0 && unmatchedIds.has(t.id));
     const negative = lines.filter(t => (t.netAmount || 0) < 0 && unmatchedIds.has(t.id));
     const usedNeg = new Set<number>();
@@ -1196,13 +1198,12 @@ async function reversalMatch(
 
         const negDate = parseSerialDate(neg.docDate);
 
-        if (!isSameEntity) {
-          if (!posDate || !negDate) continue;
-          if (dateDiffDays(posDate, negDate) > dayThreshold) continue;
-          const posRefEntity = narrationReferencesEntity(pos.narration, pos.company, entityKeywords);
-          const negRefEntity = narrationReferencesEntity(neg.narration, neg.company, entityKeywords);
-          if (posRefEntity || negRefEntity) continue;
-        }
+        if (!posDate || !negDate) continue;
+        if (dateDiffDays(posDate, negDate) > dayThreshold) continue;
+
+        const posRefEntity = narrationReferencesEntity(pos.narration, pos.company, entityKeywords);
+        const negRefEntity = narrationReferencesEntity(neg.narration, neg.company, entityKeywords);
+        if (posRefEntity || negRefEntity) continue;
 
         const amtDiff = Math.abs(posAmt - negAmt);
         const dd = (posDate && negDate) ? dateDiffDays(posDate, negDate) : null;
@@ -1225,28 +1226,23 @@ async function reversalMatch(
         const targetAmt = Math.abs(pos.netAmount || 0);
         if (targetAmt === 0) continue;
 
-        let candidates: SummarizedLine[];
-        if (isSameEntity) {
-          candidates = remainNeg.filter(n => unmatchedIds.has(n.id));
-        } else {
-          const posDate = parseSerialDate(pos.docDate);
-          if (!posDate) continue;
-          if (narrationReferencesEntity(pos.narration, pos.company, entityKeywords)) continue;
-          candidates = remainNeg.filter(n =>
-            unmatchedIds.has(n.id) && !usedNeg.has(n.id) && (() => {
-              const nDate = parseSerialDate(n.docDate);
-              if (!nDate || dateDiffDays(posDate, nDate) > dayThreshold) return false;
-              return !narrationReferencesEntity(n.narration, n.company, entityKeywords);
-            })()
-          );
-        }
+        const posDate = parseSerialDate(pos.docDate);
+        if (!posDate) continue;
+        if (narrationReferencesEntity(pos.narration, pos.company, entityKeywords)) continue;
+        const candidates = remainNeg.filter(n =>
+          unmatchedIds.has(n.id) && !usedNeg.has(n.id) && (() => {
+            const nDate = parseSerialDate(n.docDate);
+            if (!nDate || dateDiffDays(posDate, nDate) > dayThreshold) return false;
+            return !narrationReferencesEntity(n.narration, n.company, entityKeywords);
+          })()
+        );
 
         const combo = findSubsetSum(candidates, targetAmt, amtTol, amtTolPct);
         if (combo.length >= 2) {
           const ids = [pos.id, ...combo.map(c => c.id)];
           const comboSum = combo.reduce((s, c) => s + Math.abs(c.netAmount || 0), 0);
           const amtDiff = Math.abs(targetAmt - comboSum);
-          const confidence = computeConfidenceTier(amtDiff, isSameEntity ? null : dayThreshold, false, classification);
+          const confidence = computeConfidenceTier(amtDiff, dayThreshold, false, classification);
           await matchLines(ids, unmatchedIds, ruleName, lineMap, status, confidence);
           combo.forEach(c => usedNeg.add(c.id));
           usedPos.add(pos.id);
@@ -1261,28 +1257,23 @@ async function reversalMatch(
         const targetAmt = Math.abs(neg.netAmount || 0);
         if (targetAmt === 0) continue;
 
-        let candidates: SummarizedLine[];
-        if (isSameEntity) {
-          candidates = remainPos.filter(p => unmatchedIds.has(p.id) && !usedPos.has(p.id));
-        } else {
-          const negDate = parseSerialDate(neg.docDate);
-          if (!negDate) continue;
-          if (narrationReferencesEntity(neg.narration, neg.company, entityKeywords)) continue;
-          candidates = remainPos.filter(p =>
-            unmatchedIds.has(p.id) && !usedPos.has(p.id) && (() => {
-              const pDate = parseSerialDate(p.docDate);
-              if (!pDate || dateDiffDays(negDate, pDate) > dayThreshold) return false;
-              return !narrationReferencesEntity(p.narration, p.company, entityKeywords);
-            })()
-          );
-        }
+        const negDate = parseSerialDate(neg.docDate);
+        if (!negDate) continue;
+        if (narrationReferencesEntity(neg.narration, neg.company, entityKeywords)) continue;
+        const candidates = remainPos.filter(p =>
+          unmatchedIds.has(p.id) && !usedPos.has(p.id) && (() => {
+            const pDate = parseSerialDate(p.docDate);
+            if (!pDate || dateDiffDays(negDate, pDate) > dayThreshold) return false;
+            return !narrationReferencesEntity(p.narration, p.company, entityKeywords);
+          })()
+        );
 
         const combo = findSubsetSum(candidates, targetAmt, amtTol, amtTolPct);
         if (combo.length >= 2) {
           const ids = [neg.id, ...combo.map(c => c.id)];
           const comboSum = combo.reduce((s, c) => s + Math.abs(c.netAmount || 0), 0);
           const amtDiff = Math.abs(targetAmt - comboSum);
-          const confidence = computeConfidenceTier(amtDiff, isSameEntity ? null : dayThreshold, false, classification);
+          const confidence = computeConfidenceTier(amtDiff, dayThreshold, false, classification);
           await matchLines(ids, unmatchedIds, ruleName, lineMap, status, confidence);
           combo.forEach(c => usedPos.add(c.id));
           usedNeg.add(neg.id);
