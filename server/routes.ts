@@ -875,26 +875,52 @@ export async function registerRoutes(
 
   app.get("/api/export/reconciliation-template", async (req, res) => {
     try {
-      const filters: any = {};
-      if (req.query.companies) {
-        const compList = (req.query.companies as string).split(",").map((s: string) => s.trim()).filter(Boolean);
-        if (compList.length > 0) filters.companies = compList;
-      } else if (req.query.company) {
-        filters.company = req.query.company as string;
-      }
-      if (req.query.counterParty) {
-        const cp = req.query.counterParty as string;
-        if (cp.includes(",")) {
-          filters.counterParties = cp.split(",").map((s: string) => s.trim()).filter(Boolean);
-        } else {
-          filters.counterParty = cp;
+      const reconStatus = req.query.reconStatus as string | undefined;
+
+      let allLines: any[] = [];
+
+      if (req.query.partyA && req.query.partyB) {
+        const partyAList = (req.query.partyA as string).split(",").map(s => s.trim()).filter(Boolean);
+        const partyBList = (req.query.partyB as string).split(",").map(s => s.trim()).filter(Boolean);
+
+        const filtersA: any = { companies: partyAList, counterParties: partyBList };
+        if (reconStatus) filtersA.reconStatus = reconStatus;
+        const linesA = await storage.getSummarizedLines(filtersA);
+
+        const filtersB: any = { companies: partyBList, counterParties: partyAList };
+        if (reconStatus) filtersB.reconStatus = reconStatus;
+        const linesB = await storage.getSummarizedLines(filtersB);
+
+        const seenIds = new Set<number>();
+        for (const l of linesA) { seenIds.add(l.id); allLines.push(l); }
+        for (const l of linesB) { if (!seenIds.has(l.id)) allLines.push(l); }
+      } else {
+        const filters: any = {};
+        if (req.query.companies) {
+          const compList = (req.query.companies as string).split(",").map(s => s.trim()).filter(Boolean);
+          if (compList.length > 0) filters.companies = compList;
+        } else if (req.query.company) {
+          filters.company = req.query.company as string;
         }
+        if (req.query.counterParty) {
+          const cp = req.query.counterParty as string;
+          if (cp.includes(",")) {
+            filters.counterParties = cp.split(",").map(s => s.trim()).filter(Boolean);
+          } else {
+            filters.counterParty = cp;
+          }
+        }
+        if (reconStatus) filters.reconStatus = reconStatus;
+        allLines = await storage.getSummarizedLines(filters);
       }
-      if (req.query.reconStatus) filters.reconStatus = req.query.reconStatus as string;
 
-      const lines = await storage.getSummarizedLines(filters);
+      allLines.sort((a, b) => {
+        const cmp = a.company.localeCompare(b.company);
+        if (cmp !== 0) return cmp;
+        return (a.id || 0) - (b.id || 0);
+      });
 
-      const rows = lines.map(l => ({
+      const rows = allLines.map(l => ({
         "Line ID": l.id,
         "Company": l.company,
         "Counter Party": l.counterParty,

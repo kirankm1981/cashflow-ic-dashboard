@@ -644,8 +644,8 @@ export default function Workspace({ embedded = false }: { embedded?: boolean } =
 
   const handleDownloadTemplate = () => {
     const params = new URLSearchParams();
-    if (entityAJoined) params.set("companies", entityAJoined);
-    if (entityBJoined) params.set("counterParty", entityBJoined);
+    if (entityAJoined) params.set("partyA", entityAJoined);
+    if (entityBJoined) params.set("partyB", entityBJoined);
     if (statusFilter !== "all") {
       const statusMap: Record<string, string> = {
         matched: "matched", reversal: "reversal", review: "review_match",
