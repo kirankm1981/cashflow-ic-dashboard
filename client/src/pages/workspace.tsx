@@ -36,7 +36,7 @@ import {
   Upload,
 } from "lucide-react";
 import type { SummarizedLine } from "@shared/schema";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface CompanyPair {
   company: string;
@@ -229,7 +229,7 @@ function EntityPanel({
         </div>
       </div>
 
-      <ScrollArea className="max-h-[60vh]" type="always">
+      <div className="max-h-[60vh] overflow-auto recon-grid-scroll">
         <table className="w-full text-sm" data-testid={`table-${isPartyA ? "party-a" : "party-b"}`}>
           <thead className="sticky top-0 bg-card z-10">
             <tr className="border-b">
@@ -329,8 +329,7 @@ function EntityPanel({
             )}
           </tbody>
         </table>
-        <ScrollBar orientation="horizontal" />
-      </ScrollArea>
+      </div>
     </div>
   );
 }
@@ -423,7 +422,7 @@ function ReconGroupDialog({
           <span>Total Credit: <span className="font-semibold text-red-600">({formatAmount(-totalCredit)})</span></span>
           <span>Difference: <span className="font-semibold">{formatAmount(totalDebit - totalCredit)}</span></span>
         </div>
-        <ScrollArea className="flex-1 min-h-0" type="always">
+        <div className="flex-1 min-h-0 overflow-auto recon-grid-scroll">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -476,8 +475,7 @@ function ReconGroupDialog({
               })}
             </div>
           )}
-          <ScrollBar orientation="horizontal" />
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -526,9 +524,9 @@ export default function Workspace({ embedded = false }: { embedded?: boolean } =
   const entityBJoined = entityBList.join(",");
 
   const { data: linesA, isLoading: loadingA } = useQuery<SummarizedLine[]>({
-    queryKey: ["/api/summarized-lines", "partyA", entityAJoined],
+    queryKey: ["/api/summarized-lines", "partyA", entityAJoined, entityBJoined],
     queryFn: async () => {
-      const res = await fetch(`/api/summarized-lines?companies=${encodeURIComponent(entityAJoined)}`);
+      const res = await fetch(`/api/summarized-lines?companies=${encodeURIComponent(entityAJoined)}&counterParty=${encodeURIComponent(entityBJoined)}`);
       if (!res.ok) throw new Error("Failed");
       return res.json();
     },
@@ -536,9 +534,9 @@ export default function Workspace({ embedded = false }: { embedded?: boolean } =
   });
 
   const { data: linesB, isLoading: loadingB } = useQuery<SummarizedLine[]>({
-    queryKey: ["/api/summarized-lines", "partyB", entityBJoined],
+    queryKey: ["/api/summarized-lines", "partyB", entityBJoined, entityAJoined],
     queryFn: async () => {
-      const res = await fetch(`/api/summarized-lines?companies=${encodeURIComponent(entityBJoined)}`);
+      const res = await fetch(`/api/summarized-lines?companies=${encodeURIComponent(entityBJoined)}&counterParty=${encodeURIComponent(entityAJoined)}`);
       if (!res.ok) throw new Error("Failed");
       return res.json();
     },
@@ -636,9 +634,9 @@ export default function Workspace({ embedded = false }: { embedded?: boolean } =
 
   const handleExportExcel = () => {
     if (!hasPairSelected) return;
-    const allCompanies = [...new Set([...entityAList, ...entityBList])].join(",");
     const params = new URLSearchParams();
-    params.set("companies", allCompanies);
+    params.set("companies", entityAJoined);
+    params.set("counterParty", entityBJoined);
     const link = document.createElement("a");
     link.href = `/api/export/excel?${params.toString()}`;
     link.click();

@@ -238,3 +238,26 @@
     inset: -1px;
   }
 }
+
+.recon-grid-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.4) transparent;
+}
+.recon-grid-scroll::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.recon-grid-scroll::-webkit-scrollbar-track {
+  background: hsl(var(--muted) / 0.3);
+  border-radius: 5px;
+}
+.recon-grid-scroll::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.35);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.recon-grid-scroll::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.55);
+  background-clip: padding-box;
+}
