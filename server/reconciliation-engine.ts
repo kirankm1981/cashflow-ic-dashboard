@@ -284,17 +284,37 @@ export async function runReconciliation(): Promise<{
   ruleResults: { rule: string; matched: number; classification: string }[];
 }> {
   await storage.resetSummarizedLines();
-  reconCounter = 0;
 
   const rules = await storage.getActiveRules();
   const allLines = await storage.getSummarizedLines();
+
+  let maxExistingRec = 0;
+  for (const t of allLines) {
+    if (t.reconId) {
+      const m = t.reconId.match(/^REC-(\d+)$/);
+      if (m) {
+        const n = parseInt(m[1], 10);
+        if (n > maxExistingRec) maxExistingRec = n;
+      }
+    }
+  }
+  reconCounter = maxExistingRec;
 
   const sameEntityFixed = await fixSameEntityLines(allLines);
   if (sameEntityFixed > 0) {
     console.log(`[Reconciliation] Fixed ${sameEntityFixed} same-entity lines by extracting counter-party from narration`);
   }
 
-  const unmatchedIds = new Set(allLines.map((t) => t.id));
+  const manuallyMatched = allLines.filter(t => {
+    const rule = t.reconRule || "";
+    return rule === "Manual Match" || rule.startsWith("Manual Upload");
+  });
+  const manualIds = new Set(manuallyMatched.map(t => t.id));
+  if (manualIds.size > 0) {
+    console.log(`[Reconciliation] Preserving ${manualIds.size} manually matched lines`);
+  }
+
+  const unmatchedIds = new Set(allLines.filter(t => !manualIds.has(t.id)).map(t => t.id));
   const ruleResults: { rule: string; matched: number; classification: string }[] = [];
   let totalMatched = 0;
 

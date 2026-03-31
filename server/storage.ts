@@ -1,4 +1,4 @@
-import { eq, and, desc, asc, inArray, or, isNull } from "drizzle-orm";
+import { eq, and, desc, asc, inArray, or, isNull, sql } from "drizzle-orm";
 import { db } from "./db";
 import {
   users,
@@ -483,8 +483,10 @@ export class DatabaseStorage implements IStorage {
     await db.delete(summarizedLines)
       .where(eq(summarizedLines.netAmount, 0));
     await db.update(summarizedLines)
-      .set({ reconId: null, reconRule: null, reconStatus: "unmatched" });
-    await db.delete(reconciliationGroups);
+      .set({ reconId: null, reconRule: null, reconStatus: "unmatched" })
+      .where(sql`NOT (${summarizedLines.reconRule} = 'Manual Match' OR ${summarizedLines.reconRule} LIKE 'Manual Upload%')`);
+    await db.delete(reconciliationGroups)
+      .where(sql`NOT (${reconciliationGroups.ruleName} = 'Manual Match' OR ${reconciliationGroups.ruleName} LIKE 'Manual Upload%')`);
   }
 
   async getCompanies(): Promise<string[]> {
