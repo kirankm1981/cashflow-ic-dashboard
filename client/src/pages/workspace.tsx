@@ -36,7 +36,7 @@ import {
   Upload,
 } from "lucide-react";
 import type { SummarizedLine } from "@shared/schema";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 interface CompanyPair {
   company: string;
@@ -229,7 +229,7 @@ function EntityPanel({
         </div>
       </div>
 
-      <ScrollArea className="max-h-[60vh]">
+      <ScrollArea className="max-h-[60vh]" type="always">
         <table className="w-full text-sm" data-testid={`table-${isPartyA ? "party-a" : "party-b"}`}>
           <thead className="sticky top-0 bg-card z-10">
             <tr className="border-b">
@@ -329,6 +329,7 @@ function EntityPanel({
             )}
           </tbody>
         </table>
+        <ScrollBar orientation="horizontal" />
       </ScrollArea>
     </div>
   );
@@ -422,7 +423,7 @@ function ReconGroupDialog({
           <span>Total Credit: <span className="font-semibold text-red-600">({formatAmount(-totalCredit)})</span></span>
           <span>Difference: <span className="font-semibold">{formatAmount(totalDebit - totalCredit)}</span></span>
         </div>
-        <ScrollArea className="flex-1 min-h-0">
+        <ScrollArea className="flex-1 min-h-0" type="always">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -475,6 +476,7 @@ function ReconGroupDialog({
               })}
             </div>
           )}
+          <ScrollBar orientation="horizontal" />
         </ScrollArea>
       </DialogContent>
     </Dialog>
