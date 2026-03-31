@@ -425,7 +425,7 @@ export default function Dashboard() {
             <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
             <TabsTrigger value="workspace" data-testid="tab-workspace">Workspace</TabsTrigger>
             <TabsTrigger value="entitySummary" data-testid="tab-entity-summary">Entity Summary</TabsTrigger>
-            <TabsTrigger value="reports" data-testid="tab-reports">Detailed Recon Summary</TabsTrigger>
+            <TabsTrigger value="reports" data-testid="tab-reports">Entity Counter-Party Summary</TabsTrigger>
             <TabsTrigger value="insights" data-testid="tab-insights">Insights</TabsTrigger>
           </TabsList>
           <TabsContent value="overview">
@@ -494,7 +494,7 @@ export default function Dashboard() {
           <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
           <TabsTrigger value="workspace" data-testid="tab-workspace">Workspace</TabsTrigger>
           <TabsTrigger value="entitySummary" data-testid="tab-entity-summary">Entity Summary</TabsTrigger>
-          <TabsTrigger value="reports" data-testid="tab-reports">Detailed Recon Summary</TabsTrigger>
+          <TabsTrigger value="reports" data-testid="tab-reports">Entity Counter-Party Summary</TabsTrigger>
           <TabsTrigger value="insights" data-testid="tab-insights">Insights</TabsTrigger>
         </TabsList>
         <TabsContent value="overview">

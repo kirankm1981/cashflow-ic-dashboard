@@ -1249,23 +1249,23 @@ export async function registerRoutes(
       const lines = await storage.getSummarizedLines({});
       const pairMap = new Map<string, {
         entity: string; counterParty: string; total: number;
-        matched: number; reversal: number; review: number; suggested: number; unmatched: number;
+        matched: number; review: number; suggested: number; unmatched: number;
       }>();
 
       for (const line of lines) {
+        const s = line.reconStatus || "unmatched";
+        if (s === "reversal") continue;
         const key = `${line.company}||${line.counterParty}`;
         if (!pairMap.has(key)) {
           pairMap.set(key, {
             entity: line.company,
             counterParty: line.counterParty,
-            total: 0, matched: 0, reversal: 0, review: 0, suggested: 0, unmatched: 0,
+            total: 0, matched: 0, review: 0, suggested: 0, unmatched: 0,
           });
         }
         const entry = pairMap.get(key)!;
         entry.total++;
-        const s = line.reconStatus || "unmatched";
         if (s === "matched" || s === "manual") entry.matched++;
-        else if (s === "reversal") entry.reversal++;
         else if (s === "review_match") entry.review++;
         else if (s === "suggested_match") entry.suggested++;
         else entry.unmatched++;
@@ -1274,7 +1274,7 @@ export async function registerRoutes(
       const result = Array.from(pairMap.values())
         .map(p => ({
           ...p,
-          rate: p.total > 0 ? Math.round(((p.matched + p.reversal + p.review + p.suggested) / p.total) * 10000) / 100 : 0,
+          rate: p.total > 0 ? Math.round(((p.matched + p.review + p.suggested) / p.total) * 10000) / 100 : 0,
         }))
         .sort((a, b) => a.entity.localeCompare(b.entity) || a.counterParty.localeCompare(b.counterParty));
 

@@ -13,7 +13,6 @@ interface EntityCounterPartyRow {
   counterParty: string;
   total: number;
   matched: number;
-  reversal: number;
   review: number;
   suggested: number;
   unmatched: number;
@@ -52,14 +51,14 @@ export default function Reports({ embedded = false }: { embedded?: boolean } = {
     (acc, r) => ({
       total: acc.total + r.total,
       matched: acc.matched + r.matched,
-      reversal: acc.reversal + r.reversal,
       review: acc.review + r.review,
       suggested: acc.suggested + r.suggested,
       unmatched: acc.unmatched + r.unmatched,
     }),
-    { total: 0, matched: 0, reversal: 0, review: 0, suggested: 0, unmatched: 0 }
+    { total: 0, matched: 0, review: 0, suggested: 0, unmatched: 0 }
   );
-  const overallRate = totals.total > 0 ? Math.round(((totals.matched + totals.reversal + totals.review + totals.suggested) / totals.total) * 10000) / 100 : 0;
+  const overallMatched = totals.matched + totals.review + totals.suggested;
+  const overallRate = totals.total > 0 ? Math.round((overallMatched / totals.total) * 10000) / 100 : 0;
 
   const handleExportReport = () => {
     if (!filtered || filtered.length === 0) return;
@@ -68,7 +67,6 @@ export default function Reports({ embedded = false }: { embedded?: boolean } = {
       "Counter Party": displayName(r.counterParty),
       "Total Transactions": r.total,
       "Matched": r.matched,
-      "Reversal": r.reversal,
       "Review": r.review,
       "Suggested": r.suggested,
       "Unmatched": r.unmatched,
@@ -79,7 +77,6 @@ export default function Reports({ embedded = false }: { embedded?: boolean } = {
       "Counter Party": "",
       "Total Transactions": totals.total,
       "Matched": totals.matched,
-      "Reversal": totals.reversal,
       "Review": totals.review,
       "Suggested": totals.suggested,
       "Unmatched": totals.unmatched,
@@ -88,12 +85,12 @@ export default function Reports({ embedded = false }: { embedded?: boolean } = {
 
     const ws = XLSX.utils.json_to_sheet(exportRows);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Entity Report");
+    XLSX.utils.book_append_sheet(wb, ws, "Entity CP Summary");
     ws["!cols"] = [
-      { wch: 30 }, { wch: 30 }, { wch: 18 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 10 },
+      { wch: 30 }, { wch: 30 }, { wch: 18 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 10 },
     ];
     const dateStr = new Date().toISOString().slice(0, 10);
-    XLSX.writeFile(wb, `entity_counterparty_report_${dateStr}.xlsx`);
+    XLSX.writeFile(wb, `entity_counterparty_summary_${dateStr}.xlsx`);
   };
 
   return (
@@ -102,7 +99,7 @@ export default function Reports({ embedded = false }: { embedded?: boolean } = {
         {!embedded && (
           <div className="flex items-center gap-3">
             <BarChart3 className="w-6 h-6 text-primary" />
-            <h1 className="text-2xl font-bold" data-testid="text-reports-title">Entity Reconciliation Report</h1>
+            <h1 className="text-2xl font-bold" data-testid="text-reports-title">Entity Counter-Party Summary</h1>
           </div>
         )}
         <Button variant="outline" size="sm" onClick={handleExportReport} disabled={!filtered || filtered.length === 0} data-testid="button-export-report">
@@ -133,7 +130,7 @@ export default function Reports({ embedded = false }: { embedded?: boolean } = {
             <CardTitle className="text-sm font-medium text-muted-foreground">Overall Matched</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-emerald-600" data-testid="text-total-matched">{isLoading ? <Skeleton className="h-8 w-16" /> : (totals.matched + totals.reversal + totals.review + totals.suggested).toLocaleString()}</div>
+            <div className="text-2xl font-bold text-emerald-600" data-testid="text-total-matched">{isLoading ? <Skeleton className="h-8 w-16" /> : overallMatched.toLocaleString()}</div>
           </CardContent>
         </Card>
         <Card>
@@ -171,7 +168,6 @@ export default function Reports({ embedded = false }: { embedded?: boolean } = {
                   <th className="text-left py-2.5 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Counter Party</th>
                   <th className="text-right py-2.5 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total</th>
                   <th className="text-right py-2.5 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Matched</th>
-                  <th className="text-right py-2.5 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Reversal</th>
                   <th className="text-right py-2.5 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Review</th>
                   <th className="text-right py-2.5 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Suggested</th>
                   <th className="text-right py-2.5 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Unmatched</th>
@@ -182,14 +178,14 @@ export default function Reports({ embedded = false }: { embedded?: boolean } = {
                 {isLoading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <tr key={i} className="border-b">
-                      {Array.from({ length: 9 }).map((_, j) => (
+                      {Array.from({ length: 8 }).map((_, j) => (
                         <td key={j} className="py-2.5 px-4"><Skeleton className="h-4 w-full" /></td>
                       ))}
                     </tr>
                   ))
                 ) : filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-8 text-center text-muted-foreground">No data available</td>
+                    <td colSpan={8} className="py-8 text-center text-muted-foreground">No data available</td>
                   </tr>
                 ) : (
                   <>
@@ -199,7 +195,6 @@ export default function Reports({ embedded = false }: { embedded?: boolean } = {
                         <td className="py-2.5 px-4" data-testid={`text-counterparty-${idx}`}>{displayName(row.counterParty)}</td>
                         <td className="py-2.5 px-3 text-right font-mono" data-testid={`text-total-${idx}`}>{row.total.toLocaleString()}</td>
                         <td className="py-2.5 px-3 text-right font-mono text-emerald-600" data-testid={`text-matched-${idx}`}>{row.matched.toLocaleString()}</td>
-                        <td className="py-2.5 px-3 text-right font-mono text-purple-600" data-testid={`text-reversal-${idx}`}>{row.reversal.toLocaleString()}</td>
                         <td className="py-2.5 px-3 text-right font-mono text-teal-600" data-testid={`text-review-${idx}`}>{row.review.toLocaleString()}</td>
                         <td className="py-2.5 px-3 text-right font-mono text-orange-600" data-testid={`text-suggested-${idx}`}>{row.suggested.toLocaleString()}</td>
                         <td className="py-2.5 px-3 text-right font-mono text-red-600" data-testid={`text-unmatched-${idx}`}>{row.unmatched.toLocaleString()}</td>
@@ -211,7 +206,6 @@ export default function Reports({ embedded = false }: { embedded?: boolean } = {
                       <td className="py-2.5 px-4"></td>
                       <td className="py-2.5 px-3 text-right font-mono">{totals.total.toLocaleString()}</td>
                       <td className="py-2.5 px-3 text-right font-mono text-emerald-600">{totals.matched.toLocaleString()}</td>
-                      <td className="py-2.5 px-3 text-right font-mono text-purple-600">{totals.reversal.toLocaleString()}</td>
                       <td className="py-2.5 px-3 text-right font-mono text-teal-600">{totals.review.toLocaleString()}</td>
                       <td className="py-2.5 px-3 text-right font-mono text-orange-600">{totals.suggested.toLocaleString()}</td>
                       <td className="py-2.5 px-3 text-right font-mono text-red-600">{totals.unmatched.toLocaleString()}</td>
