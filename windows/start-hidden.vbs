@@ -29,7 +29,7 @@ If Not fso.FileExists(strPath & "\dist\public\index.html") Then
     batContent = batContent & "call npx vite build >nul 2>nul" & vbCrLf
 End If
 
-batContent = batContent & "set NODE_ENV=development" & vbCrLf
+batContent = batContent & "set NODE_ENV=production" & vbCrLf
 batContent = batContent & "npx tsx server/index.ts" & vbCrLf
 
 Dim batFile

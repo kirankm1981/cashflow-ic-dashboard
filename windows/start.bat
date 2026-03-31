@@ -100,7 +100,7 @@ echo.
 echo  Press Ctrl+C to stop the server.
 echo.
 
-set NODE_ENV=development
+set NODE_ENV=production
 call npx tsx server/index.ts
 
 pause

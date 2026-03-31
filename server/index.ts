@@ -25,14 +25,14 @@ declare module "express-session" {
 
 app.use(
   express.json({
-    limit: "100mb",
+    limit: "50mb",
     verify: (req, _res, buf) => {
       req.rawBody = buf;
     },
   }),
 );
 
-app.use(express.urlencoded({ extended: false, limit: "100mb" }));
+app.use(express.urlencoded({ extended: false, limit: "50mb" }));
 
 const PgStore = connectPgSimple(session);
 app.use(
@@ -42,15 +42,20 @@ app.use(
       tableName: "user_sessions",
       createTableIfMissing: true,
     }),
-    secret: process.env.SESSION_SECRET || (process.env.NODE_ENV === "production"
-      ? (() => { console.warn("WARNING: SESSION_SECRET not set in production!"); return require("crypto").randomBytes(32).toString("hex"); })()
-      : "cashflow-ic-dev-secret"),
+    secret: (() => {
+      if (process.env.SESSION_SECRET) return process.env.SESSION_SECRET;
+      if (process.env.NODE_ENV === "production") {
+        console.error("FATAL: SESSION_SECRET environment variable is required in production.");
+        process.exit(1);
+      }
+      return "cashflow-ic-dev-secret";
+    })(),
     resave: false,
     saveUninitialized: false,
     cookie: {
       maxAge: 24 * 60 * 60 * 1000,
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: process.env.FORCE_HTTPS === "true",
       sameSite: "lax",
     },
   })
@@ -82,7 +87,7 @@ app.use((req, res, next) => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
+      if (capturedJsonResponse && process.env.NODE_ENV !== "production") {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
 
