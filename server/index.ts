@@ -99,6 +99,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  const { ensureSchema } = await import("./migrate");
+  await ensureSchema();
+
   const { seedDefaultRules } = await import("./seed");
   await seedDefaultRules();
 
