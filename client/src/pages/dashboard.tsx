@@ -401,6 +401,14 @@ function OverviewContent({ stats, nameMap }: { stats: DashboardStats; nameMap: R
               ) : (
                 <p className="text-xs text-muted-foreground">Run reconciliation to see rule breakdown</p>
               )}
+              {stats.ruleBreakdown.length > 0 && (
+                <div className="flex items-center justify-between gap-2 pt-2 border-t mt-2">
+                  <span className="text-xs font-semibold">Total</span>
+                  <Badge variant="secondary" className="text-xs font-semibold shrink-0">
+                    {stats.ruleBreakdown.reduce((s, rb) => s + rb.count, 0)}
+                  </Badge>
+                </div>
+              )}
             </div>
           </div>
         </CardContent>
