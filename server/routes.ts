@@ -1818,7 +1818,7 @@ export async function registerRoutes(
 
   function isRptGlName(glName: string): boolean {
     if (!glName) return false;
-    return glName.startsWith("IC") || glName.startsWith("RPT_");
+    return glName.startsWith("IC_") || glName.startsWith("RPT_") || glName.startsWith("RPT-");
   }
 
   app.get("/api/recon/rpt-data", async (req, res) => {
@@ -1856,8 +1856,8 @@ export async function registerRoutes(
 
         if (icTxnTypeFilter && icTxnType !== icTxnTypeFilter) continue;
 
-        if (rptTypeFilter === "IC" && !glName.startsWith("IC")) continue;
-        if (rptTypeFilter === "RPT" && !glName.startsWith("RPT_")) continue;
+        if (rptTypeFilter === "IC" && !glName.startsWith("IC_")) continue;
+        if (rptTypeFilter === "RPT" && !(glName.startsWith("RPT_") || glName.startsWith("RPT-"))) continue;
 
         filteredRows.push({ rowData: row.rowData, parsed });
       }
@@ -1868,7 +1868,7 @@ export async function registerRoutes(
 
       const data = pageRows.map(({ parsed }) => {
         const glName = parsed["IC-RPT GL Name"] || "";
-        const rptType = glName.startsWith("IC") ? "IC" : glName.startsWith("RPT_") ? "RPT" : "";
+        const rptType = glName.startsWith("IC_") ? "IC" : (glName.startsWith("RPT_") || glName.startsWith("RPT-")) ? "RPT" : "";
         return {
           documentNo: parsed["Document No"] || "",
           docDate: parsed["Doc Date"] || "",
@@ -1908,7 +1908,7 @@ export async function registerRoutes(
         const parsed = JSON.parse(row.rowData);
         const glName = parsed["IC-RPT GL Name"] || "";
         if (!isRptGlName(glName)) continue;
-        parsed["RPT Type"] = glName.startsWith("IC") ? "IC" : glName.startsWith("RPT_") ? "RPT" : "";
+        parsed["RPT Type"] = glName.startsWith("IC_") ? "IC" : (glName.startsWith("RPT_") || glName.startsWith("RPT-")) ? "RPT" : "";
         rptRows.push(parsed);
       }
 
