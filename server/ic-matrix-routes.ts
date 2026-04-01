@@ -455,6 +455,210 @@ export function registerIcMatrixRoutes(app: Express) {
     }
   });
 
+  app.get("/api/ic-matrix/download-balance-matrix", async (req, res) => {
+    try {
+      const filterTxnTypes = req.query.txnTypes ? String(req.query.txnTypes).split(",").filter(Boolean) : [];
+      const filterCompanies = req.query.companies ? String(req.query.companies).split(",").filter(Boolean) : [];
+      const filterCounterParties = req.query.counterParties ? String(req.query.counterParties).split(",").filter(Boolean) : [];
+      const allData = await db.select().from(icMatrixTbData);
+      let icData = allData.filter(r => r.newCoaGlName && r.newCoaGlName.startsWith("IC_"));
+
+      const companyMappings = await db.select().from(icMatrixMappingCompany);
+      const codeToName: Record<string, string> = {};
+      for (const m of companyMappings) {
+        if (m.companyCode && m.companyName) codeToName[m.companyCode] = m.companyName;
+      }
+      for (const row of allData) {
+        if (row.companyCode && row.company && !codeToName[row.companyCode]) codeToName[row.companyCode] = row.company;
+      }
+      for (const row of icData) {
+        if (row.icCounterPartyCode && row.icCounterParty && !codeToName[row.icCounterPartyCode]) codeToName[row.icCounterPartyCode] = row.icCounterParty;
+      }
+
+      if (filterTxnTypes.length > 0) {
+        icData = icData.filter(r => r.icTxnType && filterTxnTypes.includes(r.icTxnType));
+      }
+
+      const companyCodesSet = new Set<string>();
+      const counterPartyCodesSet = new Set<string>();
+      const balanceMap = new Map<string, number>();
+      for (const row of icData) {
+        const cc = row.companyCode || "";
+        const cpCode = row.icCounterPartyCode || "";
+        if (!cc || !cpCode) continue;
+        companyCodesSet.add(cc);
+        counterPartyCodesSet.add(cpCode);
+        const key = `${cc}|${cpCode}`;
+        balanceMap.set(key, (balanceMap.get(key) || 0) + (row.netBalance || 0));
+      }
+
+      let companyCodes = Array.from(companyCodesSet).sort();
+      let counterPartyCodes = Array.from(counterPartyCodesSet).sort();
+      if (filterCompanies.length > 0) companyCodes = companyCodes.filter(c => filterCompanies.includes(c));
+      if (filterCounterParties.length > 0) counterPartyCodes = counterPartyCodes.filter(c => filterCounterParties.includes(c));
+
+      const cpHeaders = counterPartyCodes.map(cp => `${cp} - ${codeToName[cp] || cp}`);
+      const sheetRows: any[][] = [];
+      sheetRows.push(["Company Code", "Company Name", ...cpHeaders, "Total"]);
+
+      let grandTotal = 0;
+      const columnTotals: number[] = counterPartyCodes.map(() => 0);
+      for (const cc of companyCodes) {
+        let total = 0;
+        const vals = counterPartyCodes.map((cp, i) => {
+          const val = balanceMap.get(`${cc}|${cp}`) || 0;
+          columnTotals[i] += val;
+          total += val;
+          return val || "";
+        });
+        grandTotal += total;
+        sheetRows.push([cc, codeToName[cc] || cc, ...vals, total]);
+      }
+      sheetRows.push(["", "Column Total", ...columnTotals.map(v => v || ""), grandTotal]);
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(sheetRows);
+      ws["!cols"] = [{ wch: 15 }, { wch: 30 }, ...counterPartyCodes.map(() => ({ wch: 18 })), { wch: 18 }];
+      XLSX.utils.book_append_sheet(wb, ws, "IC Balance Matrix");
+      const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", "attachment; filename=IC_Balance_Matrix.xlsx");
+      res.send(buf);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/ic-matrix/download-netoff-matrix", async (req, res) => {
+    try {
+      const filterTxnTypes = req.query.txnTypes ? String(req.query.txnTypes).split(",").filter(Boolean) : [];
+      const filterCompanies = req.query.companies ? String(req.query.companies).split(",").filter(Boolean) : [];
+      const filterCounterParties = req.query.counterParties ? String(req.query.counterParties).split(",").filter(Boolean) : [];
+      const allData = await db.select().from(icMatrixTbData);
+      let icData = allData.filter(r => r.newCoaGlName && r.newCoaGlName.startsWith("IC_"));
+
+      const companyMappings = await db.select().from(icMatrixMappingCompany);
+      const codeToName: Record<string, string> = {};
+      for (const m of companyMappings) {
+        if (m.companyCode && m.companyName) codeToName[m.companyCode] = m.companyName;
+      }
+      for (const row of allData) {
+        if (row.companyCode && row.company && !codeToName[row.companyCode]) codeToName[row.companyCode] = row.company;
+      }
+      for (const row of icData) {
+        if (row.icCounterPartyCode && row.icCounterParty && !codeToName[row.icCounterPartyCode]) codeToName[row.icCounterPartyCode] = row.icCounterParty;
+      }
+
+      if (filterTxnTypes.length > 0) {
+        icData = icData.filter(r => r.icTxnType && filterTxnTypes.includes(r.icTxnType));
+      }
+
+      const companyCodesSet = new Set<string>();
+      const counterPartyCodesSet = new Set<string>();
+      const balanceMap = new Map<string, number>();
+      for (const row of icData) {
+        const cc = row.companyCode || "";
+        const cpCode = row.icCounterPartyCode || "";
+        if (!cc || !cpCode) continue;
+        companyCodesSet.add(cc);
+        counterPartyCodesSet.add(cpCode);
+        const key = `${cc}|${cpCode}`;
+        balanceMap.set(key, (balanceMap.get(key) || 0) + (row.netBalance || 0));
+      }
+
+      let companyCodes = Array.from(companyCodesSet).sort();
+      let counterPartyCodes = Array.from(counterPartyCodesSet).sort();
+      if (filterCompanies.length > 0) companyCodes = companyCodes.filter(c => filterCompanies.includes(c));
+      if (filterCounterParties.length > 0) counterPartyCodes = counterPartyCodes.filter(c => filterCounterParties.includes(c));
+
+      const netOffBalanceMap = new Map<string, number>();
+      const netOffProcessed = new Set<string>();
+      const allCodesUnion = new Set([...companyCodes, ...counterPartyCodes]);
+      for (const a of allCodesUnion) {
+        for (const b of allCodesUnion) {
+          if (a === b) continue;
+          const pairKey = [a, b].sort().join("|");
+          if (netOffProcessed.has(pairKey)) continue;
+          netOffProcessed.add(pairKey);
+          const aToB = balanceMap.get(`${a}|${b}`) || 0;
+          const bToA = balanceMap.get(`${b}|${a}`) || 0;
+          const net = aToB + bToA;
+          if (net >= 0) {
+            netOffBalanceMap.set(`${a}|${b}`, net);
+            netOffBalanceMap.set(`${b}|${a}`, 0);
+          } else {
+            netOffBalanceMap.set(`${a}|${b}`, 0);
+            netOffBalanceMap.set(`${b}|${a}`, net);
+          }
+        }
+      }
+
+      const cpHeaders = counterPartyCodes.map(cp => `${cp} - ${codeToName[cp] || cp}`);
+      const sheetRows: any[][] = [];
+      sheetRows.push(["Company Code", "Company Name", ...cpHeaders, "Total"]);
+
+      let grandTotal = 0;
+      const columnTotals: number[] = counterPartyCodes.map(() => 0);
+      for (const cc of companyCodes) {
+        let total = 0;
+        const vals = counterPartyCodes.map((cp, i) => {
+          const val = netOffBalanceMap.get(`${cc}|${cp}`) || 0;
+          columnTotals[i] += val;
+          total += val;
+          return val || "";
+        });
+        grandTotal += total;
+        sheetRows.push([cc, codeToName[cc] || cc, ...vals, total]);
+      }
+      sheetRows.push(["", "Column Total", ...columnTotals.map(v => v || ""), grandTotal]);
+
+      const netOffSummaryRows: {
+        companyCode: string; counterPartyCode: string;
+        companyBalance: number; counterPartyBalance: number; difference: number;
+      }[] = [];
+      const summaryProcessed = new Set<string>();
+      for (const cc of companyCodes) {
+        for (const cp of counterPartyCodes) {
+          if (cc === cp) continue;
+          const pairKey = [cc, cp].sort().join("|");
+          if (summaryProcessed.has(pairKey)) continue;
+          summaryProcessed.add(pairKey);
+          const ccToCp = balanceMap.get(`${cc}|${cp}`) || 0;
+          const cpToCc = balanceMap.get(`${cp}|${cc}`) || 0;
+          const diff = ccToCp + cpToCc;
+          if (Math.abs(diff) > 0.01) {
+            netOffSummaryRows.push({ companyCode: cc, counterPartyCode: cp, companyBalance: ccToCp, counterPartyBalance: cpToCc, difference: diff });
+          }
+        }
+      }
+      netOffSummaryRows.sort((a, b) => Math.abs(b.difference) - Math.abs(a.difference));
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(sheetRows);
+      ws["!cols"] = [{ wch: 15 }, { wch: 30 }, ...counterPartyCodes.map(() => ({ wch: 18 })), { wch: 18 }];
+      XLSX.utils.book_append_sheet(wb, ws, "IC Net-off Matrix");
+
+      const summarySheet = XLSX.utils.json_to_sheet(netOffSummaryRows.map(r => ({
+        "Company Code": r.companyCode,
+        "Company Name": codeToName[r.companyCode] || r.companyCode,
+        "Counter Party Code": r.counterPartyCode,
+        "Counter Party Name": codeToName[r.counterPartyCode] || r.counterPartyCode,
+        "Company Balance": r.companyBalance,
+        "Counter Party Balance": r.counterPartyBalance,
+        "Difference": r.difference,
+      })));
+      summarySheet["!cols"] = [{ wch: 15 }, { wch: 30 }, { wch: 18 }, { wch: 30 }, { wch: 18 }, { wch: 20 }, { wch: 15 }];
+      XLSX.utils.book_append_sheet(wb, summarySheet, "Net-off Summary");
+
+      const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", "attachment; filename=IC_Netoff_Matrix.xlsx");
+      res.send(buf);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.delete("/api/ic-matrix/tb-file/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);

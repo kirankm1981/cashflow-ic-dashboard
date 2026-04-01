@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { IndianRupee, TrendingUp, TrendingDown, AlertTriangle, ChevronRight, ChevronDown } from "lucide-react";
+import { IndianRupee, TrendingUp, TrendingDown, AlertTriangle, ChevronRight, ChevronDown, Download } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import {
@@ -534,9 +534,15 @@ export default function CashflowDashboard() {
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">Detailed Cashflow — Type / CF Head / Projects</CardTitle>
-                <Badge variant="secondary" className="text-xs">
-                  {pivotData.projectList.length} projects
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="text-xs">
+                    {pivotData.projectList.length} projects
+                  </Badge>
+                  <Button variant="outline" size="sm" onClick={() => window.open("/api/cashflow/download-detailed", "_blank")} data-testid="button-download-detailed">
+                    <Download className="w-4 h-4 mr-1" />
+                    Download
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -603,6 +609,12 @@ export default function CashflowDashboard() {
             <Skeleton className="h-64 w-full" />
           ) : (
             <>
+              <div className="flex justify-end">
+                <Button variant="outline" size="sm" onClick={() => window.open("/api/cashflow/download-unmapped", "_blank")} data-testid="button-download-unmapped">
+                  <Download className="w-4 h-4 mr-1" />
+                  Download Unmapped Items
+                </Button>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Card className="border-amber-200 dark:border-amber-800">
                   <CardHeader className="pb-2">
@@ -703,10 +715,20 @@ export default function CashflowDashboard() {
         <TabsContent value="pastLosses" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Past Losses</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                {pastLossesData?.length || 0} records from mapping file
-              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg">Past Losses</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    {pastLossesData?.length || 0} records from mapping file
+                  </p>
+                </div>
+                {pastLossesData && pastLossesData.length > 0 && (
+                  <Button variant="outline" size="sm" onClick={() => window.open("/api/cashflow/download-past-losses", "_blank")} data-testid="button-download-past-losses">
+                    <Download className="w-4 h-4 mr-1" />
+                    Download
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               {loadingPastLosses ? (

@@ -217,9 +217,21 @@ export default function IcMatrix() {
     : data;
 
   const hasData = summary?.totalRecords > 0;
+  const [activeMatrixTab, setActiveMatrixTab] = useState("matrix");
 
   const handleDownload = () => {
-    window.open("/api/ic-matrix/download", "_blank");
+    const params = new URLSearchParams();
+    if (selectedIcTxnTypes.length > 0) params.set("txnTypes", selectedIcTxnTypes.join(","));
+    if (selectedCompanies.length > 0) params.set("companies", selectedCompanies.join(","));
+    if (selectedCounterParties.length > 0) params.set("counterParties", selectedCounterParties.join(","));
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    if (activeMatrixTab === "matrix") {
+      window.open(`/api/ic-matrix/download-balance-matrix${qs}`, "_blank");
+    } else if (activeMatrixTab === "netoffmatrix" || activeMatrixTab === "netoff") {
+      window.open(`/api/ic-matrix/download-netoff-matrix${qs}`, "_blank");
+    } else {
+      window.open("/api/ic-matrix/download", "_blank");
+    }
   };
 
   const matrixData = dashboard?.matrix || [];
@@ -358,7 +370,9 @@ export default function IcMatrix() {
           {hasData && (
             <Button variant="outline" size="sm" onClick={handleDownload} data-testid="button-download">
               <Download className="w-4 h-4 mr-2" />
-              Download
+              {activeMatrixTab === "matrix" ? "Download Balance Matrix" :
+               activeMatrixTab === "netoffmatrix" || activeMatrixTab === "netoff" ? "Download Net-off Matrix" :
+               "Download Compiled TB"}
             </Button>
           )}
         </div>
@@ -440,7 +454,7 @@ export default function IcMatrix() {
           </CardContent>
         </Card>
       ) : (
-        <Tabs defaultValue="matrix" className="space-y-4">
+        <Tabs defaultValue="matrix" value={activeMatrixTab} onValueChange={setActiveMatrixTab} className="space-y-4">
           <div className="flex items-center gap-3 flex-wrap">
             <TabsList data-testid="tabs-dashboard">
               <TabsTrigger value="matrix" data-testid="tab-matrix">IC Balance Matrix</TabsTrigger>

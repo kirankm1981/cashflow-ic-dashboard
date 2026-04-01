@@ -619,6 +619,174 @@ export function registerCashflowRoutes(app: Express) {
     }
   });
 
+  app.get("/api/cashflow/download-detailed", async (_req, res) => {
+    try {
+      const entityMappings = await db.select().from(cashflowMappingEntities);
+      const entityCompanyKeys = new Set(entityMappings.map(e => normalizeText(e.companyNameErp || e.companyName || "")).filter(Boolean));
+
+      const tbAgg = await db.select({
+        company: cashflowTbData.company,
+        projectName: cashflowTbData.projectName,
+        entityStatus: cashflowTbData.entityStatus,
+        cashflow: cashflowTbData.cashflow,
+        cfHead: cashflowTbData.cfHead,
+        amount: sql<number>`sum(${cashflowTbData.netClosingBalance})`,
+      }).from(cashflowTbData)
+        .groupBy(cashflowTbData.company, cashflowTbData.projectName, cashflowTbData.entityStatus, cashflowTbData.cashflow, cashflowTbData.cfHead);
+
+      const tbRows = tbAgg.filter(r => entityCompanyKeys.has(normalizeText(r.company || ""))).map(r => ({
+        company: r.company, projectName: r.projectName, entityStatus: r.entityStatus,
+        cashflow: r.cashflow, cfHead: r.cfHead, amount: Number(r.amount) || 0,
+      }));
+
+      const plRows = await db.select().from(cashflowPastLosses);
+      const pastLossRows = plRows.filter(pl => entityCompanyKeys.has(normalizeText(pl.company || ""))).map(pl => {
+        const companyBUs = entityMappings.filter(e => normalizeText(e.companyNameErp || e.companyName || "") === normalizeText(pl.company || ""));
+        const matchedBU = companyBUs.find(e => normalizeText(e.projectName || "") === normalizeText(pl.project || ""));
+        return {
+          company: pl.company || "", projectName: pl.project || null,
+          entityStatus: matchedBU?.entityStatus || companyBUs[0]?.entityStatus || null,
+          cashflow: pl.cashflow || null, cfHead: pl.cfHead || null, amount: pl.amount || 0,
+        };
+      });
+
+      const unified = [...tbRows, ...pastLossRows];
+
+      const projects = new Set<string>();
+      const structure = new Map<string, Map<string, Map<string, number>>>();
+      for (const r of unified) {
+        const cfType = r.cashflow || "Unclassified";
+        const head = r.cfHead || "Unmapped";
+        const project = r.projectName || "Unassigned";
+        projects.add(project);
+        if (!structure.has(cfType)) structure.set(cfType, new Map());
+        const heads = structure.get(cfType)!;
+        if (!heads.has(head)) heads.set(head, new Map());
+        const projectMap = heads.get(head)!;
+        projectMap.set(project, (projectMap.get(project) || 0) + (r.amount || 0));
+      }
+      const projectList = Array.from(projects).sort();
+
+      const sheetRows: any[][] = [];
+      sheetRows.push(["Cashflow Type", "CF Head", ...projectList, "Total"]);
+
+      const cfTypes = Array.from(structure.keys()).sort();
+      for (const cfType of cfTypes) {
+        const heads = structure.get(cfType)!;
+        const parentTotals: Record<string, number> = {};
+        let parentGrandTotal = 0;
+        const childRows: any[][] = [];
+
+        const sortedHeads = Array.from(heads.keys()).sort();
+        for (const head of sortedHeads) {
+          const projectMap = heads.get(head)!;
+          let rowTotal = 0;
+          const vals = projectList.map(p => {
+            const v = projectMap.get(p) || 0;
+            parentTotals[p] = (parentTotals[p] || 0) + v;
+            rowTotal += v;
+            return v || "";
+          });
+          parentGrandTotal += rowTotal;
+          childRows.push(["", head, ...vals, rowTotal]);
+        }
+
+        sheetRows.push([cfType, "", ...projectList.map(p => parentTotals[p] || ""), parentGrandTotal]);
+        sheetRows.push(...childRows);
+      }
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(sheetRows);
+      ws["!cols"] = [{ wch: 20 }, { wch: 30 }, ...projectList.map(() => ({ wch: 18 })), { wch: 18 }];
+      XLSX.utils.book_append_sheet(wb, ws, "Detailed Cashflow");
+      const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", "attachment; filename=Cashflow_Detailed.xlsx");
+      res.send(buf);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/cashflow/download-unmapped", async (_req, res) => {
+    try {
+      const unmappedCfAgg = await db.select({
+        company: cashflowTbData.company,
+        accountHead: cashflowTbData.accountHead,
+        netClosingBalance: sql<number>`sum(${cashflowTbData.netClosingBalance})`,
+        count: sql<number>`count(*)`,
+      }).from(cashflowTbData)
+        .where(sql`(${cashflowTbData.cashflow} IS NULL OR ${cashflowTbData.cashflow} = '' OR ${cashflowTbData.cfHead} IS NULL OR ${cashflowTbData.cfHead} = '')`)
+        .groupBy(cashflowTbData.company, cashflowTbData.accountHead);
+
+      const unmappedEntityAgg = await db.select({
+        company: cashflowTbData.company,
+        businessUnit: cashflowTbData.businessUnit,
+        accountHead: cashflowTbData.accountHead,
+        netClosingBalance: sql<number>`sum(${cashflowTbData.netClosingBalance})`,
+        count: sql<number>`count(*)`,
+      }).from(cashflowTbData)
+        .where(sql`(${cashflowTbData.projectName} IS NULL OR ${cashflowTbData.projectName} = '' OR ${cashflowTbData.entityStatus} IS NULL OR ${cashflowTbData.entityStatus} = '')`)
+        .groupBy(cashflowTbData.company, cashflowTbData.businessUnit, cashflowTbData.accountHead);
+
+      const wb = XLSX.utils.book_new();
+
+      const cfSheet = XLSX.utils.json_to_sheet(unmappedCfAgg.map(r => ({
+        "Company": r.company,
+        "Account Head": r.accountHead,
+        "Net Closing Balance": Number(r.netClosingBalance) || 0,
+        "Row Count": Number(r.count) || 0,
+      })));
+      cfSheet["!cols"] = [{ wch: 40 }, { wch: 40 }, { wch: 20 }, { wch: 12 }];
+      XLSX.utils.book_append_sheet(wb, cfSheet, "Unmapped Cashflow");
+
+      const entitySheet = XLSX.utils.json_to_sheet(unmappedEntityAgg.map(r => ({
+        "Company": r.company,
+        "Business Unit": r.businessUnit,
+        "Account Head": r.accountHead,
+        "Net Closing Balance": Number(r.netClosingBalance) || 0,
+        "Row Count": Number(r.count) || 0,
+      })));
+      entitySheet["!cols"] = [{ wch: 40 }, { wch: 30 }, { wch: 40 }, { wch: 20 }, { wch: 12 }];
+      XLSX.utils.book_append_sheet(wb, entitySheet, "Unmapped Entity");
+
+      const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", "attachment; filename=Cashflow_Unmapped_Items.xlsx");
+      res.send(buf);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/cashflow/download-past-losses", async (_req, res) => {
+    try {
+      const data = await db.select().from(cashflowPastLosses);
+      if (data.length === 0) {
+        return res.status(404).json({ message: "No past losses data available." });
+      }
+      const sheetData = data.map(r => ({
+        "Company": r.company || "",
+        "Project": r.project || "",
+        "Cashflow": r.cashflow || "",
+        "CF Head": r.cfHead || "",
+        "Amount": r.amount || 0,
+        "As Per FS": r.asPerFs || "",
+        "Losses Upto": r.lossesUpto || "",
+      }));
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(sheetData);
+      ws["!cols"] = [{ wch: 40 }, { wch: 30 }, { wch: 15 }, { wch: 30 }, { wch: 18 }, { wch: 15 }, { wch: 15 }];
+      XLSX.utils.book_append_sheet(wb, ws, "Past Losses");
+      const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", "attachment; filename=Cashflow_Past_Losses.xlsx");
+      res.send(buf);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/cashflow/unmapped-items", async (_req, res) => {
     try {
       const unmappedCfAgg = await db.select({
