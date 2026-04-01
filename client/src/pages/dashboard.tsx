@@ -164,7 +164,8 @@ function EntitySummaryContent({ stats, nameMap }: { stats: DashboardStats; nameM
             </thead>
             <tbody>
               {stats.companySummary.map((cs) => {
-                const rate = cs.icTotal > 0 ? (cs.icReconciled / cs.icTotal) * 100 : 0;
+                const reconciled = cs.matched + cs.reversal + cs.review + cs.suggested;
+                const rate = cs.total > 0 ? (reconciled / cs.total) * 100 : 0;
                 return (
                   <tr key={cs.company} className="border-b last:border-0" data-testid={`row-entity-${cs.company}`}>
                     <td className="py-2.5 px-3 font-medium">{displayName(cs.company)}</td>
@@ -183,6 +184,36 @@ function EntitySummaryContent({ stats, nameMap }: { stats: DashboardStats; nameM
                 );
               })}
             </tbody>
+            <tfoot>
+              {(() => {
+                const t = stats.companySummary.reduce((acc, cs) => ({
+                  total: acc.total + cs.total,
+                  matched: acc.matched + cs.matched,
+                  reversal: acc.reversal + cs.reversal,
+                  review: acc.review + cs.review,
+                  suggested: acc.suggested + cs.suggested,
+                  unmatched: acc.unmatched + cs.unmatched,
+                }), { total: 0, matched: 0, reversal: 0, review: 0, suggested: 0, unmatched: 0 });
+                const reconciled = t.matched + t.reversal + t.review + t.suggested;
+                const rate = t.total > 0 ? (reconciled / t.total) * 100 : 0;
+                return (
+                  <tr className="border-t-2 font-semibold bg-muted/30" data-testid="row-entity-total">
+                    <td className="py-2.5 px-3">Total</td>
+                    <td className="py-2.5 px-3 text-right">{formatNumber(t.total)}</td>
+                    <td className="py-2.5 px-3 text-right text-emerald-600">{formatNumber(t.matched)}</td>
+                    <td className="py-2.5 px-3 text-right text-purple-600">{formatNumber(t.reversal)}</td>
+                    <td className="py-2.5 px-3 text-right text-teal-600">{formatNumber(t.review)}</td>
+                    <td className="py-2.5 px-3 text-right text-orange-600">{formatNumber(t.suggested)}</td>
+                    <td className="py-2.5 px-3 text-right text-red-600">{formatNumber(t.unmatched)}</td>
+                    <td className="py-2.5 px-3 text-right">
+                      <Badge variant={rate > 90 ? "default" : "secondary"}>
+                        {rate.toFixed(1)}%
+                      </Badge>
+                    </td>
+                  </tr>
+                );
+              })()}
+            </tfoot>
           </table>
         </div>
       </CardContent>
