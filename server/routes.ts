@@ -1789,8 +1789,7 @@ export async function registerRoutes(
       const [firstRow] = await db.select({ rowData: icReconGlRawRows.rowData }).from(icReconGlRawRows).limit(1);
       const headers = Object.keys(JSON.parse(firstRow.rowData));
 
-      const lines: string[] = [];
-      lines.push(headers.map(h => `"${h.replace(/"/g, '""')}"`).join(","));
+      const sheetData: any[][] = [headers];
 
       const batchSize = 5000;
       let offset = 0;
@@ -1799,18 +1798,28 @@ export async function registerRoutes(
         if (batch.length === 0) break;
         for (const row of batch) {
           const parsed = JSON.parse(row.rowData);
-          lines.push(headers.map(h => {
-            const v = parsed[h] !== undefined ? String(parsed[h]) : "";
-            return `"${v.replace(/"/g, '""')}"`;
-          }).join(","));
+          sheetData.push(headers.map(h => parsed[h] !== undefined ? parsed[h] : ""));
         }
         offset += batchSize;
         if (batch.length < batchSize) break;
       }
 
-      res.setHeader("Content-Type", "text/csv; charset=utf-8");
-      res.setHeader("Content-Disposition", "attachment; filename=IC_Recon_Mapped_Data.csv");
-      res.send(lines.join("\n"));
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(sheetData);
+      const colWidths = headers.map((h: string, i: number) => {
+        let max = h.length;
+        for (const row of sheetData.slice(1, 101)) {
+          const val = String(row[i] || "");
+          if (val.length > max) max = val.length;
+        }
+        return { wch: Math.min(max + 2, 40) };
+      });
+      ws["!cols"] = colWidths;
+      XLSX.utils.book_append_sheet(wb, ws, "Mapped Data");
+      const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", "attachment; filename=IC_Recon_Mapped_Data.xlsx");
+      res.send(buf);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -1917,19 +1926,26 @@ export async function registerRoutes(
       }
 
       const rptHeaders = ["Company", "Company Code", "Document No", "Doc Date", "Account Head", "Sub Account Head", "Net Amount", "IC-RPT GL Name", "IC Txn Type", "RPT Type"];
-      const lines: string[] = [];
-      lines.push(rptHeaders.map(h => `"${h}"`).join(","));
-
+      const sheetData: any[][] = [rptHeaders];
       for (const parsed of rptRows) {
-        lines.push(rptHeaders.map(h => {
-          const v = parsed[h] !== undefined ? String(parsed[h]) : "";
-          return `"${v.replace(/"/g, '""')}"`;
-        }).join(","));
+        sheetData.push(rptHeaders.map(h => parsed[h] !== undefined ? parsed[h] : ""));
       }
 
-      res.setHeader("Content-Type", "text/csv; charset=utf-8");
-      res.setHeader("Content-Disposition", "attachment; filename=IC_Recon_RPT_Data.csv");
-      res.send(lines.join("\n"));
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(sheetData);
+      ws["!cols"] = rptHeaders.map((h, i) => {
+        let max = h.length;
+        for (const row of sheetData.slice(1, 101)) {
+          const val = String(row[i] || "");
+          if (val.length > max) max = val.length;
+        }
+        return { wch: Math.min(max + 2, 40) };
+      });
+      XLSX.utils.book_append_sheet(wb, ws, "RPT Data");
+      const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", "attachment; filename=IC_Recon_RPT_Data.xlsx");
+      res.send(buf);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
