@@ -147,7 +147,7 @@ export interface IStorage {
   clearMlSuggestions(): Promise<void>;
 }
 
-const MATCHED_STATUSES = ["matched", "reversal", "review_match", "suggested_match"];
+const MATCHED_STATUSES = ["matched", "reversal", "review_match", "suggested_match", "manual"];
 
 function isMatchedStatus(status: string): boolean {
   return MATCHED_STATUSES.includes(status);
