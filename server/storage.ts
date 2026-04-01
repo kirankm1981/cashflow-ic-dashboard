@@ -309,13 +309,7 @@ export class DatabaseStorage implements IStorage {
     const matchedTransactions = allLines.filter((t) => isMatchedStatus(t.reconStatus || "")).length;
     const unmatchedTransactions = totalTransactions - matchedTransactions;
 
-    const icLines = allLines.filter(t => t.company !== t.counterParty && (t.reconStatus || "unmatched") !== "reversal");
-    const icTotal = icLines.length;
-    const icReconciled = icLines.filter(t => {
-      const s = t.reconStatus || "unmatched";
-      return s === "matched" || s === "manual" || s === "review_match" || s === "suggested_match";
-    }).length;
-    const matchRate = icTotal > 0 ? (icReconciled / icTotal) * 100 : 0;
+    const matchRate = totalTransactions > 0 ? (matchedTransactions / totalTransactions) * 100 : 0;
 
     const totalDebit = allLines.reduce((sum, t) => sum + Math.max(t.netAmount || 0, 0), 0);
     const totalCredit = allLines.reduce((sum, t) => sum + Math.abs(Math.min(t.netAmount || 0, 0)), 0);
