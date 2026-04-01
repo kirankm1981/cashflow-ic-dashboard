@@ -83,13 +83,20 @@ export function registerCashflowRoutes(app: Express) {
         });
       }
 
-      const entityMap = new Map<string, { structure: string | null; projectName: string | null; entityStatus: string | null }>();
+      const companyStructureMap = new Map<string, string | null>();
+      const buMap = new Map<string, { projectName: string | null; entityStatus: string | null }>();
       for (const e of entityMappings) {
-        entityMap.set(normalizeText(e.companyNameErp || ""), {
-          structure: e.structure,
-          projectName: e.projectName,
-          entityStatus: e.entityStatus,
-        });
+        const compKey = normalizeText(e.companyNameErp || e.companyName || "");
+        if (compKey && e.structure && !companyStructureMap.has(compKey)) {
+          companyStructureMap.set(compKey, e.structure);
+        }
+        const buKey = normalizeText(e.businessUnit || "");
+        if (buKey) {
+          buMap.set(buKey, {
+            projectName: e.projectName,
+            entityStatus: e.entityStatus,
+          });
+        }
       }
 
       const [tbFile] = await db.insert(cashflowTbFiles).values({
@@ -115,12 +122,14 @@ export function registerCashflowRoutes(app: Express) {
           const closingCredit = parseNum(r[17]);
 
           const grouping = groupingMap.get(normalizeText(accountHead));
-          const entity = entityMap.get(normalizeText(company));
+          const businessUnit = String(r[1] || "").trim();
+          const structure = companyStructureMap.get(normalizeText(company)) || null;
+          const buMapping = buMap.get(normalizeText(businessUnit));
 
           return {
             tbFileId: tbFile.id,
             company,
-            businessUnit: String(r[1] || "").trim(),
+            businessUnit,
             group1: String(r[2] || "").trim(),
             group2: String(r[3] || "").trim(),
             group3: String(r[4] || "").trim(),
@@ -141,9 +150,9 @@ export function registerCashflowRoutes(app: Express) {
             netClosingBalance: closingDebit - closingCredit,
             cashflow: grouping?.cashflow || null,
             cfHead: grouping?.cfHead || null,
-            structure: entity?.structure || null,
-            projectName: entity?.projectName || null,
-            entityStatus: entity?.entityStatus || null,
+            structure,
+            projectName: buMapping?.projectName || null,
+            entityStatus: buMapping?.entityStatus || null,
             tbSource: enterprise || label,
           };
         });
@@ -207,18 +216,34 @@ export function registerCashflowRoutes(app: Express) {
         await db.delete(cashflowMappingEntities);
         const ws = wb.Sheets[entitySheet];
         const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
-        const dataRows = rows.slice(1).filter(r => String(r[1] || "").trim() !== "");
+        const headers = (rows[0] || []).map((h: any) => String(h || "").trim().toLowerCase().replace(/\s+/g, ""));
+        const hasBusinessUnit = headers.includes("businessunit") || headers.some(h => h === "bu" || h === "business_unit");
+        const dataRows = rows.slice(1).filter(r => String(r[0] || "").trim() !== "");
         const BATCH = 500;
         for (let i = 0; i < dataRows.length; i += BATCH) {
           const batch = dataRows.slice(i, i + BATCH);
-          const values = batch.map(r => ({
-            companyName: String(r[0] || "").trim() || null,
-            companyNameErp: String(r[1] || "").trim(),
-            structure: String(r[2] || "").trim() || null,
-            projectName: String(r[3] || "").trim() || null,
-            entityStatus: String(r[4] || "").trim() || null,
-            remarks: String(r[5] || "").trim() || null,
-          }));
+          let values;
+          if (hasBusinessUnit) {
+            values = batch.map(r => ({
+              companyName: String(r[0] || "").trim() || null,
+              companyNameErp: String(r[0] || "").trim(),
+              structure: String(r[1] || "").trim() || null,
+              businessUnit: String(r[2] || "").trim() || null,
+              projectName: String(r[3] || "").trim() || null,
+              entityStatus: String(r[4] || "").trim() || null,
+              remarks: String(r[5] || "").trim() || null,
+            }));
+          } else {
+            values = batch.map(r => ({
+              companyName: String(r[0] || "").trim() || null,
+              companyNameErp: String(r[1] || "").trim(),
+              structure: String(r[2] || "").trim() || null,
+              businessUnit: null,
+              projectName: String(r[3] || "").trim() || null,
+              entityStatus: String(r[4] || "").trim() || null,
+              remarks: String(r[5] || "").trim() || null,
+            }));
+          }
           await db.insert(cashflowMappingEntities).values(values);
           entitiesInserted += values.length;
         }
@@ -363,13 +388,20 @@ export function registerCashflowRoutes(app: Express) {
         });
       }
 
-      const entityMap = new Map<string, { structure: string | null; projectName: string | null; entityStatus: string | null }>();
+      const companyStructureMap = new Map<string, string | null>();
+      const buMap = new Map<string, { projectName: string | null; entityStatus: string | null }>();
       for (const e of entityMappings) {
-        entityMap.set(normalizeText(e.companyNameErp || ""), {
-          structure: e.structure,
-          projectName: e.projectName,
-          entityStatus: e.entityStatus,
-        });
+        const compKey = normalizeText(e.companyNameErp || e.companyName || "");
+        if (compKey && e.structure && !companyStructureMap.has(compKey)) {
+          companyStructureMap.set(compKey, e.structure);
+        }
+        const buKey = normalizeText(e.businessUnit || "");
+        if (buKey) {
+          buMap.set(buKey, {
+            projectName: e.projectName,
+            entityStatus: e.entityStatus,
+          });
+        }
       }
 
       const BATCH = 500;
@@ -381,6 +413,7 @@ export function registerCashflowRoutes(app: Express) {
         const batch = await db.select({
           id: cashflowTbData.id,
           company: cashflowTbData.company,
+          businessUnit: cashflowTbData.businessUnit,
           accountHead: cashflowTbData.accountHead,
           cashflow: cashflowTbData.cashflow,
           cfHead: cashflowTbData.cfHead,
@@ -393,13 +426,13 @@ export function registerCashflowRoutes(app: Express) {
 
         for (const row of batch) {
           const grouping = groupingMap.get(normalizeText(row.accountHead || ""));
-          const entity = entityMap.get(normalizeText(row.company || ""));
+          const buMapping = buMap.get(normalizeText(row.businessUnit || ""));
 
           const newCashflow = grouping?.cashflow || null;
           const newCfHead = grouping?.cfHead || null;
-          const newStructure = entity?.structure || null;
-          const newProjectName = entity?.projectName || null;
-          const newEntityStatus = entity?.entityStatus || null;
+          const newStructure = companyStructureMap.get(normalizeText(row.company || "")) || null;
+          const newProjectName = buMapping?.projectName || null;
+          const newEntityStatus = buMapping?.entityStatus || null;
 
           if (
             newCashflow !== row.cashflow ||
@@ -513,15 +546,17 @@ export function registerCashflowRoutes(app: Express) {
   app.get("/api/cashflow/unified-data", async (_req, res) => {
     try {
       const entityMappings = await db.select().from(cashflowMappingEntities);
-      const entityMap = new Map<string, { projectName: string | null; entityStatus: string | null }>();
+      const entityCompanyKeys = new Set(entityMappings.map(e => normalizeText(e.companyNameErp || e.companyName || "")).filter(Boolean));
+      const buEntityMap = new Map<string, { projectName: string | null; entityStatus: string | null }>();
       for (const e of entityMappings) {
-        entityMap.set(normalizeText(e.companyNameErp || ""), {
-          projectName: e.projectName,
-          entityStatus: e.entityStatus,
-        });
+        const buKey = normalizeText(e.businessUnit || "");
+        if (buKey) {
+          buEntityMap.set(buKey, {
+            projectName: e.projectName,
+            entityStatus: e.entityStatus,
+          });
+        }
       }
-
-      const entityKeys = new Set(entityMappings.map(e => normalizeText(e.companyNameErp || "")));
 
       const tbAgg = await db.select({
         company: cashflowTbData.company,
@@ -541,7 +576,7 @@ export function registerCashflowRoutes(app: Express) {
         );
 
       const tbRows = tbAgg
-        .filter(r => entityKeys.has(normalizeText(r.company || "")))
+        .filter(r => entityCompanyKeys.has(normalizeText(r.company || "")))
         .map(r => ({
           company: r.company,
           projectName: r.projectName,
@@ -551,18 +586,19 @@ export function registerCashflowRoutes(app: Express) {
           amount: Number(r.amount) || 0,
         }));
       const totalTbRaw = tbAgg.reduce((s, r) => s + Number(r.rowCount || 0), 0);
-      const tbMappedEntityRows = tbAgg.filter(r => entityKeys.has(normalizeText(r.company || ""))).reduce((s, r) => s + Number(r.rowCount || 0), 0);
+      const tbMappedEntityRows = tbAgg.filter(r => entityCompanyKeys.has(normalizeText(r.company || ""))).reduce((s, r) => s + Number(r.rowCount || 0), 0);
       const excludedTbCount = totalTbRaw - tbMappedEntityRows;
 
       const plRows = await db.select().from(cashflowPastLosses);
       const pastLossRows = plRows
-        .filter(pl => entityKeys.has(normalizeText(pl.company || "")))
+        .filter(pl => entityCompanyKeys.has(normalizeText(pl.company || "")))
         .map(pl => {
-          const entity = entityMap.get(normalizeText(pl.company || ""));
+          const companyBUs = entityMappings.filter(e => normalizeText(e.companyNameErp || e.companyName || "") === normalizeText(pl.company || ""));
+          const matchedBU = companyBUs.find(e => normalizeText(e.projectName || "") === normalizeText(pl.project || ""));
           return {
             company: pl.company || "",
-            projectName: entity?.projectName || pl.project || null,
-            entityStatus: entity?.entityStatus || null,
+            projectName: pl.project || null,
+            entityStatus: matchedBU?.entityStatus || companyBUs[0]?.entityStatus || null,
             cashflow: pl.cashflow || null,
             cfHead: pl.cfHead || null,
             amount: pl.amount || 0,
@@ -595,12 +631,13 @@ export function registerCashflowRoutes(app: Express) {
 
       const unmappedEntityAgg = await db.select({
         company: cashflowTbData.company,
+        businessUnit: cashflowTbData.businessUnit,
         accountHead: cashflowTbData.accountHead,
         netClosingBalance: sql<number>`sum(${cashflowTbData.netClosingBalance})`,
         count: sql<number>`count(*)`,
       }).from(cashflowTbData)
         .where(sql`(${cashflowTbData.projectName} IS NULL OR ${cashflowTbData.projectName} = '' OR ${cashflowTbData.entityStatus} IS NULL OR ${cashflowTbData.entityStatus} = '')`)
-        .groupBy(cashflowTbData.company, cashflowTbData.accountHead);
+        .groupBy(cashflowTbData.company, cashflowTbData.businessUnit, cashflowTbData.accountHead);
 
       const unmappedAccountHeads = [...new Set(unmappedCfAgg.map(r => r.accountHead).filter(Boolean))];
       const unmappedCompanies = [...new Set(unmappedEntityAgg.map(r => r.company).filter(Boolean))];

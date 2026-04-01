@@ -399,6 +399,7 @@ export const cashflowMappingEntities = pgTable("cashflow_mapping_entities", {
   companyName: text("company_name"),
   companyNameErp: text("company_name_erp").notNull(),
   structure: text("structure"),
+  businessUnit: text("business_unit"),
   projectName: text("project_name"),
   entityStatus: text("entity_status"),
   remarks: text("remarks"),
