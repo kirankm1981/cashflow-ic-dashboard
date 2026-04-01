@@ -319,7 +319,7 @@ export function registerIcMatrixRoutes(app: Express) {
       const counterPartyCodes = req.query.counterPartyCodes ? String(req.query.counterPartyCodes).split(",") : [];
       const icTxnTypes = req.query.icTxnTypes ? String(req.query.icTxnTypes).split(",") : [];
 
-      const conditions = [sql`${icMatrixTbData.newCoaGlName} LIKE 'IC_%'`];
+      const conditions = [sql`${icMatrixTbData.newCoaGlName} LIKE 'IC\_%' ESCAPE '\\'`];
       if (tbFileId) conditions.push(sql`${icMatrixTbData.tbFileId} = ${tbFileId}`);
       if (companyCodes.length > 0) {
         const placeholders = companyCodes.map(c => sql`${c}`);
