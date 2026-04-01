@@ -28,6 +28,7 @@ function normalizeText(val: string): string {
   s = s.replace(/[\u2018\u2019\u201A\u201B]/g, "'")
        .replace(/[\u201C\u201D\u201E\u201F]/g, '"')
        .replace(/[\u2013\u2014]/g, "-");
+  s = s.replace(/\./g, " ");
   s = s.replace(/\s+/g, " ").trim();
   return s.toUpperCase();
 }
