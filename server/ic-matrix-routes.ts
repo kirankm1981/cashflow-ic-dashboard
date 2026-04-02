@@ -354,6 +354,46 @@ export function registerIcMatrixRoutes(app: Express) {
     }
   });
 
+  app.get("/api/ic-matrix/download-ic-data", async (req, res) => {
+    try {
+      const tbFileId = req.query.tbFileId ? Number(req.query.tbFileId) : undefined;
+      const conditions = [sql`${icMatrixTbData.newCoaGlName} LIKE 'IC\\_%' ESCAPE '\\'`];
+      if (tbFileId) conditions.push(sql`${icMatrixTbData.tbFileId} = ${tbFileId}`);
+      const baseCondition = sql.join(conditions, sql` AND `);
+      const data = await db.select().from(icMatrixTbData).where(baseCondition);
+
+      const rows = data.map(r => ({
+        "Company": r.company || "",
+        "Company Code": r.companyCode || "",
+        "Account Head": r.accountHead || "",
+        "Sub Account Head": r.subAccountHead || "",
+        "Closing Debit": r.closingDebit || 0,
+        "Closing Credit": r.closingCredit || 0,
+        "Net Balance": r.netBalance || 0,
+        "New COA GL Name": r.newCoaGlName || "",
+        "IC Counter Party": r.icCounterParty || "",
+        "IC CP Code": r.icCounterPartyCode || "",
+        "IC Txn Type": r.icTxnType || "",
+        "TB Source": r.tbSource || "",
+      }));
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(rows);
+      ws["!cols"] = [
+        { wch: 30 }, { wch: 15 }, { wch: 25 }, { wch: 25 },
+        { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 25 },
+        { wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 25 },
+      ];
+      XLSX.utils.book_append_sheet(wb, ws, "IC Data");
+      const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", "attachment; filename=IC_Data.xlsx");
+      res.send(buf);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/ic-matrix/mapping-summary", async (_req, res) => {
     try {
       const [glCount] = await db.select({ count: sql<number>`count(*)` }).from(icMatrixMappingGl);

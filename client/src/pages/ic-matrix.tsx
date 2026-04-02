@@ -872,6 +872,20 @@ export default function IcMatrix() {
                         data-testid="input-search"
                       />
                     </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const params = new URLSearchParams();
+                        if (selectedTbFile && selectedTbFile !== "all") params.set("tbFileId", selectedTbFile);
+                        const qs = params.toString() ? `?${params.toString()}` : "";
+                        window.open(`/api/ic-matrix/download-ic-data${qs}`, "_blank");
+                      }}
+                      data-testid="button-download-ic-data"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Download IC Data
+                    </Button>
                   </div>
                 </div>
               </CardHeader>
