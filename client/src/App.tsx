@@ -23,6 +23,7 @@ import LoginPage from "@/pages/login";
 import ForceChangePassword from "@/pages/force-change-password";
 import UserManagement from "@/pages/user-management";
 import { useLocation, Redirect } from "wouter";
+import { ErrorBoundary } from "@/components/error-boundary";
 import { UploadManagerProvider } from "@/lib/upload-manager";
 import GlobalUploadNotifications from "@/components/global-upload-notifications";
 import { useAuth } from "@/hooks/use-auth";
@@ -87,20 +88,20 @@ function ModuleViewerGuard({ module, component: Component }: { module: string; c
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Landing} />
-      <Route path="/recon">{() => <ModuleGuard module="ic_recon" component={Dashboard} />}</Route>
-      <Route path="/recon/upload">{() => <ModuleViewerGuard module="ic_recon" component={UploadPage} />}</Route>
-      <Route path="/recon/workspace">{() => <ModuleGuard module="ic_recon" component={Workspace} />}</Route>
-      <Route path="/recon/rpt-data">{() => <ModuleGuard module="ic_recon" component={RptDataPage} />}</Route>
-      <Route path="/recon/rules">{() => <ModuleGuard module="ic_recon" component={RuleConfig} />}</Route>
-      <Route path="/recon/audit">{() => <ModuleGuard module="ic_recon" component={AuditTrail} />}</Route>
-      <Route path="/recon/reports">{() => <ModuleGuard module="ic_recon" component={Reports} />}</Route>
-      <Route path="/cashflow">{() => <ModuleGuard module="cashflow" component={CashflowDashboard} />}</Route>
-      <Route path="/cashflow/unmapped">{() => <ModuleViewerGuard module="cashflow" component={CashflowUnmapped} />}</Route>
-      <Route path="/cashflow/upload">{() => <ModuleViewerGuard module="cashflow" component={CashflowUpload} />}</Route>
-      <Route path="/ic-matrix">{() => <ModuleGuard module="ic_matrix" component={IcMatrix} />}</Route>
-      <Route path="/ic-matrix/upload">{() => <ModuleViewerGuard module="ic_matrix" component={IcMatrixUpload} />}</Route>
-      <Route path="/admin/users" component={UserManagement} />
+      <Route path="/">{() => <ErrorBoundary><Landing /></ErrorBoundary>}</Route>
+      <Route path="/recon">{() => <ErrorBoundary><ModuleGuard module="ic_recon" component={Dashboard} /></ErrorBoundary>}</Route>
+      <Route path="/recon/upload">{() => <ErrorBoundary><ModuleViewerGuard module="ic_recon" component={UploadPage} /></ErrorBoundary>}</Route>
+      <Route path="/recon/workspace">{() => <ErrorBoundary><ModuleGuard module="ic_recon" component={Workspace} /></ErrorBoundary>}</Route>
+      <Route path="/recon/rpt-data">{() => <ErrorBoundary><ModuleGuard module="ic_recon" component={RptDataPage} /></ErrorBoundary>}</Route>
+      <Route path="/recon/rules">{() => <ErrorBoundary><ModuleGuard module="ic_recon" component={RuleConfig} /></ErrorBoundary>}</Route>
+      <Route path="/recon/audit">{() => <ErrorBoundary><ModuleGuard module="ic_recon" component={AuditTrail} /></ErrorBoundary>}</Route>
+      <Route path="/recon/reports">{() => <ErrorBoundary><ModuleGuard module="ic_recon" component={Reports} /></ErrorBoundary>}</Route>
+      <Route path="/cashflow">{() => <ErrorBoundary><ModuleGuard module="cashflow" component={CashflowDashboard} /></ErrorBoundary>}</Route>
+      <Route path="/cashflow/unmapped">{() => <ErrorBoundary><ModuleViewerGuard module="cashflow" component={CashflowUnmapped} /></ErrorBoundary>}</Route>
+      <Route path="/cashflow/upload">{() => <ErrorBoundary><ModuleViewerGuard module="cashflow" component={CashflowUpload} /></ErrorBoundary>}</Route>
+      <Route path="/ic-matrix">{() => <ErrorBoundary><ModuleGuard module="ic_matrix" component={IcMatrix} /></ErrorBoundary>}</Route>
+      <Route path="/ic-matrix/upload">{() => <ErrorBoundary><ModuleViewerGuard module="ic_matrix" component={IcMatrixUpload} /></ErrorBoundary>}</Route>
+      <Route path="/admin/users">{() => <ErrorBoundary><UserManagement /></ErrorBoundary>}</Route>
       <Route component={NotFound} />
     </Switch>
   );
