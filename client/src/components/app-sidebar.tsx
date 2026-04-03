@@ -207,7 +207,7 @@ export function AppSidebar() {
           </Link>
         </SidebarHeader>
         <SidebarContent>
-          {hasModule("cashflow") && (
+          {!isAdmin && hasModule("cashflow") && (
             <NavGroup
               label="MIS"
               icon={IndianRupee}
@@ -218,7 +218,7 @@ export function AppSidebar() {
               linkPrefix="cashflow"
             />
           )}
-          {hasModule("ic_matrix") && (
+          {!isAdmin && hasModule("ic_matrix") && (
             <NavGroup
               label="IC Matrix"
               icon={Grid3X3}
@@ -229,7 +229,7 @@ export function AppSidebar() {
               linkPrefix="matrix"
             />
           )}
-          {hasModule("ic_recon") && (
+          {!isAdmin && hasModule("ic_recon") && (
             <NavGroup
               label="IC Recon"
               icon={GitCompare}
@@ -246,7 +246,7 @@ export function AppSidebar() {
               <SidebarGroupLabel className="py-2">
                 <div className="flex items-center gap-2">
                   <Shield className="w-4 h-4" />
-                  <span className="text-[13px] font-bold tracking-wide uppercase">Admin</span>
+                  <span className="text-[13px] font-bold tracking-wide uppercase">Platform Admin</span>
                 </div>
               </SidebarGroupLabel>
               <SidebarGroupContent className="pl-3">
