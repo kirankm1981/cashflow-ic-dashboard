@@ -427,14 +427,6 @@ export function registerReconGlRoutes(app: Express) {
         icRecords: inserted.length,
       });
 
-      let reconResult = null;
-      try {
-        reconResult = await runReconciliation();
-        console.log(`[Auto-Recon] After GL upload: ${reconResult.totalMatched} matched`);
-      } catch (reconErr: any) {
-        console.error(`[Auto-Recon] Error: ${reconErr.message}`);
-      }
-
       res.json({
         batchId,
         fileName: req.file.originalname,
@@ -444,7 +436,13 @@ export function registerReconGlRoutes(app: Express) {
         totalTransactions: totalUniqueTransactions,
         icRecords: inserted.length,
         summarizedLines: insertedLines.length,
-        reconciliation: reconResult,
+        reconciliation: null,
+      });
+
+      setImmediate(() => {
+        runReconciliation()
+          .then(r => console.log(`[Auto-Recon] Complete: ${r.totalMatched} matched`))
+          .catch(e => console.error(`[Auto-Recon] Error: ${e.message}`));
       });
     } catch (error: any) {
       console.error("GL dump upload error:", error);
