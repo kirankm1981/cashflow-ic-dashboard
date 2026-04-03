@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode } from "react";
 import { queryClient } from "./queryClient";
+import { toast } from "@/hooks/use-toast";
 
 type UploadStatus = "idle" | "uploading" | "processing" | "success" | "error";
 
@@ -24,6 +25,7 @@ interface UploadManagerContextType {
   uploadCashflowTb: (file: File, label: string, slotId: string) => Promise<void>;
   uploadCashflowMapping: (file: File) => Promise<void>;
   isUploading: (module: "recon" | "ic-matrix" | "cashflow") => boolean;
+  reconRunning: boolean;
 }
 
 const UploadManagerContext = createContext<UploadManagerContextType | null>(null);
@@ -62,8 +64,115 @@ function xhrUpload(url: string, formData: FormData, onProgress: (pct: number) =>
   });
 }
 
+const RECON_POLL_INTERVAL = 5000;
+const RECON_POLL_TIMEOUT = 120000;
+const MATCH_STABLE_THRESHOLD = 3;
+
 export function UploadManagerProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<UploadNotification[]>([]);
+  const [reconRunning, setReconRunning] = useState(false);
+  const reconPollRef = useRef<{
+    baselineMatched: number;
+    baselineRate: number;
+    startedAt: number;
+    stableCount: number;
+    lastRate: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!reconRunning) return;
+    let cancelled = false;
+
+    const poll = async () => {
+      if (cancelled) return;
+      try {
+        const res = await fetch("/api/dashboard", { credentials: "include" });
+        if (!res.ok) return;
+        const data = await res.json();
+        const currentRate = data.matchRate ?? 0;
+        const currentMatched = data.matchedTransactions ?? 0;
+        const ref = reconPollRef.current;
+        if (!ref) return;
+
+        const elapsed = Date.now() - ref.startedAt;
+
+        if (elapsed >= RECON_POLL_TIMEOUT) {
+          const newMatches = currentMatched - ref.baselineMatched;
+          if (newMatches > 0) {
+            toast({
+              title: "Reconciliation complete",
+              description: `${formatNum(newMatches)} new matches found (${formatNum(currentRate)}% match rate)`,
+            });
+          } else {
+            toast({
+              title: "Reconciliation complete",
+              description: `No new matches — match rate remains at ${formatNum(currentRate)}%`,
+            });
+          }
+          queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
+          setReconRunning(false);
+          reconPollRef.current = null;
+          return;
+        }
+
+        if (Math.abs(currentRate - ref.lastRate) < 0.001) {
+          ref.stableCount++;
+        } else {
+          ref.stableCount = 0;
+        }
+        ref.lastRate = currentRate;
+
+        if (ref.stableCount >= MATCH_STABLE_THRESHOLD && currentRate !== ref.baselineRate) {
+          const newMatches = currentMatched - ref.baselineMatched;
+          toast({
+            title: "Reconciliation complete",
+            description: `${formatNum(newMatches)} new matches found (${formatNum(currentRate)}% match rate)`,
+          });
+          queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
+          setReconRunning(false);
+          reconPollRef.current = null;
+          return;
+        }
+
+        if (ref.stableCount >= MATCH_STABLE_THRESHOLD && currentRate === ref.baselineRate) {
+          toast({
+            title: "Reconciliation complete",
+            description: `No new matches — match rate remains at ${formatNum(currentRate)}%`,
+          });
+          queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+          setReconRunning(false);
+          reconPollRef.current = null;
+          return;
+        }
+      } catch {
+      }
+    };
+
+    const intervalId = setInterval(poll, RECON_POLL_INTERVAL);
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+    };
+  }, [reconRunning]);
+
+  const startReconPolling = useCallback(async () => {
+    try {
+      const res = await fetch("/api/dashboard", { credentials: "include" });
+      if (!res.ok) return;
+      const data = await res.json();
+      reconPollRef.current = {
+        baselineMatched: data.matchedTransactions ?? 0,
+        baselineRate: data.matchRate ?? 0,
+        startedAt: Date.now(),
+        stableCount: 0,
+        lastRate: data.matchRate ?? 0,
+      };
+      setReconRunning(true);
+    } catch {
+    }
+  }, []);
 
   const addNotification = useCallback((n: UploadNotification) => {
     setNotifications(prev => [...prev.filter(p => p.id !== n.id), n]);
@@ -108,11 +217,12 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ["/api/companies"] });
       queryClient.invalidateQueries({ queryKey: ["/api/counterparties"] });
       queryClient.invalidateQueries({ queryKey: ["/api/company-pairs"] });
+      startReconPolling();
       setTimeout(() => removeNotification(notifId), 8000);
     } catch (err: any) {
       updateNotification(notifId, { progress: 100, status: "error", message: err.message || "Upload failed" });
     }
-  }, [addNotification, updateNotification, removeNotification]);
+  }, [addNotification, updateNotification, removeNotification, startReconPolling]);
 
   const uploadMappingFile = useCallback(async (file: File) => {
     const notifId = `mapping-${Date.now()}`;
@@ -268,6 +378,7 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
       uploadCashflowTb,
       uploadCashflowMapping,
       isUploading,
+      reconRunning,
     }}>
       {children}
     </UploadManagerContext.Provider>
