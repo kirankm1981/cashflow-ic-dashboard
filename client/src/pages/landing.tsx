@@ -63,17 +63,18 @@ function MisCardStats() {
     tbFiles: number;
     enterprises: string[];
     periods: string[];
+    entityCount: number;
   }>({ queryKey: ["/api/cashflow/summary"] });
 
   if (isLoading) return <StatsLoader />;
   if (!data || data.tbFiles === 0) return null;
 
-  const entityCount = data.enterprises.length;
+  const entityCount = data.entityCount || 0;
   const lastPeriod = data.periods.length > 0 ? data.periods[data.periods.length - 1] : null;
 
   return (
     <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs" data-testid="stats-mis">
-      <span><span className="text-muted-foreground">Entities: </span><span className="font-semibold">{entityCount}</span></span>
+      {entityCount > 0 && <span><span className="text-muted-foreground">Entities: </span><span className="font-semibold">{entityCount}</span></span>}
       {lastPeriod && <span><span className="text-muted-foreground">Period: </span><span className="font-semibold">{lastPeriod}</span></span>}
       <span><span className="text-muted-foreground">TB Files: </span><span className="font-semibold">{data.tbFiles}</span></span>
     </div>
