@@ -5,7 +5,7 @@ import type { InsertTransaction, InsertSummarizedLine } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { normalizeText } from "../utils/normalize";
 
-import { upload, cleanupFile } from "./upload";
+import { upload, cleanupFile } from "../utils/upload-config";
 import { parseFileInWorker } from "../file-processor";
 import { randomUUID } from "crypto";
 import fs from "fs";

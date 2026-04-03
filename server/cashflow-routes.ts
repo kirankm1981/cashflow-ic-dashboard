@@ -1,5 +1,4 @@
 import type { Express } from "express";
-import multer from "multer";
 import XLSX from "xlsx";
 import { db } from "./db";
 import {
@@ -10,50 +9,9 @@ import {
   cashflowPastLosses,
 } from "@shared/schema";
 import { eq, sql, asc, inArray, and } from "drizzle-orm";
-import os from "os";
-import fsModule from "fs";
-import pathModule from "path";
-import { randomUUID } from "crypto";
 import { parseFileInWorker } from "./file-processor";
 import { requireAuth } from "./middleware/auth";
-
-const diskStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    const tmpDir = pathModule.join(os.tmpdir(), "ic-uploads");
-    if (!fsModule.existsSync(tmpDir)) fsModule.mkdirSync(tmpDir, { recursive: true });
-    cb(null, tmpDir);
-  },
-  filename: (_req, file, cb) => {
-    cb(null, `${Date.now()}-${randomUUID()}${pathModule.extname(file.originalname)}`);
-  },
-});
-const ALLOWED_EXTENSIONS = new Set([".xlsx", ".xls", ".csv"]);
-const ALLOWED_MIMETYPES = new Set([
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "application/vnd.ms-excel",
-  "text/csv",
-  "application/csv",
-  "text/plain",
-]);
-
-const upload = multer({
-  storage: diskStorage,
-  limits: { fileSize: 100 * 1024 * 1024 },
-  fileFilter: (_req, file, cb) => {
-    const ext = pathModule.extname(file.originalname).toLowerCase();
-    if (!ALLOWED_EXTENSIONS.has(ext)) {
-      return cb(new Error(`File type not allowed. Only xlsx, xls, csv permitted. Got: ${ext}`));
-    }
-    if (!ALLOWED_MIMETYPES.has(file.mimetype)) {
-      return cb(new Error(`MIME type not permitted: ${file.mimetype}`));
-    }
-    cb(null, true);
-  },
-});
-
-function cleanupFile(filePath: string) {
-  try { if (filePath && fsModule.existsSync(filePath)) fsModule.unlinkSync(filePath); } catch {}
-}
+import { upload, cleanupFile } from "./utils/upload-config";
 
 import { normalizeText } from "./utils/normalize";
 
