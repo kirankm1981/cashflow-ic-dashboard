@@ -60,7 +60,7 @@ function PageTitle() {
     <div className="flex items-center gap-2">
       <span className={`text-xs font-medium ${colors[module] || ""}`} data-testid="text-active-module">{module}</span>
       <span className="text-muted-foreground/40">|</span>
-      <span className="text-xs text-muted-foreground" data-testid="text-page-title">{titles[location] || "MIS & IC Dashboard"}</span>
+      <span className="text-xs text-muted-foreground" data-testid="text-page-title">{titles[location] || "Assetz Strata"}</span>
     </div>
   );
 }

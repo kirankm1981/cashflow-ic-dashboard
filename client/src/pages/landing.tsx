@@ -58,7 +58,7 @@ export default function Landing() {
       <div className="max-w-4xl w-full space-y-8">
         <div className="text-center space-y-2">
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight" data-testid="text-landing-title">
-            MIS & IC Dashboard
+            Assetz Strata
           </h1>
           <p className="text-muted-foreground text-sm md:text-base max-w-xl mx-auto">
             MIS reporting, intercompany reconciliation, IC Balance matrix and IC Net off
