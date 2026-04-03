@@ -249,7 +249,9 @@ export function registerCashflowRoutes(app: Express) {
       });
     } catch (error: any) {
       console.error("Cashflow TB upload error:", error);
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -454,7 +456,9 @@ export function registerCashflowRoutes(app: Express) {
       });
     } catch (error: any) {
       console.error("Cashflow mapping upload error:", error);
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -463,7 +467,9 @@ export function registerCashflowRoutes(app: Express) {
       const files = await db.select().from(cashflowTbFiles);
       res.json(files);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -474,7 +480,9 @@ export function registerCashflowRoutes(app: Express) {
       await db.delete(cashflowTbFiles).where(eq(cashflowTbFiles.id, id));
       res.json({ message: "Deleted" });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -484,7 +492,9 @@ export function registerCashflowRoutes(app: Express) {
       await db.delete(cashflowTbFiles);
       res.json({ message: "All TB data cleared" });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -496,7 +506,9 @@ export function registerCashflowRoutes(app: Express) {
       invalidateMappingCache();
       res.json({ message: "Mapping data cleared" });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -512,7 +524,9 @@ export function registerCashflowRoutes(app: Express) {
         pastLosses: pastLosses.length,
       });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -529,7 +543,9 @@ export function registerCashflowRoutes(app: Express) {
         periods: [...new Set(files.map(f => f.period).filter(Boolean))],
       });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -599,7 +615,9 @@ export function registerCashflowRoutes(app: Express) {
 
       res.json({ message: `Reprocessed ${updated} records`, updated });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -618,7 +636,9 @@ export function registerCashflowRoutes(app: Express) {
         offset,
       });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -627,7 +647,9 @@ export function registerCashflowRoutes(app: Express) {
       const data = await db.select().from(cashflowPastLosses);
       res.json(data);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -683,7 +705,9 @@ export function registerCashflowRoutes(app: Express) {
       res.setHeader("Content-Disposition", "attachment; filename=Cashflow_Mapped_TB.xlsx");
       res.send(buffer);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -758,7 +782,9 @@ export function registerCashflowRoutes(app: Express) {
         excludedCount: excludedTbCount,
       });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -870,7 +896,9 @@ export function registerCashflowRoutes(app: Express) {
 
       res.json({ rows, companies, projects, periods });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -959,7 +987,9 @@ export function registerCashflowRoutes(app: Express) {
       res.setHeader("Content-Disposition", "attachment; filename=Cashflow_Detailed.xlsx");
       res.send(buf);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -1010,7 +1040,9 @@ export function registerCashflowRoutes(app: Express) {
       res.setHeader("Content-Disposition", "attachment; filename=Cashflow_Unmapped_Items.xlsx");
       res.send(buf);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -1038,7 +1070,9 @@ export function registerCashflowRoutes(app: Express) {
       res.setHeader("Content-Disposition", "attachment; filename=Cashflow_Past_Losses.xlsx");
       res.send(buf);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -1128,7 +1162,9 @@ export function registerCashflowRoutes(app: Express) {
         },
       });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -1196,7 +1232,9 @@ export function registerCashflowRoutes(app: Express) {
       invalidateMappingCache();
       res.json({ message: `GL mapping updated: ${updated} updated, ${inserted} inserted`, updated, inserted });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -1246,7 +1284,9 @@ export function registerCashflowRoutes(app: Express) {
       invalidateMappingCache();
       res.json({ message: `Entity mapping updated: ${updated} updated, ${inserted} inserted`, updated, inserted });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -1308,7 +1348,9 @@ export function registerCashflowRoutes(app: Express) {
       res.setHeader("Content-Disposition", "attachment; filename=MIS_Mapping_File.xlsx");
       res.send(buf);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 }

@@ -159,8 +159,9 @@ app.use((req, res, next) => {
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    const isMulterError = err.name === "MulterError" ||
+      (err.message && /file type|mime type|file size/i.test(err.message));
+    const status = isMulterError ? 400 : (err.status || err.statusCode || 500);
 
     console.error("Internal Server Error:", err);
 
@@ -168,7 +169,11 @@ app.use((req, res, next) => {
       return next(err);
     }
 
-    return res.status(status).json({ message });
+    const clientMessage = status < 500
+      ? (err.message || "Bad request")
+      : "An internal error occurred. Please try again.";
+
+    return res.status(status).json({ message: clientMessage });
   });
 
   if (process.env.NODE_ENV === "production") {

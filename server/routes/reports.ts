@@ -60,7 +60,9 @@ export function registerReportRoutes(app: Express) {
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
       res.send(Buffer.from(xlsxBuffer));
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -141,7 +143,9 @@ export function registerReportRoutes(app: Express) {
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
       res.send(Buffer.from(xlsxBuffer));
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -182,7 +186,9 @@ export function registerReportRoutes(app: Express) {
 
       res.json(result);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 }

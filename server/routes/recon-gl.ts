@@ -55,7 +55,9 @@ export function registerReconGlRoutes(app: Express) {
 
       res.json(files);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -70,7 +72,9 @@ export function registerReconGlRoutes(app: Express) {
         companyMappings: companyMappings.length,
       });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -436,7 +440,9 @@ export function registerReconGlRoutes(app: Express) {
       });
     } catch (error: any) {
       console.error("GL dump upload error:", error);
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -458,7 +464,9 @@ export function registerReconGlRoutes(app: Express) {
 
       res.json({ deleted: true });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -509,7 +517,9 @@ export function registerReconGlRoutes(app: Express) {
       res.setHeader("Content-Disposition", "attachment; filename=IC_Recon_Mapped_Data.xlsx");
       res.send(buf);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -599,7 +609,9 @@ export function registerReconGlRoutes(app: Express) {
       const totalPages = Math.ceil(total / limit);
       res.json({ data, total, page, limit, totalPages, icTxnTypes });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -648,7 +660,9 @@ export function registerReconGlRoutes(app: Express) {
 
       res.json({ data, total: data.length });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -693,7 +707,9 @@ export function registerReconGlRoutes(app: Express) {
       res.setHeader("Content-Disposition", "attachment; filename=IC_Recon_RPT_Summary.xlsx");
       res.send(buf);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -731,7 +747,9 @@ export function registerReconGlRoutes(app: Express) {
       res.setHeader("Content-Disposition", "attachment; filename=IC_Recon_RPT_Data.xlsx");
       res.send(buf);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 }

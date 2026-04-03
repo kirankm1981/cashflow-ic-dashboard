@@ -27,7 +27,9 @@ export function registerReconciliationRoutes(app: Express) {
       const lines = await storage.getSummarizedLines(filters);
       res.json(lines);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -37,7 +39,9 @@ export function registerReconciliationRoutes(app: Express) {
       res.json(result);
     } catch (error: any) {
       console.error("Reconciliation error:", error);
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -86,7 +90,9 @@ export function registerReconciliationRoutes(app: Express) {
       learnFromManualMatch(transactionIds).catch(err => console.error("[ML] Learn error:", err));
       res.json({ reconId, matched: transactionIds.length });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -105,7 +111,9 @@ export function registerReconciliationRoutes(app: Express) {
       learnFromUnmatch(reconId, lineIds).catch(err => console.error("[ML] Unlearn error:", err));
       res.json({ reconId, unmatched: count });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -119,7 +127,9 @@ export function registerReconciliationRoutes(app: Express) {
       const rules = await storage.getActiveRules();
       res.json(rules);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -128,7 +138,9 @@ export function registerReconciliationRoutes(app: Express) {
       const rules = await storage.getRules();
       res.json(rules);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -155,7 +167,9 @@ export function registerReconciliationRoutes(app: Express) {
       });
       res.json(rule);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -181,7 +195,9 @@ export function registerReconciliationRoutes(app: Express) {
       if (!rule) return res.status(404).json({ message: "Rule not found" });
       res.json(rule);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -190,7 +206,9 @@ export function registerReconciliationRoutes(app: Express) {
       await storage.deleteRule(parseInt(req.params.id));
       res.json({ success: true });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -199,7 +217,9 @@ export function registerReconciliationRoutes(app: Express) {
       const stats = await storage.getDashboardStats();
       res.json(stats);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -214,7 +234,9 @@ export function registerReconciliationRoutes(app: Express) {
       }
       res.json(map);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -223,7 +245,9 @@ export function registerReconciliationRoutes(app: Express) {
       const companies = await storage.getCompanies();
       res.json(companies);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -232,7 +256,9 @@ export function registerReconciliationRoutes(app: Express) {
       const counterParties = await storage.getCounterParties();
       res.json(counterParties);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -241,7 +267,9 @@ export function registerReconciliationRoutes(app: Express) {
       const batches = await storage.getUploadBatches();
       res.json(batches);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -250,7 +278,9 @@ export function registerReconciliationRoutes(app: Express) {
       const pairs = await storage.getCompanyPairs();
       res.json(pairs);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -259,7 +289,9 @@ export function registerReconciliationRoutes(app: Express) {
       const groups = await storage.getReconGroups();
       res.json(groups);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -268,7 +300,9 @@ export function registerReconciliationRoutes(app: Express) {
       const settings = await storage.getDashboardSettings(req.session.userId!);
       res.json(settings);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -285,7 +319,9 @@ export function registerReconciliationRoutes(app: Express) {
       await storage.upsertDashboardSetting(req.session.userId!, chartId, numberScale, decimalPlaces);
       res.json({ success: true });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 }

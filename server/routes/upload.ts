@@ -90,7 +90,9 @@ export function registerUploadRoutes(app: Express) {
       const txns = await storage.getTransactions(filters);
       res.json(txns);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -100,7 +102,9 @@ export function registerUploadRoutes(app: Express) {
       if (!txn) return res.status(404).json({ message: "Transaction not found" });
       res.json(txn);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -116,7 +120,9 @@ export function registerUploadRoutes(app: Express) {
       res.json({ sheetNames });
     } catch (error: any) {
       if (req.file?.path) cleanupFile(req.file.path);
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -128,7 +134,9 @@ export function registerUploadRoutes(app: Express) {
       res.json(result);
     } catch (error: any) {
       if (req.file?.path) cleanupFile(req.file.path);
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -298,7 +306,9 @@ export function registerUploadRoutes(app: Express) {
       });
     } catch (error: any) {
       console.error("Upload error:", error);
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -314,7 +324,9 @@ export function registerUploadRoutes(app: Express) {
       await db.delete(icReconGlFiles);
       res.json({ success: true });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -412,7 +424,9 @@ export function registerUploadRoutes(app: Express) {
         errors: errors.length > 0 ? errors : undefined,
       });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 }

@@ -91,7 +91,9 @@ export function registerAuthRoutes(app: Express) {
         res.json(userData);
       });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -138,7 +140,9 @@ export function registerAuthRoutes(app: Express) {
         createdAt: u.createdAt,
       })));
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -184,7 +188,9 @@ export function registerAuthRoutes(app: Express) {
         createdAt: user.createdAt,
       });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -228,7 +234,9 @@ export function registerAuthRoutes(app: Express) {
         createdAt: user.createdAt,
       });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -242,7 +250,9 @@ export function registerAuthRoutes(app: Express) {
       userCache.delete(id);
       res.json({ message: "User deleted" });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -272,7 +282,9 @@ export function registerAuthRoutes(app: Express) {
       } as any);
       res.json({ message: "Password changed successfully" });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 }

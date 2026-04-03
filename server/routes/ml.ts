@@ -9,7 +9,9 @@ export function registerMlRoutes(app: Express) {
       res.json(result);
     } catch (error: any) {
       console.error("ML analysis error:", error);
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -31,7 +33,9 @@ export function registerMlRoutes(app: Express) {
       }));
       res.json(enriched);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -80,7 +84,9 @@ export function registerMlRoutes(app: Express) {
 
       res.json({ reconId, matched: 2 });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -90,7 +96,9 @@ export function registerMlRoutes(app: Express) {
       await storage.updateMlSuggestionStatus(id, "rejected");
       res.json({ success: true });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -107,7 +115,9 @@ export function registerMlRoutes(app: Express) {
       }));
       res.json(enriched);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -116,7 +126,9 @@ export function registerMlRoutes(app: Express) {
       await storage.resolveAnomalyFlag(parseInt(req.params.id));
       res.json({ success: true });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -132,7 +144,9 @@ export function registerMlRoutes(app: Express) {
       }));
       res.json(enriched);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -142,7 +156,9 @@ export function registerMlRoutes(app: Express) {
       const scores = await storage.getMatchConfidenceScores(reconId);
       res.json(scores);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -167,7 +183,9 @@ export function registerMlRoutes(app: Express) {
         : 0;
       res.json({ buckets, avgScore: Math.min(avgScore, 100), total: scores.length });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -176,7 +194,9 @@ export function registerMlRoutes(app: Express) {
       const patterns = await storage.getMlMatchPatterns();
       res.json(patterns);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -215,7 +235,9 @@ export function registerMlRoutes(app: Express) {
         anomalyBreakdown: Object.fromEntries(anomalyBreakdown),
       });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 }

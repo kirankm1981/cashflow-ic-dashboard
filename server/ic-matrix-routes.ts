@@ -205,7 +205,9 @@ export function registerIcMatrixRoutes(app: Express) {
       });
     } catch (error: any) {
       console.error("TB upload error:", error);
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -267,7 +269,9 @@ export function registerIcMatrixRoutes(app: Express) {
       });
     } catch (error: any) {
       console.error("Mapping upload error:", error);
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -319,7 +323,9 @@ export function registerIcMatrixRoutes(app: Express) {
 
       res.json({ updated });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -328,7 +334,9 @@ export function registerIcMatrixRoutes(app: Express) {
       const files = await db.select().from(icMatrixTbFiles);
       res.json(files);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -374,7 +382,9 @@ export function registerIcMatrixRoutes(app: Express) {
         totalPages: Math.ceil(countResult.count / limit),
       });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -414,7 +424,9 @@ export function registerIcMatrixRoutes(app: Express) {
       res.setHeader("Content-Disposition", "attachment; filename=IC_Data.xlsx");
       res.send(buf);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -427,7 +439,9 @@ export function registerIcMatrixRoutes(app: Express) {
         companyMappings: companyCount.count,
       });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -458,7 +472,9 @@ export function registerIcMatrixRoutes(app: Express) {
         files: files.map(f => ({ id: f.id, label: f.label, fileName: f.fileName, enterprise: f.enterprise, records: f.totalRecords, period: f.period })),
       });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -515,7 +531,9 @@ export function registerIcMatrixRoutes(app: Express) {
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       res.send(buf);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -589,7 +607,9 @@ export function registerIcMatrixRoutes(app: Express) {
       res.setHeader("Content-Disposition", "attachment; filename=IC_Balance_Matrix.xlsx");
       res.send(buf);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -719,7 +739,9 @@ export function registerIcMatrixRoutes(app: Express) {
       res.setHeader("Content-Disposition", "attachment; filename=IC_Netoff_Matrix.xlsx");
       res.send(buf);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -730,7 +752,9 @@ export function registerIcMatrixRoutes(app: Express) {
       await db.delete(icMatrixTbFiles).where(eq(icMatrixTbFiles.id, id));
       res.json({ deleted: true });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -918,7 +942,9 @@ export function registerIcMatrixRoutes(app: Express) {
         totalDifference: netOffRows.reduce((s, r) => s + Math.abs(r.difference), 0),
       });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -930,7 +956,9 @@ export function registerIcMatrixRoutes(app: Express) {
       await db.delete(icMatrixMappingCompany);
       res.json({ cleared: true });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -940,7 +968,9 @@ export function registerIcMatrixRoutes(app: Express) {
       await db.delete(icMatrixTbFiles);
       res.json({ cleared: true });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 
@@ -950,7 +980,9 @@ export function registerIcMatrixRoutes(app: Express) {
       await db.delete(icMatrixMappingCompany);
       res.json({ cleared: true });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      const isOperational = error.status && error.status < 500;
+      const message = isOperational ? error.message : "Internal server error";
+      res.status(error.status || 500).json({ message });
     }
   });
 }
