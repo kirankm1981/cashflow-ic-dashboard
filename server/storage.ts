@@ -304,49 +304,71 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getDashboardStats() {
-    const allLines = await db.select().from(summarizedLines);
-    const totalTransactions = allLines.length;
-    const matchedTransactions = allLines.filter((t) => isMatchedStatus(t.reconStatus || "")).length;
-    const unmatchedTransactions = totalTransactions - matchedTransactions;
+    const [statusCounts, companyStats, ruleCounts, glFilesList] = await Promise.all([
+      db.select({
+        reconStatus: summarizedLines.reconStatus,
+        count: sql<number>`count(*)::int`,
+        totalDebit: sql<number>`coalesce(sum(case when net_amount > 0 then net_amount else 0 end), 0)`,
+        totalCredit: sql<number>`coalesce(sum(case when net_amount < 0 then abs(net_amount) else 0 end), 0)`,
+      }).from(summarizedLines).groupBy(summarizedLines.reconStatus),
 
+      db.select({
+        company: summarizedLines.company,
+        total: sql<number>`count(*)::int`,
+        matched: sql<number>`count(*) filter (where recon_status in ('matched','manual'))::int`,
+        reversal: sql<number>`count(*) filter (where recon_status = 'reversal')::int`,
+        review: sql<number>`count(*) filter (where recon_status = 'review_match')::int`,
+        suggested: sql<number>`count(*) filter (where recon_status = 'suggested_match')::int`,
+        unmatched: sql<number>`count(*) filter (where recon_status = 'unmatched' or recon_status is null)::int`,
+        icTotal: sql<number>`count(*) filter (where company != counter_party and (recon_status is null or recon_status != 'reversal'))::int`,
+        icReconciled: sql<number>`count(*) filter (where company != counter_party and recon_status in ('matched','manual','review_match','suggested_match'))::int`,
+      }).from(summarizedLines).groupBy(summarizedLines.company),
+
+      db.select({
+        reconRule: summarizedLines.reconRule,
+        count: sql<number>`count(*)::int`,
+      }).from(summarizedLines)
+        .where(sql`recon_rule is not null`)
+        .groupBy(summarizedLines.reconRule),
+
+      db.select().from(icReconGlFiles),
+    ]);
+
+    let totalTransactions = 0;
+    let matchedTransactions = 0;
+    let totalDebit = 0;
+    let totalCredit = 0;
+    const statusBreakdown: { status: string; count: number }[] = [];
+
+    for (const row of statusCounts) {
+      const status = row.reconStatus || "unmatched";
+      const count = Number(row.count);
+      totalTransactions += count;
+      if (MATCHED_STATUSES.includes(status)) matchedTransactions += count;
+      totalDebit += Number(row.totalDebit);
+      totalCredit += Number(row.totalCredit);
+      statusBreakdown.push({ status, count });
+    }
+
+    const unmatchedTransactions = totalTransactions - matchedTransactions;
     const matchRate = totalTransactions > 0 ? (matchedTransactions / totalTransactions) * 100 : 0;
 
-    const totalDebit = allLines.reduce((sum, t) => sum + Math.max(t.netAmount || 0, 0), 0);
-    const totalCredit = allLines.reduce((sum, t) => sum + Math.abs(Math.min(t.netAmount || 0, 0)), 0);
-
-    const companyMap = new Map<string, { total: number; matched: number; reversal: number; review: number; suggested: number; unmatched: number; icTotal: number; icReconciled: number }>();
-    for (const t of allLines) {
-      const key = t.company;
-      if (!companyMap.has(key)) companyMap.set(key, { total: 0, matched: 0, reversal: 0, review: 0, suggested: 0, unmatched: 0, icTotal: 0, icReconciled: 0 });
-      const entry = companyMap.get(key)!;
-      entry.total++;
-      const s = t.reconStatus || "unmatched";
-      if (s === "matched" || s === "manual") entry.matched++;
-      else if (s === "reversal") entry.reversal++;
-      else if (s === "review_match") entry.review++;
-      else if (s === "suggested_match") entry.suggested++;
-      else entry.unmatched++;
-
-      const isSameEntity = t.company === t.counterParty;
-      if (!isSameEntity && s !== "reversal") {
-        entry.icTotal++;
-        if (s === "matched" || s === "manual" || s === "review_match" || s === "suggested_match") {
-          entry.icReconciled++;
-        }
-      }
-    }
-    const companySummary = Array.from(companyMap.entries()).map(([company, stats]) => ({
-      company,
-      ...stats,
+    const companySummary = companyStats.map(r => ({
+      company: r.company,
+      total: Number(r.total),
+      matched: Number(r.matched),
+      reversal: Number(r.reversal),
+      review: Number(r.review),
+      suggested: Number(r.suggested),
+      unmatched: Number(r.unmatched),
+      icTotal: Number(r.icTotal),
+      icReconciled: Number(r.icReconciled),
     }));
 
     const ruleMap = new Map<string, number>();
-    for (const t of allLines) {
-      if (t.reconRule) {
-        ruleMap.set(t.reconRule, (ruleMap.get(t.reconRule) || 0) + 1);
-      }
+    for (const r of ruleCounts) {
+      if (r.reconRule) ruleMap.set(r.reconRule, Number(r.count));
     }
-
     const allRules = await db.select().from(reconciliationRules).orderBy(asc(reconciliationRules.priority));
     const ruleBreakdown = allRules.map((r) => ({
       rule: r.name,
@@ -354,14 +376,6 @@ export class DatabaseStorage implements IStorage {
       matchType: r.classification || "AUTO_MATCH",
     }));
 
-    const statusMap = new Map<string, number>();
-    for (const t of allLines) {
-      const s = t.reconStatus || "unmatched";
-      statusMap.set(s, (statusMap.get(s) || 0) + 1);
-    }
-    const statusBreakdown = Array.from(statusMap.entries()).map(([status, count]) => ({ status, count }));
-
-    const glFilesList = await db.select().from(icReconGlFiles);
     const glSources = glFilesList.map(f => {
       let eName = f.enterpriseName || null;
       let rPeriod = f.reportPeriod || null;
