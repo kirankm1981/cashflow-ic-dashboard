@@ -220,7 +220,7 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
 
   const uploadCashflowMapping = useCallback(async (file: File) => {
     const notifId = `cashflow-mapping-${Date.now()}`;
-    addNotification({ id: notifId, module: "cashflow", label: "Cashflow Mapping", progress: 0, status: "uploading", message: "Uploading mapping file..." });
+    addNotification({ id: notifId, module: "cashflow", label: "MIS Mapping", progress: 0, status: "uploading", message: "Uploading mapping file..." });
 
     try {
       const formData = new FormData();

@@ -183,10 +183,10 @@ export default function CashflowUpload() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight" data-testid="text-cashflow-upload-title">
-            Cashflow Upload
+            MIS Upload
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Upload Trial Balance files and Cashflow mapping to compile data
+            Upload Trial Balance files and MIS mapping to compile data
           </p>
         </div>
       </div>
@@ -313,7 +313,7 @@ export default function CashflowUpload() {
             <div className="flex items-center justify-between">
               <CardTitle className="text-base flex items-center gap-2">
                 <Database className="w-4 h-4" />
-                Cashflow Mapping File
+                MIS Mapping File
               </CardTitle>
               {mappingSummary?.hasMapping && (
                 <div className="flex gap-2">
@@ -371,7 +371,7 @@ export default function CashflowUpload() {
                       ) : (
                         <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
                       )}
-                      <span className="text-xs">Groupings (Cashflow / CF Head)</span>
+                      <span className="text-xs">Groupings (MIS / CF Head)</span>
                     </div>
                     <Badge variant={mappingSummary.groupings > 0 ? "default" : "secondary"} className="text-[10px]">
                       {formatNum(mappingSummary.groupings)} mappings

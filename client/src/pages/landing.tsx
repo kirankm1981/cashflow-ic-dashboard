@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 const allModules = [
   {
     key: "cashflow",
-    title: "Cashflow Dashboard",
+    title: "Assetz MIS",
     description: "Monitor and analyze intercompany cash flows, track inflows and outflows across all entities",
     icon: IndianRupee,
     href: "/cashflow",
@@ -58,10 +58,10 @@ export default function Landing() {
       <div className="max-w-4xl w-full space-y-8">
         <div className="text-center space-y-2">
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight" data-testid="text-landing-title">
-            Cashflow & IC Dashboard
+            Assetz MIS & IC Dashboard
           </h1>
           <p className="text-muted-foreground text-sm md:text-base max-w-xl mx-auto">
-            Intercompany reconciliation, cashflow reporting, IC Balance matrix and IC Net off
+            MIS reporting, intercompany reconciliation, IC Balance matrix and IC Net off
           </p>
         </div>
 

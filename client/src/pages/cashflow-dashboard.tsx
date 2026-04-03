@@ -241,7 +241,7 @@ export default function CashflowDashboard() {
     return (
       <div className="p-6 space-y-6" data-testid="page-cashflow-dashboard">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Cashflow Dashboard</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Assetz MIS</h1>
           <p className="text-muted-foreground text-sm mt-1">Monitor and analyze cashflows across entities</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -258,7 +258,7 @@ export default function CashflowDashboard() {
       <div className="p-6 space-y-6" data-testid="page-cashflow-dashboard">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight" data-testid="text-cashflow-title">Cashflow Dashboard</h1>
+            <h1 className="text-2xl font-bold tracking-tight" data-testid="text-cashflow-title">Assetz MIS</h1>
             <p className="text-muted-foreground text-sm mt-1">Monitor and analyze cashflows across entities</p>
           </div>
         </div>
@@ -267,7 +267,7 @@ export default function CashflowDashboard() {
             <IndianRupee className="w-12 h-12 text-muted-foreground/40 mb-4" />
             <h3 className="text-lg font-semibold mb-2">No Data Yet</h3>
             <p className="text-sm text-muted-foreground max-w-md mb-4">
-              Upload Trial Balance files and a Cashflow Mapping file to get started.
+              Upload Trial Balance files and a MIS Mapping file to get started.
             </p>
             <button
               className="text-sm text-primary underline cursor-pointer"
@@ -338,7 +338,7 @@ export default function CashflowDashboard() {
     <div className="p-6 space-y-4" data-testid="page-cashflow-dashboard">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight" data-testid="text-cashflow-title">Cashflow Dashboard</h1>
+          <h1 className="text-2xl font-bold tracking-tight" data-testid="text-cashflow-title">Assetz MIS</h1>
           <p className="text-muted-foreground text-sm mt-1">Monitor and analyze cashflows across entities</p>
         </div>
         {(periodDisplay || enterpriseDisplay) && (
@@ -352,7 +352,7 @@ export default function CashflowDashboard() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList data-testid="tabs-cashflow-dashboard">
           <TabsTrigger value="dashboard" data-testid="tab-cf-dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="detailed" data-testid="tab-cf-detailed">Detailed Cashflow</TabsTrigger>
+          <TabsTrigger value="detailed" data-testid="tab-cf-detailed">Detailed MIS</TabsTrigger>
           <TabsTrigger value="unmapped" data-testid="tab-cf-unmapped" className="relative">
             Unmapped Items
             {totalUnmapped > 0 && (
@@ -533,7 +533,7 @@ export default function CashflowDashboard() {
           <Card>
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Detailed Cashflow — Type / CF Head / Projects</CardTitle>
+                <CardTitle className="text-base">Detailed MIS — Type / CF Head / Projects</CardTitle>
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary" className="text-xs">
                     {pivotData.projectList.length} projects
