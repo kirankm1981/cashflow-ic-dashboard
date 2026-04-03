@@ -74,12 +74,13 @@ If fso.FileExists(logFile) Then
     End If
 End If
 
-' Now start the server via PM2 (auto-restart on crash)
+' Now start the server via PM2 (restart if exists, otherwise start fresh)
 WshShell.Run "cmd /c cd /d """ & strPath & _
-    """ && set NODE_ENV=production && if not exist dist\index.cjs " & _
-    "(npx tsx script/build.ts) && pm2 start dist/index.cjs " & _
-    "--name cashflow-ic --restart-delay 3000 --max-restarts 10 " & _
-    "--output """ & logFile & """ --error """ & logFile & """", 0, True
+    """ && set NODE_ENV=production" & _
+    " && if not exist dist\index.cjs (npx tsx script/build.ts)" & _
+    " && (pm2 restart cashflow-ic 2>nul || pm2 start dist/index.cjs" & _
+    " --name cashflow-ic --restart-delay 3000 --max-restarts 10" & _
+    " --output """ & logFile & """ --error """ & logFile & """)", 0, True
 WScript.Sleep 3000   ' initial wait for node to start
 
 Dim attempts, serverUp
