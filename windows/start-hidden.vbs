@@ -22,6 +22,15 @@ Do While Not envFile.AtEndOfStream
 Loop
 envFile.Close
 
+' Check if port 3000 is already in use
+Dim portCheck
+portCheck = WshShell.Run("cmd /c netstat -an | find ""0.0.0.0:3000""", 0, True)
+If portCheck = 0 Then
+    ' Port already in use — server may already be running
+    WshShell.Run "http://localhost:3000", 1, False
+    WScript.Quit 0
+End If
+
 ' Try sync-db up to 5 times with 5-second waits (handles PG startup delay)
 Dim retries, dbOk
 retries = 0
