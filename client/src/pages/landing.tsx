@@ -7,7 +7,7 @@ const allModules = [
   {
     key: "cashflow",
     title: "MIS",
-    description: "Monitor and analyze intercompany cash flows, track inflows and outflows across all entities",
+    description: "Consolidated financial dashboards covering cashflow, profitability, working capital, debt, and key performance indicators",
     icon: IndianRupee,
     href: "/cashflow",
     gradient: "from-emerald-500 to-teal-600",
