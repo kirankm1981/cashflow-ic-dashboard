@@ -577,11 +577,27 @@ export function registerReconGlRoutes(app: Express) {
         .sort();
 
       const data = pageRows.map(r => {
-        const parsed = typeof r.rowData === "string" ? JSON.parse(r.rowData) : r.rowData as Record<string, any>;
-        return parsed;
+        const p = typeof r.rowData === "string" ? JSON.parse(r.rowData) : r.rowData as Record<string, any>;
+        const glName = (p["IC-RPT GL Name"] || "") as string;
+        return {
+          company: p["Company"] || "",
+          companyCode: p["Company Code"] || "",
+          documentNo: p["Document No"] || "",
+          docDate: p["Doc Date"] || "",
+          accountHead: p["Account Head"] || "",
+          subAccountHead: p["Sub Account Head"] || "",
+          icRptGlName: glName,
+          icTxnType: p["IC Txn Type"] || "",
+          rptType: glName.startsWith("IC_") ? "IC" : glName.startsWith("RPT_") ? "RPT" : "",
+          netAmount: p["Net Amount"] ?? 0,
+          icCounterParty: p["IC Counter Party"] || "",
+          icCounterPartyCode: p["IC Counter Party Code"] || "",
+          narration: p["Narration"] || "",
+        };
       });
 
-      res.json({ data, total, page, limit, icTxnTypes });
+      const totalPages = Math.ceil(total / limit);
+      res.json({ data, total, page, limit, totalPages, icTxnTypes });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -597,19 +613,38 @@ export function registerReconGlRoutes(app: Express) {
 
       const summaryRows = await db.select({
         companyCode: sqlTag<string>`COALESCE(row_data->>'Company Code','')`.as("company_code"),
+        companyName: sqlTag<string>`COALESCE(row_data->>'Company','')`.as("company_name"),
         counterPartyCode: sqlTag<string>`COALESCE(row_data->>'IC Counter Party Code','')`.as("counter_party_code"),
+        counterPartyName: sqlTag<string>`COALESCE(row_data->>'IC Counter Party','')`.as("counter_party_name"),
         icTxnType: sqlTag<string>`COALESCE(row_data->>'IC Txn Type','')`.as("ic_txn_type"),
+        glName: sqlTag<string>`MIN(row_data->>'IC-RPT GL Name')`.as("gl_name"),
         totalNet: sqlTag<number>`SUM(CAST(COALESCE(NULLIF(row_data->>'Net Amount',''),'0') AS NUMERIC))`.as("total_net"),
         rowCount: sqlTag<number>`COUNT(*)`.as("row_count"),
       }).from(icReconGlRawRows)
         .where(rptBaseWhere)
         .groupBy(
           sqlTag`row_data->>'Company Code'`,
+          sqlTag`row_data->>'Company'`,
           sqlTag`row_data->>'IC Counter Party Code'`,
+          sqlTag`row_data->>'IC Counter Party'`,
           sqlTag`row_data->>'IC Txn Type'`,
         );
 
-      res.json(summaryRows);
+      const data = summaryRows.map(r => {
+        const gl = (r.glName || "") as string;
+        return {
+          company: r.companyCode || "",
+          companyName: r.companyName || "",
+          counterParty: r.counterPartyCode || "",
+          counterPartyName: r.counterPartyName || "",
+          transactionType: r.icTxnType || "",
+          rptType: gl.startsWith("IC_") ? "IC" : gl.startsWith("RPT_") ? "RPT" : "",
+          amount: Number(r.totalNet) || 0,
+          rowCount: Number(r.rowCount) || 0,
+        };
+      });
+
+      res.json({ data, total: data.length });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

@@ -15,10 +15,13 @@ function formatNum(val: number | null | undefined): string {
 
 interface RptSummaryRow {
   company: string;
+  companyName: string;
   counterParty: string;
+  counterPartyName: string;
   transactionType: string;
   rptType: string;
   amount: number;
+  rowCount: number;
 }
 
 export default function RptDataPage() {
@@ -59,7 +62,9 @@ export default function RptDataPage() {
       const s = summarySearch.toLowerCase();
       rows = rows.filter(r =>
         r.company.toLowerCase().includes(s) ||
+        r.companyName.toLowerCase().includes(s) ||
         r.counterParty.toLowerCase().includes(s) ||
+        r.counterPartyName.toLowerCase().includes(s) ||
         r.transactionType.toLowerCase().includes(s)
       );
     }
@@ -364,8 +369,8 @@ export default function RptDataPage() {
                       {filteredSummary.map((row, idx) => (
                         <tr key={idx} className="border-t hover:bg-muted/30" data-testid={`row-rpt-summary-${idx}`}>
                           <td className="p-2 text-muted-foreground">{idx + 1}</td>
-                          <td className="p-2 max-w-[200px] truncate" title={row.company}>{row.company || "-"}</td>
-                          <td className="p-2 max-w-[200px] truncate" title={row.counterParty}>{row.counterParty || "-"}</td>
+                          <td className="p-2 max-w-[200px] truncate" title={row.companyName || row.company}>{row.companyName || row.company || "-"}</td>
+                          <td className="p-2 max-w-[200px] truncate" title={row.counterPartyName || row.counterParty}>{row.counterPartyName || row.counterParty || "-"}</td>
                           <td className="p-2 whitespace-nowrap">{row.transactionType || "-"}</td>
                           <td className="p-2 whitespace-nowrap">
                             <Badge variant={row.rptType === "IC" ? "default" : "secondary"} className="text-[10px] px-1.5">
