@@ -387,7 +387,7 @@ export default function CashflowDashboard() {
     return (
       <div className="p-6 space-y-6" data-testid="page-cashflow-dashboard">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Assetz MIS</h1>
+          <h1 className="text-2xl font-bold tracking-tight">MIS</h1>
           <p className="text-muted-foreground text-sm mt-1">Monitor and analyze cashflows across entities</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -404,7 +404,7 @@ export default function CashflowDashboard() {
       <div className="p-6 space-y-6" data-testid="page-cashflow-dashboard">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight" data-testid="text-cashflow-title">Assetz MIS</h1>
+            <h1 className="text-2xl font-bold tracking-tight" data-testid="text-cashflow-title">MIS</h1>
             <p className="text-muted-foreground text-sm mt-1">Monitor and analyze cashflows across entities</p>
           </div>
         </div>
@@ -484,7 +484,7 @@ export default function CashflowDashboard() {
     <div className="p-6 space-y-4" data-testid="page-cashflow-dashboard">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight" data-testid="text-cashflow-title">Assetz MIS</h1>
+          <h1 className="text-2xl font-bold tracking-tight" data-testid="text-cashflow-title">MIS</h1>
           <p className="text-muted-foreground text-sm mt-1">Monitor and analyze cashflows across entities</p>
         </div>
         {(periodDisplay || enterpriseDisplay) && (

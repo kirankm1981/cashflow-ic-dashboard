@@ -25,7 +25,7 @@ export default function LoginPage() {
           </div>
           <div>
             <CardTitle className="text-xl font-bold text-white" data-testid="text-login-title">
-              Assetz MIS & IC Dashboard
+              MIS & IC Dashboard
             </CardTitle>
             <CardDescription className="text-slate-400">
               Sign in to continue

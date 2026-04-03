@@ -51,7 +51,7 @@ function PasswordHints({ password }: { password: string }) {
 
 const ALL_MODULES = [
   { key: "ic_recon", label: "IC Recon" },
-  { key: "cashflow", label: "Assetz MIS" },
+  { key: "cashflow", label: "MIS" },
   { key: "ic_matrix", label: "IC Matrix" },
 ];
 

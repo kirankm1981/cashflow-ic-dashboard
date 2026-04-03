@@ -37,7 +37,7 @@ function PageTitle() {
     "/recon/rpt-data": "RPT Data",
     "/recon/rules": "Rule Configuration",
     "/recon/audit": "Audit Trail",
-    "/cashflow": "Assetz MIS",
+    "/cashflow": "MIS",
     "/cashflow/upload": "MIS Upload",
     "/ic-matrix": "IC Matrix",
     "/ic-matrix/upload": "Upload TB Files",
@@ -45,12 +45,12 @@ function PageTitle() {
   };
   const module = location === "/" ? "Platform"
     : location.startsWith("/admin") ? "Admin"
-    : location.startsWith("/cashflow") ? "Assetz MIS"
+    : location.startsWith("/cashflow") ? "MIS"
     : location.startsWith("/ic-matrix") ? "IC Matrix"
     : "IC Recon";
   const colors: Record<string, string> = {
     "IC Recon": "text-blue-500",
-    "Assetz MIS": "text-emerald-500",
+    "MIS": "text-emerald-500",
     "IC Matrix": "text-purple-500",
     "Admin": "text-amber-500",
   };
@@ -58,7 +58,7 @@ function PageTitle() {
     <div className="flex items-center gap-2">
       <span className={`text-xs font-medium ${colors[module] || ""}`} data-testid="text-active-module">{module}</span>
       <span className="text-muted-foreground/40">|</span>
-      <span className="text-xs text-muted-foreground" data-testid="text-page-title">{titles[location] || "Assetz MIS & IC Dashboard"}</span>
+      <span className="text-xs text-muted-foreground" data-testid="text-page-title">{titles[location] || "MIS & IC Dashboard"}</span>
     </div>
   );
 }
