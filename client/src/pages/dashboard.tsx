@@ -160,7 +160,7 @@ function EntitySummaryContent({ stats, nameMap }: { stats: DashboardStats; nameM
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
         <Card>
           <CardContent className="p-4">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Entities</p>
@@ -183,14 +183,26 @@ function EntitySummaryContent({ stats, nameMap }: { stats: DashboardStats; nameM
         </Card>
         <Card>
           <CardContent className="p-4">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Matched</p>
+            <p className="text-2xl font-bold mt-1 text-emerald-600" data-testid="text-entity-matched">{formatNumber(totals.matched)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Reversals</p>
             <p className="text-2xl font-bold mt-1 text-purple-600" data-testid="text-entity-reversals">{formatNumber(totals.reversal)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Review + Suggested</p>
-            <p className="text-2xl font-bold mt-1 text-teal-600" data-testid="text-entity-review-suggested">{formatNumber(totals.review + totals.suggested)}</p>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Review</p>
+            <p className="text-2xl font-bold mt-1 text-teal-600" data-testid="text-entity-review">{formatNumber(totals.review)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Suggested</p>
+            <p className="text-2xl font-bold mt-1 text-orange-600" data-testid="text-entity-suggested">{formatNumber(totals.suggested)}</p>
           </CardContent>
         </Card>
         <Card>
