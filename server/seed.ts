@@ -308,7 +308,7 @@ export async function fixReversalStatuses() {
 export async function seedDefaultAdmin() {
   const existing = await db.select().from(users);
   if (existing.length === 0) {
-    const hashedPassword = await bcrypt.hash("admin123", 10);
+    const hashedPassword = await bcrypt.hash("admin", 10);
     await db.insert(users).values({
       username: "admin",
       password: hashedPassword,
