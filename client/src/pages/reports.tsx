@@ -188,32 +188,34 @@ export default function Reports({ embedded = false }: { embedded?: boolean } = {
                     <td colSpan={8} className="py-8 text-center text-muted-foreground">No data available</td>
                   </tr>
                 ) : (
-                  <>
-                    {filtered.map((row, idx) => (
-                      <tr key={idx} className="border-b hover:bg-muted/30 transition-colors" data-testid={`row-report-${idx}`}>
-                        <td className="py-2.5 px-4 font-medium" data-testid={`text-entity-${idx}`}>{displayName(row.entity)}</td>
-                        <td className="py-2.5 px-4" data-testid={`text-counterparty-${idx}`}>{displayName(row.counterParty)}</td>
-                        <td className="py-2.5 px-3 text-right font-mono" data-testid={`text-total-${idx}`}>{row.total.toLocaleString()}</td>
-                        <td className="py-2.5 px-3 text-right font-mono text-emerald-600" data-testid={`text-matched-${idx}`}>{row.matched.toLocaleString()}</td>
-                        <td className="py-2.5 px-3 text-right font-mono text-teal-600" data-testid={`text-review-${idx}`}>{row.review.toLocaleString()}</td>
-                        <td className="py-2.5 px-3 text-right font-mono text-orange-600" data-testid={`text-suggested-${idx}`}>{row.suggested.toLocaleString()}</td>
-                        <td className="py-2.5 px-3 text-right font-mono text-red-600" data-testid={`text-unmatched-${idx}`}>{row.unmatched.toLocaleString()}</td>
-                        <td className="py-2.5 px-3 text-center" data-testid={`text-rate-${idx}`}>{getRateBadge(row.rate)}</td>
-                      </tr>
-                    ))}
-                    <tr className="bg-muted/40 font-semibold border-t-2" data-testid="row-report-total">
-                      <td className="py-2.5 px-4">TOTAL</td>
-                      <td className="py-2.5 px-4"></td>
-                      <td className="py-2.5 px-3 text-right font-mono">{totals.total.toLocaleString()}</td>
-                      <td className="py-2.5 px-3 text-right font-mono text-emerald-600">{totals.matched.toLocaleString()}</td>
-                      <td className="py-2.5 px-3 text-right font-mono text-teal-600">{totals.review.toLocaleString()}</td>
-                      <td className="py-2.5 px-3 text-right font-mono text-orange-600">{totals.suggested.toLocaleString()}</td>
-                      <td className="py-2.5 px-3 text-right font-mono text-red-600">{totals.unmatched.toLocaleString()}</td>
-                      <td className="py-2.5 px-3 text-center">{getRateBadge(overallRate)}</td>
+                  filtered.map((row, idx) => (
+                    <tr key={idx} className="border-b hover:bg-muted/30 transition-colors" data-testid={`row-report-${idx}`}>
+                      <td className="py-2.5 px-4 font-medium" data-testid={`text-entity-${idx}`}>{displayName(row.entity)}</td>
+                      <td className="py-2.5 px-4" data-testid={`text-counterparty-${idx}`}>{displayName(row.counterParty)}</td>
+                      <td className="py-2.5 px-3 text-right font-mono" data-testid={`text-total-${idx}`}>{row.total.toLocaleString()}</td>
+                      <td className="py-2.5 px-3 text-right font-mono text-emerald-600" data-testid={`text-matched-${idx}`}>{row.matched.toLocaleString()}</td>
+                      <td className="py-2.5 px-3 text-right font-mono text-teal-600" data-testid={`text-review-${idx}`}>{row.review.toLocaleString()}</td>
+                      <td className="py-2.5 px-3 text-right font-mono text-orange-600" data-testid={`text-suggested-${idx}`}>{row.suggested.toLocaleString()}</td>
+                      <td className="py-2.5 px-3 text-right font-mono text-red-600" data-testid={`text-unmatched-${idx}`}>{row.unmatched.toLocaleString()}</td>
+                      <td className="py-2.5 px-3 text-center" data-testid={`text-rate-${idx}`}>{getRateBadge(row.rate)}</td>
                     </tr>
-                  </>
+                  ))
                 )}
               </tbody>
+              {!isLoading && filtered.length > 0 && (
+                <tfoot className="sticky bottom-0 bg-background border-t-2">
+                  <tr className="bg-muted/60 font-semibold" data-testid="row-report-total">
+                    <td className="py-2.5 px-4">TOTAL</td>
+                    <td className="py-2.5 px-4">{filtered.length} pairs</td>
+                    <td className="py-2.5 px-3 text-right font-mono">{totals.total.toLocaleString()}</td>
+                    <td className="py-2.5 px-3 text-right font-mono text-emerald-600">{totals.matched.toLocaleString()}</td>
+                    <td className="py-2.5 px-3 text-right font-mono text-teal-600">{totals.review.toLocaleString()}</td>
+                    <td className="py-2.5 px-3 text-right font-mono text-orange-600">{totals.suggested.toLocaleString()}</td>
+                    <td className="py-2.5 px-3 text-right font-mono text-red-600">{totals.unmatched.toLocaleString()}</td>
+                    <td className="py-2.5 px-3 text-center">{getRateBadge(overallRate)}</td>
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </div>
         </CardContent>
