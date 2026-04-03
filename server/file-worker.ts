@@ -1,6 +1,7 @@
 import { parentPort } from "worker_threads";
 import * as XLSX from "xlsx";
 import { parse } from "csv-parse/sync";
+import fs from "fs";
 
 function parseFileToRecords(buffer: Buffer, filename: string, selectedSheet?: string): Record<string, string>[] {
   const ext = (filename || "").toLowerCase().split(".").pop();
@@ -66,8 +67,8 @@ function previewHeaders(buffer: Buffer, filename: string, selectedSheet?: string
 
 parentPort?.on("message", (msg) => {
   try {
-    const { action, buffer, filename, selectedSheet } = msg;
-    const buf = Buffer.from(buffer);
+    const { action, buffer, filePath, filename, selectedSheet } = msg;
+    const buf = buffer ? Buffer.from(buffer) : fs.readFileSync(filePath);
 
     let result: any;
     switch (action) {
@@ -84,8 +85,11 @@ parentPort?.on("message", (msg) => {
         throw new Error(`Unknown action: ${action}`);
     }
 
+    if (filePath) { try { fs.unlinkSync(filePath); } catch {} }
+
     parentPort?.postMessage({ success: true, data: result });
   } catch (error: any) {
+    if (msg.filePath) { try { fs.unlinkSync(msg.filePath); } catch {} }
     parentPort?.postMessage({ success: false, error: error.message });
   }
 });

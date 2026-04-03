@@ -69,44 +69,53 @@ function runWorker(workerData: any): Promise<any> {
   });
 }
 
-export async function parseFileInWorker(buffer: Buffer, filename: string, selectedSheet?: string): Promise<Record<string, string>[]> {
+export async function parseFileInWorker(filePath: string, filename: string, selectedSheet?: string): Promise<Record<string, string>[]> {
   try {
     return await runWorker({
       action: "parse",
-      buffer: buffer,
+      filePath,
       filename,
       selectedSheet,
     });
   } catch (err: any) {
     console.warn("Worker parsing failed, falling back to main thread:", err.message);
+    const fs = require("fs");
+    const buffer = fs.existsSync(filePath) ? fs.readFileSync(filePath) : Buffer.alloc(0);
+    try { fs.unlinkSync(filePath); } catch {}
     return parseFileMainThread(buffer, filename, selectedSheet);
   }
 }
 
-export async function getSheetNamesInWorker(buffer: Buffer): Promise<string[]> {
+export async function getSheetNamesInWorker(filePath: string): Promise<string[]> {
   try {
     return await runWorker({
       action: "sheetNames",
-      buffer: buffer,
+      filePath,
     });
   } catch (err: any) {
     console.warn("Worker sheet names failed, falling back to main thread:", err.message);
+    const fs = require("fs");
+    const buffer = fs.existsSync(filePath) ? fs.readFileSync(filePath) : Buffer.alloc(0);
+    try { fs.unlinkSync(filePath); } catch {}
     const XLSX = await import("xlsx");
     const workbook = XLSX.read(buffer, { type: "buffer", bookSheets: true });
     return workbook.SheetNames || [];
   }
 }
 
-export async function previewHeadersInWorker(buffer: Buffer, filename: string, selectedSheet?: string): Promise<{ headers: string[]; sampleRows: Record<string, string>[] }> {
+export async function previewHeadersInWorker(filePath: string, filename: string, selectedSheet?: string): Promise<{ headers: string[]; sampleRows: Record<string, string>[] }> {
   try {
     return await runWorker({
       action: "preview",
-      buffer: buffer,
+      filePath,
       filename,
       selectedSheet,
     });
   } catch (err: any) {
     console.warn("Worker preview failed, falling back to main thread:", err.message);
+    const fs = require("fs");
+    const buffer = fs.existsSync(filePath) ? fs.readFileSync(filePath) : Buffer.alloc(0);
+    try { fs.unlinkSync(filePath); } catch {}
     return previewMainThread(buffer, filename, selectedSheet);
   }
 }

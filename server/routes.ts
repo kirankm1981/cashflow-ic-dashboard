@@ -456,9 +456,7 @@ export async function registerRoutes(
         cleanupFile(req.file.path);
         return res.json({ sheetNames: [] });
       }
-      const fileBuffer = fs.readFileSync(req.file.path);
-      cleanupFile(req.file.path);
-      const sheetNames = await getSheetNamesInWorker(fileBuffer);
+      const sheetNames = await getSheetNamesInWorker(req.file.path);
       res.json({ sheetNames });
     } catch (error: any) {
       if (req.file?.path) cleanupFile(req.file.path);
@@ -470,9 +468,7 @@ export async function registerRoutes(
     try {
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
       const selectedSheet = req.body?.sheetName || null;
-      const fileBuffer = fs.readFileSync(req.file.path);
-      cleanupFile(req.file.path);
-      const result = await previewHeadersInWorker(fileBuffer, req.file.originalname, selectedSheet);
+      const result = await previewHeadersInWorker(req.file.path, req.file.originalname, selectedSheet);
       res.json(result);
     } catch (error: any) {
       if (req.file?.path) cleanupFile(req.file.path);
@@ -489,9 +485,7 @@ export async function registerRoutes(
       const columnMapping = req.body.columnMapping ? JSON.parse(req.body.columnMapping) : null;
       const selectedSheet = req.body.sheetName || undefined;
 
-      const fileBuffer = fs.readFileSync(req.file.path);
-      cleanupFile(req.file.path);
-      const records = await parseFileInWorker(fileBuffer, req.file.originalname, selectedSheet);
+      const records = await parseFileInWorker(req.file.path, req.file.originalname, selectedSheet);
 
       if (records.length === 0) {
         return res.status(400).json({ message: "File contains no data rows" });
