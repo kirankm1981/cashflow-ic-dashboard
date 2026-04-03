@@ -4,15 +4,19 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChevronDown, ChevronRight, TrendingUp, TrendingDown, ArrowRightLeft } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, ReferenceLine, ComposedChart, Line } from "recharts";
-import { DashboardRow, fmt, colorForValue } from "./types";
+import { DashboardRow, createFmt, fmtSuffix, colorForValue } from "./types";
+import type { FormatConfig } from "./types";
 
 const COLORS = { Operating: "#22c55e", Investing: "#f97316", Financing: "#3b82f6", "Cash & Cash Equivalents": "#8b5cf6" };
 
 interface Props {
   rows: DashboardRow[];
+  formatConfig?: FormatConfig;
 }
 
-export function D1CashflowStatement({ rows }: Props) {
+export function D1CashflowStatement({ rows, formatConfig }: Props) {
+  const fmt = createFmt(formatConfig);
+  const suffix = fmtSuffix(formatConfig);
   const [expandedActivities, setExpandedActivities] = useState<Set<string>>(new Set());
   const [expandedLines, setExpandedLines] = useState<Set<string>>(new Set());
 
@@ -212,9 +216,9 @@ export function D1CashflowStatement({ rows }: Props) {
               <TableHeader>
                 <TableRow>
                   <TableHead className="sticky left-0 bg-background z-10 min-w-[280px]">CF Statement Line</TableHead>
-                  <TableHead className="text-right min-w-[120px]">Debit (₹L)</TableHead>
-                  <TableHead className="text-right min-w-[120px]">Credit (₹L)</TableHead>
-                  <TableHead className="text-right min-w-[130px]">Net Movement (₹L)</TableHead>
+                  <TableHead className="text-right min-w-[120px]">Debit ({suffix})</TableHead>
+                  <TableHead className="text-right min-w-[120px]">Credit ({suffix})</TableHead>
+                  <TableHead className="text-right min-w-[130px]">Net Movement ({suffix})</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

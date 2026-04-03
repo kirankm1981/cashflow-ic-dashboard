@@ -5,7 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, ComposedChart, Line, ReferenceLine } from "recharts";
-import { DashboardRow, fmt, colorForValue } from "./types";
+import { DashboardRow, createFmt, fmtSuffix, colorForValue } from "./types";
+import type { FormatConfig } from "./types";
 
 const PL_ORDER = [
   "Revenue from Operations",
@@ -37,9 +38,12 @@ const WIP_COLORS = ["#3b82f6", "#f97316", "#22c55e", "#ef4444", "#8b5cf6", "#06b
 
 interface Props {
   rows: DashboardRow[];
+  formatConfig?: FormatConfig;
 }
 
-export function D2PlWip({ rows }: Props) {
+export function D2PlWip({ rows, formatConfig }: Props) {
+  const fmt = createFmt(formatConfig);
+  const suffix = fmtSuffix(formatConfig);
   const [plTab, setPlTab] = useState("pl");
   const [expandedPl, setExpandedPl] = useState<Set<string>>(new Set());
 
@@ -207,7 +211,7 @@ export function D2PlWip({ rows }: Props) {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="min-w-[280px]">P&L Category</TableHead>
-                      <TableHead className="text-right min-w-[130px]">Amount (₹L)</TableHead>
+                      <TableHead className="text-right min-w-[130px]">Amount ({suffix})</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -315,9 +319,9 @@ export function D2PlWip({ rows }: Props) {
                         <TableRow>
                           <TableHead>Project</TableHead>
                           <TableHead>WIP Component</TableHead>
-                          <TableHead className="text-right">Opening (₹L)</TableHead>
-                          <TableHead className="text-right">Period Add. (₹L)</TableHead>
-                          <TableHead className="text-right">Closing (₹L)</TableHead>
+                          <TableHead className="text-right">Opening ({suffix})</TableHead>
+                          <TableHead className="text-right">Period Add. ({suffix})</TableHead>
+                          <TableHead className="text-right">Closing ({suffix})</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>

@@ -4,7 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis } from "recharts";
-import { DashboardRow, fmt, fmtPct, colorForValue } from "./types";
+import { DashboardRow, createFmt, fmtSuffix, fmtPct, colorForValue } from "./types";
+import type { FormatConfig } from "./types";
 
 const DEBT_COLORS: Record<string, string> = {
   "Secured LT Borrowings": "#1e40af",
@@ -22,9 +23,12 @@ const GROSS_DEBT_BUCKETS = ["Secured LT Borrowings", "Unsecured LT Borrowings", 
 interface Props {
   rows: DashboardRow[];
   allRows: DashboardRow[];
+  formatConfig?: FormatConfig;
 }
 
-export function D4DebtFinancing({ rows, allRows }: Props) {
+export function D4DebtFinancing({ rows, allRows, formatConfig }: Props) {
+  const fmt = createFmt(formatConfig);
+  const suffix = fmtSuffix(formatConfig);
   const [tab, setTab] = useState("debt");
 
   const debtRows = useMemo(() => rows.filter(r => r.debtBucket), [rows]);
@@ -188,10 +192,10 @@ export function D4DebtFinancing({ rows, allRows }: Props) {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="min-w-[200px]">Debt Type</TableHead>
-                      <TableHead className="text-right">Opening (₹L)</TableHead>
-                      <TableHead className="text-right">Additions (₹L)</TableHead>
-                      <TableHead className="text-right">Repayments (₹L)</TableHead>
-                      <TableHead className="text-right">Closing (₹L)</TableHead>
+                      <TableHead className="text-right">Opening ({suffix})</TableHead>
+                      <TableHead className="text-right">Additions ({suffix})</TableHead>
+                      <TableHead className="text-right">Repayments ({suffix})</TableHead>
+                      <TableHead className="text-right">Closing ({suffix})</TableHead>
                       <TableHead className="text-right">% of Total</TableHead>
                     </TableRow>
                   </TableHeader>

@@ -107,6 +107,7 @@ export default function CashflowDashboard() {
   const allDashRows = dashboardData?.rows || [];
 
   const isAnalyticTab = ["d1", "d2", "d3", "d4", "d5"].includes(activeTab);
+  const showDashFilters = isAnalyticTab || activeTab === "detailed";
 
   const unified = unifiedResult?.data || [];
 
@@ -351,15 +352,20 @@ export default function CashflowDashboard() {
           </TabsTrigger>
         </TabsList>
 
-        {isAnalyticTab && (
-          <div className="mt-3">
-            <DashboardFilters
-              companies={dashboardData?.companies || []}
-              projects={dashboardData?.projects || []}
-              periods={dashboardData?.periods || []}
-              filters={dashFilters}
-              onChange={setDashFilters}
-            />
+        {showDashFilters && (
+          <div className="mt-3 flex items-start gap-2">
+            {isAnalyticTab && (
+              <div className="flex-1">
+                <DashboardFilters
+                  companies={dashboardData?.companies || []}
+                  projects={dashboardData?.projects || []}
+                  periods={dashboardData?.periods || []}
+                  filters={dashFilters}
+                  onChange={setDashFilters}
+                />
+              </div>
+            )}
+            <ChartFormatSettings chartId="cf-amounts" />
           </div>
         )}
 
@@ -666,7 +672,7 @@ export default function CashflowDashboard() {
           {loadingDashData ? (
             <div className="space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-24 w-full" />)}</div>
           ) : (
-            <D1CashflowStatement rows={filteredDashRows} />
+            <D1CashflowStatement rows={filteredDashRows} formatConfig={cfFmt} />
           )}
         </TabsContent>
 
@@ -674,7 +680,7 @@ export default function CashflowDashboard() {
           {loadingDashData ? (
             <div className="space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-24 w-full" />)}</div>
           ) : (
-            <D2PlWip rows={filteredDashRows} />
+            <D2PlWip rows={filteredDashRows} formatConfig={cfFmt} />
           )}
         </TabsContent>
 
@@ -682,7 +688,7 @@ export default function CashflowDashboard() {
           {loadingDashData ? (
             <div className="space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-24 w-full" />)}</div>
           ) : (
-            <D3WorkingCapital rows={filteredDashRows} />
+            <D3WorkingCapital rows={filteredDashRows} formatConfig={cfFmt} />
           )}
         </TabsContent>
 
@@ -690,7 +696,7 @@ export default function CashflowDashboard() {
           {loadingDashData ? (
             <div className="space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-24 w-full" />)}</div>
           ) : (
-            <D4DebtFinancing rows={filteredDashRows} allRows={allDashRows} />
+            <D4DebtFinancing rows={filteredDashRows} allRows={allDashRows} formatConfig={cfFmt} />
           )}
         </TabsContent>
 
@@ -701,6 +707,7 @@ export default function CashflowDashboard() {
             <D5InvestorKpis
               rows={filteredDashRows}
               allRows={allDashRows}
+              formatConfig={cfFmt}
               onProjectFilter={(project) => {
                 setDashFilters(prev => ({ ...prev, projects: [project] }));
               }}

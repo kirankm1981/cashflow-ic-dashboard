@@ -52,12 +52,30 @@ export function filterRows(rows: DashboardRow[], filters: FilterState): Dashboar
   });
 }
 
+import { formatAmount, SCALE_SUFFIXES } from "@/lib/number-format";
+import type { FormatConfig } from "@/lib/number-format";
+
+export type { FormatConfig };
+
 export function fmt(value: number, decimals = 2): string {
   const lakhs = value / 100000;
   const abs = Math.abs(lakhs);
   const formatted = abs >= 100 ? abs.toFixed(0) : abs.toFixed(decimals);
   const sign = lakhs < 0 ? "-" : "";
   return `${sign}₹${formatted} L`;
+}
+
+export function createFmt(config?: FormatConfig) {
+  if (!config) return fmt;
+  return (_value: number, _decimals?: number) => {
+    return `₹${formatAmount(_value, config)}`;
+  };
+}
+
+export function fmtSuffix(config?: FormatConfig): string {
+  if (!config) return "₹L";
+  const suffix = SCALE_SUFFIXES[config.scale];
+  return suffix ? `₹${suffix}` : "₹";
 }
 
 export function fmtCr(value: number, decimals = 2): string {

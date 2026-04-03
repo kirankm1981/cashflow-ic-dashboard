@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Copy, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { DashboardRow, fmt, fmtPct, colorForValue } from "./types";
+import { DashboardRow, createFmt, fmtSuffix, fmtPct, colorForValue } from "./types";
+import type { FormatConfig } from "./types";
 import { useToast } from "@/hooks/use-toast";
 
 const KPI_DEFS = [
@@ -27,9 +28,12 @@ interface Props {
   rows: DashboardRow[];
   allRows: DashboardRow[];
   onProjectFilter?: (project: string) => void;
+  formatConfig?: FormatConfig;
 }
 
-export function D5InvestorKpis({ rows, allRows, onProjectFilter }: Props) {
+export function D5InvestorKpis({ rows, allRows, onProjectFilter, formatConfig }: Props) {
+  const fmt = createFmt(formatConfig);
+  const suffix = fmtSuffix(formatConfig);
   const { toast } = useToast();
   const [selectedKpis, setSelectedKpis] = useState<Set<string>>(new Set(["Revenue Billed", "Collections", "WIP Balance"]));
 
@@ -146,7 +150,7 @@ export function D5InvestorKpis({ rows, allRows, onProjectFilter }: Props) {
     if (Math.abs(kpiValues["Cash Position"] || 0) < 2500000) notes.push(`⚠ Low cash — ${fmt(Math.abs(kpiValues["Cash Position"] || 0))}.`);
     if (notes.length === 0) notes.push(`✓ All metrics within range as of ${period}.`);
     return notes;
-  }, [collectionEfficiency, debtToWip, finCostToRevenue, kpiValues, rows]);
+  }, [collectionEfficiency, debtToWip, finCostToRevenue, kpiValues, rows, fmt]);
 
   return (
     <div className="space-y-4" data-testid="d5-investor-kpis">
@@ -230,12 +234,12 @@ export function D5InvestorKpis({ rows, allRows, onProjectFilter }: Props) {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="min-w-[180px]">Project</TableHead>
-                    <TableHead className="text-right">Revenue (₹L)</TableHead>
-                    <TableHead className="text-right">Collections (₹L)</TableHead>
+                    <TableHead className="text-right">Revenue ({suffix})</TableHead>
+                    <TableHead className="text-right">Collections ({suffix})</TableHead>
                     <TableHead className="text-right">Efficiency %</TableHead>
-                    <TableHead className="text-right">WIP (₹L)</TableHead>
-                    <TableHead className="text-right">Gross Debt (₹L)</TableHead>
-                    <TableHead className="text-right">Cash (₹L)</TableHead>
+                    <TableHead className="text-right">WIP ({suffix})</TableHead>
+                    <TableHead className="text-right">Gross Debt ({suffix})</TableHead>
+                    <TableHead className="text-right">Cash ({suffix})</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

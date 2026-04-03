@@ -4,13 +4,17 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChevronDown, ChevronRight, AlertTriangle } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ComposedChart, Line, ReferenceLine, Cell } from "recharts";
-import { DashboardRow, fmt, colorForValue } from "./types";
+import { DashboardRow, createFmt, fmtSuffix, colorForValue } from "./types";
+import type { FormatConfig } from "./types";
 
 interface Props {
   rows: DashboardRow[];
+  formatConfig?: FormatConfig;
 }
 
-export function D3WorkingCapital({ rows }: Props) {
+export function D3WorkingCapital({ rows, formatConfig }: Props) {
+  const fmt = createFmt(formatConfig);
+  const suffix = fmtSuffix(formatConfig);
   const [expandedBuckets, setExpandedBuckets] = useState<Set<string>>(new Set());
 
   const wcRows = useMemo(() => rows.filter(r => r.wcBucket), [rows]);
@@ -179,9 +183,9 @@ export function D3WorkingCapital({ rows }: Props) {
               <TableHeader>
                 <TableRow>
                   <TableHead className="min-w-[250px]">WC Bucket</TableHead>
-                  <TableHead className="text-right">Opening (₹L)</TableHead>
-                  <TableHead className="text-right">Closing (₹L)</TableHead>
-                  <TableHead className="text-right">Change (₹L)</TableHead>
+                  <TableHead className="text-right">Opening ({suffix})</TableHead>
+                  <TableHead className="text-right">Closing ({suffix})</TableHead>
+                  <TableHead className="text-right">Change ({suffix})</TableHead>
                   <TableHead className="text-right">Change %</TableHead>
                 </TableRow>
               </TableHeader>
