@@ -3,11 +3,18 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 function getWorkerPath(): string {
+  const isProd = process.env.NODE_ENV === "production";
   try {
     const dir = path.dirname(fileURLToPath(import.meta.url));
+    if (isProd) {
+      return path.join(dir, "file-worker.cjs");
+    }
     return path.join(dir, "file-worker.ts");
   } catch {
-    return path.join(__dirname, "file-worker.ts");
+    const base = __dirname;
+    return isProd
+      ? path.join(base, "file-worker.cjs")
+      : path.join(base, "file-worker.ts");
   }
 }
 
@@ -17,7 +24,9 @@ const taskQueue: Array<{ workerData: any; resolve: Function; reject: Function; t
 const workerBusy = new Map<Worker, boolean>();
 
 function createWorker(): Worker {
-  const worker = new Worker(getWorkerPath(), { execArgv: ["--loader", "tsx/esm"] });
+  const worker = new Worker(getWorkerPath(), {
+    execArgv: process.env.NODE_ENV === "production" ? [] : ["--loader", "tsx/esm"],
+  });
   worker.on("message", (msg) => {
     const task = (worker as any)._currentTask;
     if (task) {

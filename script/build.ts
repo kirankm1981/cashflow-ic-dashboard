@@ -38,6 +38,20 @@ async function build() {
   });
 
   console.log("Server build complete: dist/index.cjs");
+
+  await esbuild.build({
+    entryPoints: [path.resolve(projectRoot, "server/file-worker.ts")],
+    outfile: path.resolve(projectRoot, "dist/file-worker.cjs"),
+    bundle: true,
+    platform: "node",
+    target: "node20",
+    format: "cjs",
+    sourcemap: true,
+    external: ["pg-native", "bufferutil", "utf-8-validate"],
+    loader: { ".ts": "ts" },
+  });
+  console.log("Worker build complete: dist/file-worker.cjs");
+
   console.log("Full production build done!");
 }
 
