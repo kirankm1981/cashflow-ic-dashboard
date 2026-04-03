@@ -205,8 +205,7 @@ export function AppSidebar() {
                 <Gauge className="w-5 h-5 text-white" />
               </div>
               <div>
-                <p className="text-sm font-bold tracking-tight text-white" data-testid="text-app-name">MIS & IC</p>
-                <p className="text-[11px] text-sidebar-foreground/60 font-medium">Dashboard Platform</p>
+                <p className="text-sm font-bold tracking-tight text-white" data-testid="text-app-name">Assetz Strata</p>
               </div>
             </div>
           </Link>

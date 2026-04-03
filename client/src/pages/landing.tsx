@@ -60,9 +60,6 @@ export default function Landing() {
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight" data-testid="text-landing-title">
             Assetz Strata
           </h1>
-          <p className="text-muted-foreground text-sm md:text-base max-w-xl mx-auto">
-            MIS reporting, intercompany reconciliation, IC Balance matrix and IC Net off
-          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
