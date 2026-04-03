@@ -183,12 +183,6 @@ function EntitySummaryContent({ stats, nameMap }: { stats: DashboardStats; nameM
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Unmatched</p>
-            <p className="text-2xl font-bold mt-1 text-red-600" data-testid="text-entity-unmatched">{formatNumber(totals.unmatched)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Reversals</p>
             <p className="text-2xl font-bold mt-1 text-purple-600" data-testid="text-entity-reversals">{formatNumber(totals.reversal)}</p>
           </CardContent>
@@ -197,6 +191,12 @@ function EntitySummaryContent({ stats, nameMap }: { stats: DashboardStats; nameM
           <CardContent className="p-4">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Review + Suggested</p>
             <p className="text-2xl font-bold mt-1 text-teal-600" data-testid="text-entity-review-suggested">{formatNumber(totals.review + totals.suggested)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Unmatched</p>
+            <p className="text-2xl font-bold mt-1 text-red-600" data-testid="text-entity-unmatched">{formatNumber(totals.unmatched)}</p>
           </CardContent>
         </Card>
       </div>
