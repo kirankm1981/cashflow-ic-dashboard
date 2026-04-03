@@ -494,7 +494,7 @@ export function registerCashflowRoutes(app: Express) {
       const totalRecords = files.reduce((sum, f) => sum + (f.totalRecords || 0), 0);
       const dataCount = await db.select({ count: sql<number>`count(*)` }).from(cashflowTbData);
       const entityCached = await getEntityCache();
-      const uniqueEntities = new Set(entityCached.mappings.map(e => (e.projectName || "").trim()).filter(Boolean));
+      const uniqueEntities = new Set(entityCached.mappings.map(e => (e.companyNameErp || e.companyName || "").trim()).filter(Boolean));
       res.json({
         tbFiles: files.length,
         totalRecords,
