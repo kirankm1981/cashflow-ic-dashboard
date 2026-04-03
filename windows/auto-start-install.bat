@@ -7,6 +7,7 @@ echo  ============================================
 echo.
 
 cd /d "%~dp0\.."
+set "PROJECT_ROOT=%CD%"
 
 if not exist .env (
     echo  [ERROR] .env file not found. Run windows\install.bat first.
@@ -28,8 +29,8 @@ set "SHORTCUT=%STARTUP%\CashflowICDashboard.lnk"
 
 echo Set oWS = WScript.CreateObject("WScript.Shell") > "%TEMP%\create_shortcut.vbs"
 echo Set oLink = oWS.CreateShortcut("%SHORTCUT%") >> "%TEMP%\create_shortcut.vbs"
-echo oLink.TargetPath = "%~dp0start-hidden.vbs" >> "%TEMP%\create_shortcut.vbs"
-echo oLink.WorkingDirectory = "%~dp0\.." >> "%TEMP%\create_shortcut.vbs"
+echo oLink.TargetPath = "%PROJECT_ROOT%\windows\start-hidden.vbs" >> "%TEMP%\create_shortcut.vbs"
+echo oLink.WorkingDirectory = "%PROJECT_ROOT%" >> "%TEMP%\create_shortcut.vbs"
 echo oLink.Description = "Cashflow IC Dashboard" >> "%TEMP%\create_shortcut.vbs"
 echo oLink.Save >> "%TEMP%\create_shortcut.vbs"
 cscript //nologo "%TEMP%\create_shortcut.vbs"
