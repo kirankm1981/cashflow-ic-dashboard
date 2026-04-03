@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, integer, serial, doublePrecision, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, serial, doublePrecision, boolean, index, varchar, json, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -51,7 +51,12 @@ export const transactions = pgTable("transactions", {
   reconId: text("recon_id"),
   reconRule: text("recon_rule"),
   createdAt: text("created_at").$defaultFn(() => new Date().toISOString()),
-});
+}, (t) => [
+  index("transactions_company_idx").on(t.company),
+  index("transactions_recon_status_idx").on(t.reconStatus),
+  index("transactions_upload_batch_idx").on(t.uploadBatchId),
+  index("transactions_counter_party_idx").on(t.counterParty),
+]);
 
 export const insertTransactionSchema = createInsertSchema(transactions).omit({
   id: true,
@@ -81,7 +86,13 @@ export const summarizedLines = pgTable("summarized_lines", {
   amountDiff: doublePrecision("amount_diff"),
   dateDiff: integer("date_diff"),
   createdAt: text("created_at").$defaultFn(() => new Date().toISOString()),
-});
+}, (t) => [
+  index("sl_company_idx").on(t.company),
+  index("sl_recon_status_idx").on(t.reconStatus),
+  index("sl_recon_id_idx").on(t.reconId),
+  index("sl_upload_batch_idx").on(t.uploadBatchId),
+  index("sl_counter_party_idx").on(t.counterParty),
+]);
 
 export const insertSummarizedLineSchema = createInsertSchema(summarizedLines).omit({
   id: true,
@@ -309,7 +320,12 @@ export const icReconGlRawRows = pgTable("ic_recon_gl_raw_rows", {
   id: serial("id").primaryKey(),
   batchId: text("batch_id").notNull(),
   rowData: text("row_data").notNull(),
-});
+  company: text("company"),
+  companyCode: text("company_code"),
+  netAmount: doublePrecision("net_amount"),
+}, (t) => [
+  index("gl_raw_batch_idx").on(t.batchId),
+]);
 
 export type IcReconGlRawRow = typeof icReconGlRawRows.$inferSelect;
 
@@ -393,7 +409,14 @@ export const cashflowTbData = pgTable("cashflow_tb_data", {
   projectName: text("project_name"),
   entityStatus: text("entity_status"),
   tbSource: text("tb_source"),
-});
+}, (t) => [
+  index("cf_tb_activity_type_idx").on(t.activityType),
+  index("cf_tb_kpi_tag_idx").on(t.kpiTag),
+  index("cf_tb_wc_bucket_idx").on(t.wcBucket),
+  index("cf_tb_debt_bucket_idx").on(t.debtBucket),
+  index("cf_tb_company_idx").on(t.company),
+  index("cf_tb_tb_file_id_idx").on(t.tbFileId),
+]);
 
 export type CashflowTbData = typeof cashflowTbData.$inferSelect;
 
@@ -452,4 +475,10 @@ export const cashflowPastLosses = pgTable("cashflow_past_losses", {
   amount: doublePrecision("amount").default(0),
   asPerFs: text("as_per_fs"),
   lossesUpto: text("losses_upto"),
+});
+
+export const userSessions = pgTable("user_sessions", {
+  sid: varchar("sid").primaryKey(),
+  sess: json("sess").notNull(),
+  expire: timestamp("expire", { precision: 6, withTimezone: false }).notNull(),
 });
