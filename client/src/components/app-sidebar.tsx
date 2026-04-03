@@ -14,6 +14,8 @@ import {
   Shield,
   User,
   KeyRound,
+  Check,
+  X,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -121,6 +123,32 @@ function NavGroup({ label, icon: Icon, items, defaultOpen, location, testId, lin
         </SidebarGroupContent>
       )}
     </SidebarGroup>
+  );
+}
+
+const PW_RULES = [
+  { label: "At least 8 characters", test: (p: string) => p.length >= 8 },
+  { label: "At least one uppercase letter", test: (p: string) => /[A-Z]/.test(p) },
+  { label: "At least one lowercase letter", test: (p: string) => /[a-z]/.test(p) },
+  { label: "At least one number", test: (p: string) => /[0-9]/.test(p) },
+  { label: "At least one special character (!@#$%^&*...)", test: (p: string) => /[!@#$%^&*()_+\-=\[\]{}|;':",.<>?\/\\`~]/.test(p) },
+];
+
+function PasswordHints({ password }: { password: string }) {
+  if (!password) return null;
+  return (
+    <div className="mt-2 space-y-1" data-testid="password-requirements-live">
+      <p className="text-xs text-muted-foreground font-medium">Password requirements:</p>
+      {PW_RULES.map((r, i) => {
+        const pass = r.test(password);
+        return (
+          <p key={i} className={`text-xs flex items-center gap-1.5 ${pass ? "text-emerald-500" : "text-muted-foreground"}`}>
+            {pass ? <Check className="w-3 h-3 flex-shrink-0" /> : <X className="w-3 h-3 flex-shrink-0" />}
+            {r.label}
+          </p>
+        );
+      })}
+    </div>
   );
 }
 
@@ -291,6 +319,7 @@ export function AppSidebar() {
                 onChange={(e) => setPwFields({ ...pwFields, newPassword: e.target.value })}
                 placeholder="Enter new password"
               />
+              <PasswordHints password={pwFields.newPassword} />
             </div>
             <div className="space-y-1">
               <label className="text-sm font-medium">Confirm New Password</label>

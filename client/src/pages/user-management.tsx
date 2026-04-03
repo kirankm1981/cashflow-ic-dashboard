@@ -9,7 +9,45 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { UserPlus, Pencil, Trash2, Shield, User, ShieldCheck, ShieldX, KeyRound, Ban, CheckCircle2 } from "lucide-react";
+import { UserPlus, Pencil, Trash2, Shield, User, ShieldCheck, ShieldX, KeyRound, Ban, CheckCircle2, Check, X } from "lucide-react";
+
+const PASSWORD_RULES = [
+  { label: "At least 8 characters", test: (p: string) => p.length >= 8 },
+  { label: "At least one uppercase letter", test: (p: string) => /[A-Z]/.test(p) },
+  { label: "At least one lowercase letter", test: (p: string) => /[a-z]/.test(p) },
+  { label: "At least one number", test: (p: string) => /[0-9]/.test(p) },
+  { label: "At least one special character (!@#$%^&*...)", test: (p: string) => /[!@#$%^&*()_+\-=\[\]{}|;':",.<>?\/\\`~]/.test(p) },
+];
+
+function PasswordHints({ password }: { password: string }) {
+  if (!password) {
+    return (
+      <div className="mt-2 space-y-1" data-testid="password-requirements-hint">
+        <p className="text-xs text-muted-foreground font-medium">Password must contain:</p>
+        {PASSWORD_RULES.map((r, i) => (
+          <p key={i} className="text-xs text-muted-foreground flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-full border border-muted-foreground/30 inline-block flex-shrink-0" />
+            {r.label}
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return (
+    <div className="mt-2 space-y-1" data-testid="password-requirements-live">
+      <p className="text-xs text-muted-foreground font-medium">Password requirements:</p>
+      {PASSWORD_RULES.map((r, i) => {
+        const pass = r.test(password);
+        return (
+          <p key={i} className={`text-xs flex items-center gap-1.5 ${pass ? "text-emerald-500" : "text-muted-foreground"}`}>
+            {pass ? <Check className="w-3 h-3 flex-shrink-0" /> : <X className="w-3 h-3 flex-shrink-0" />}
+            {r.label}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
 
 interface ManagedUser {
   id: string;
@@ -212,6 +250,7 @@ export default function UserManagement() {
                 onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
                 placeholder="Password"
               />
+              <PasswordHints password={newUser.password} />
             </div>
             <div className="space-y-1">
               <label className="text-sm font-medium">Role</label>
@@ -258,6 +297,7 @@ export default function UserManagement() {
                 onChange={(e) => setResetPwValue(e.target.value)}
                 placeholder="Enter new password"
               />
+              <PasswordHints password={resetPwValue} />
             </div>
           </div>
           <DialogFooter>
@@ -265,8 +305,9 @@ export default function UserManagement() {
             <Button
               onClick={() => {
                 if (!resetPwUser || !resetPwValue) return;
-                if (resetPwValue.length < 6) {
-                  toast({ title: "Password must be at least 6 characters", variant: "destructive" });
+                const allPass = PASSWORD_RULES.every(r => r.test(resetPwValue));
+                if (!allPass) {
+                  toast({ title: "Password does not meet complexity requirements", variant: "destructive" });
                   return;
                 }
                 updateMutation.mutate({ id: resetPwUser.id, updates: { password: resetPwValue } });
@@ -350,6 +391,7 @@ export default function UserManagement() {
                 onChange={(e) => setEditFields({ ...editFields, password: e.target.value })}
                 placeholder="Leave blank to keep current"
               />
+              {editFields.password && <PasswordHints password={editFields.password} />}
             </div>
             <div className="flex items-center gap-3 pt-2">
               <label className="text-sm font-medium">Status</label>
