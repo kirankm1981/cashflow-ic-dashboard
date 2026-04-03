@@ -51,7 +51,9 @@ if "%PG_PASS%"=="" (
     exit /b 1
 )
 
-echo DATABASE_URL=postgresql://%PG_USER%:%PG_PASS%@%PG_HOST%:%PG_PORT%/%PG_DB%> .env
+for /f "usebackq delims=" %%E in (`powershell -NoProfile -Command "$p=$Env:PG_PASS; [Uri]::EscapeDataString($p)"`) do set "PG_PASS_ENCODED=%%E"
+
+echo DATABASE_URL=postgresql://%PG_USER%:%PG_PASS_ENCODED%@%PG_HOST%:%PG_PORT%/%PG_DB%> .env
 echo SESSION_SECRET=cashflow-ic-prod-%RANDOM%%RANDOM%%RANDOM%>> .env
 echo PORT=3000>> .env
 echo NODE_ENV=production>> .env
