@@ -45,10 +45,11 @@ If Not dbOk Then
     WScript.Quit 1
 End If
 
-' Now start the server
+' Now start the server via PM2 (auto-restart on crash)
 WshShell.Run "cmd /c cd /d """ & strPath & _
     """ && set NODE_ENV=production && if not exist dist\index.cjs " & _
-    "(npx tsx script/build.ts) && node dist/index.cjs", 0, False
+    "(npx tsx script/build.ts) && pm2 start dist/index.cjs " & _
+    "--name cashflow-ic --restart-delay 3000 --max-restarts 10", 0, True
 WScript.Sleep 3000   ' initial wait for node to start
 
 Dim attempts, serverUp

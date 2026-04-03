@@ -103,6 +103,12 @@ if %errorlevel% neq 0 (
 echo  [OK] Dependencies installed.
 echo.
 
+echo  [STEP 5.5/7] Installing PM2 process manager...
+call npm install -g pm2
+call npm install -g pm2-windows-startup
+echo  [OK] PM2 installed.
+echo.
+
 echo  [STEP 6/7] Creating database tables...
 node windows\sync-db.cjs
 if exist "windows\.db-fail" goto INSTALL_DB_FAIL

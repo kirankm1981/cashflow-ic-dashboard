@@ -24,21 +24,20 @@ if /i not "%CONFIRM%"=="Y" (
     exit /b 0
 )
 
-set "STARTUP=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup"
-set "SHORTCUT=%STARTUP%\CashflowICDashboard.lnk"
-
-echo Set oWS = WScript.CreateObject("WScript.Shell") > "%TEMP%\create_shortcut.vbs"
-echo Set oLink = oWS.CreateShortcut("%SHORTCUT%") >> "%TEMP%\create_shortcut.vbs"
-echo oLink.TargetPath = "%PROJECT_ROOT%\windows\start-hidden.vbs" >> "%TEMP%\create_shortcut.vbs"
-echo oLink.WorkingDirectory = "%PROJECT_ROOT%" >> "%TEMP%\create_shortcut.vbs"
-echo oLink.Description = "Cashflow IC Dashboard" >> "%TEMP%\create_shortcut.vbs"
-echo oLink.Save >> "%TEMP%\create_shortcut.vbs"
-cscript //nologo "%TEMP%\create_shortcut.vbs"
-del "%TEMP%\create_shortcut.vbs"
+echo  Configuring PM2 startup and saving process list...
+cd /d "%PROJECT_ROOT%"
+call pm2 startup
+call pm2 save
 
 echo.
-echo  [OK] Auto-start configured.
+echo  [OK] Auto-start configured via PM2.
 echo  The app will start automatically when you log into Windows.
+echo  PM2 handles auto-restart on crash, logging, and process monitoring.
+echo.
+echo  Useful commands:
+echo    pm2 status         - Check process status
+echo    pm2 logs cashflow-ic - View server logs
+echo    pm2 restart cashflow-ic - Restart the server
 echo.
 echo  To remove auto-start, run windows\auto-start-uninstall.bat
 echo.
