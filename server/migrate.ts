@@ -404,6 +404,8 @@ export async function ensureSchema() {
       "ALTER TABLE cashflow_mapping_entities ADD COLUMN IF NOT EXISTS project_name TEXT",
       "ALTER TABLE cashflow_mapping_entities ADD COLUMN IF NOT EXISTS entity_status TEXT",
       "ALTER TABLE cashflow_mapping_entities ADD COLUMN IF NOT EXISTS remarks TEXT",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT true",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_changed_at TEXT",
     ];
 
     for (const stmt of alterStatements) {

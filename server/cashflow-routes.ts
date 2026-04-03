@@ -10,8 +10,26 @@ import {
   cashflowPastLosses,
 } from "@shared/schema";
 import { eq, sql, asc } from "drizzle-orm";
+import os from "os";
+import fsModule from "fs";
+import pathModule from "path";
+import { randomUUID } from "crypto";
 
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
+const diskStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    const tmpDir = pathModule.join(os.tmpdir(), "ic-uploads");
+    if (!fsModule.existsSync(tmpDir)) fsModule.mkdirSync(tmpDir, { recursive: true });
+    cb(null, tmpDir);
+  },
+  filename: (_req, file, cb) => {
+    cb(null, `${Date.now()}-${randomUUID()}${pathModule.extname(file.originalname)}`);
+  },
+});
+const upload = multer({ storage: diskStorage, limits: { fileSize: 100 * 1024 * 1024 } });
+
+function cleanupFile(filePath: string) {
+  try { if (filePath && fsModule.existsSync(filePath)) fsModule.unlinkSync(filePath); } catch {}
+}
 
 function normalizeText(val: string): string {
   let s = (val || "").trim();
@@ -49,14 +67,16 @@ function excelDateToString(val: any): string {
 
 export function registerCashflowRoutes(app: Express) {
   app.post("/api/cashflow/upload-tb", upload.single("file"), async (req, res) => {
-    req.setTimeout(600000);
-    res.setTimeout(600000);
+    req.setTimeout(1200000);
+    res.setTimeout(1200000);
     try {
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
       const label = (req.body.label || "TB").trim();
 
-      const wb = XLSX.read(req.file.buffer, { type: "buffer" });
+      const fileBuffer = fsModule.readFileSync(req.file.path);
+      cleanupFile(req.file.path);
+      const wb = XLSX.read(fileBuffer, { type: "buffer" });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const allRows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, range: 0, defval: "" });
 
@@ -175,12 +195,14 @@ export function registerCashflowRoutes(app: Express) {
   });
 
   app.post("/api/cashflow/upload-mapping", upload.single("file"), async (req, res) => {
-    req.setTimeout(600000);
-    res.setTimeout(600000);
+    req.setTimeout(1200000);
+    res.setTimeout(1200000);
     try {
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
-      const wb = XLSX.read(req.file.buffer, { type: "buffer" });
+      const fileBuffer = fsModule.readFileSync(req.file.path);
+      cleanupFile(req.file.path);
+      const wb = XLSX.read(fileBuffer, { type: "buffer" });
 
       const findSheet = (target: string) => {
         const exact = wb.SheetNames.find(s => s === target);

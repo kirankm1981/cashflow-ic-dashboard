@@ -8,6 +8,9 @@ import { registerCashflowRoutes } from "./cashflow-routes";
 import multer from "multer";
 import { parse } from "csv-parse/sync";
 import * as XLSX from "xlsx";
+import os from "os";
+import fs from "fs";
+import { parseFileInWorker, getSheetNamesInWorker, previewHeadersInWorker } from "./file-processor";
 import { eq } from "drizzle-orm";
 import type { InsertTransaction, InsertSummarizedLine } from "@shared/schema";
 import { icReconGlFiles, icReconGlRawRows, icMatrixMappingGl, icMatrixMappingCompany, loginSchema } from "@shared/schema";
@@ -92,12 +95,64 @@ function parseFileToRecords(buffer: Buffer, filename: string, selectedSheet?: st
   });
 }
 
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
+const diskStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    const tmpDir = path.join(os.tmpdir(), "ic-uploads");
+    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
+    cb(null, tmpDir);
+  },
+  filename: (_req, file, cb) => {
+    cb(null, `${Date.now()}-${randomUUID()}${path.extname(file.originalname)}`);
+  },
+});
+const upload = multer({ storage: diskStorage, limits: { fileSize: 100 * 1024 * 1024 } });
+
+function cleanupFile(filePath: string) {
+  try {
+    if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  } catch {}
+}
+
+const PASSWORD_MIN_LENGTH = 8;
+const PASSWORD_MAX_AGE_DAYS = 90;
+const PASSWORD_RULES = [
+  { test: (p: string) => p.length >= PASSWORD_MIN_LENGTH, msg: `At least ${PASSWORD_MIN_LENGTH} characters` },
+  { test: (p: string) => /[A-Z]/.test(p), msg: "At least one uppercase letter" },
+  { test: (p: string) => /[a-z]/.test(p), msg: "At least one lowercase letter" },
+  { test: (p: string) => /[0-9]/.test(p), msg: "At least one number" },
+  { test: (p: string) => /[!@#$%^&*()_+\-=\[\]{}|;':",.<>?\/\\`~]/.test(p), msg: "At least one special character (!@#$%^&*...)" },
+];
+
+function validatePasswordComplexity(password: string): string[] {
+  return PASSWORD_RULES.filter(r => !r.test(password)).map(r => r.msg);
+}
+
+function isPasswordExpired(passwordChangedAt: string | null | undefined): boolean {
+  if (!passwordChangedAt) return true;
+  const changedDate = new Date(passwordChangedAt);
+  const now = new Date();
+  const diffDays = (now.getTime() - changedDate.getTime()) / (1000 * 60 * 60 * 24);
+  return diffDays >= PASSWORD_MAX_AGE_DAYS;
+}
+
+function needsPasswordChange(user: any): boolean {
+  if (user.role === "platform_admin") return false;
+  if (user.mustChangePassword) return true;
+  return isPasswordExpired(user.passwordChangedAt);
+}
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+
+  app.get("/api/auth/password-rules", (_req, res) => {
+    res.json({
+      rules: PASSWORD_RULES.map(r => r.msg),
+      maxAgeDays: PASSWORD_MAX_AGE_DAYS,
+      minLength: PASSWORD_MIN_LENGTH,
+    });
+  });
 
   app.post("/api/auth/login", async (req, res) => {
     try {
@@ -117,11 +172,15 @@ export async function registerRoutes(
       if (!valid) {
         return res.status(401).json({ message: "Invalid username or password" });
       }
+
+      const mustChangePassword = needsPasswordChange(user);
+
       const userData = {
         id: user.id,
         username: user.username,
         displayName: user.displayName,
         role: user.role,
+        mustChangePassword,
       };
       req.session.regenerate((err) => {
         if (err) {
@@ -158,6 +217,7 @@ export async function registerRoutes(
       username: user.username,
       displayName: user.displayName,
       role: user.role,
+      mustChangePassword: needsPasswordChange(user),
     });
   });
 
@@ -186,17 +246,25 @@ export async function registerRoutes(
       if (role && !["platform_admin", "recon_user", "viewer"].includes(role)) {
         return res.status(400).json({ message: "Invalid role" });
       }
+      const pwErrors = validatePasswordComplexity(password);
+      if (pwErrors.length > 0) {
+        return res.status(400).json({ message: "Password does not meet complexity requirements", errors: pwErrors });
+      }
       const existing = await storage.getUserByUsername(username);
       if (existing) {
         return res.status(409).json({ message: "Username already exists" });
       }
-      const hashedPassword = await bcrypt.hash(password, 10);
+      const hashedPassword = await bcrypt.hash(password, 12);
       const user = await storage.createUser({
         username,
         password: hashedPassword,
         displayName: displayName || username,
         role: role || "recon_user",
       });
+      await storage.updateUser(user.id, {
+        mustChangePassword: role === "platform_admin" ? false : true,
+        passwordChangedAt: new Date().toISOString(),
+      } as any);
       res.json({
         id: user.id,
         username: user.username,
@@ -223,7 +291,13 @@ export async function registerRoutes(
       }
       if (req.body.active !== undefined) updates.active = req.body.active;
       if (req.body.password) {
-        updates.password = await bcrypt.hash(req.body.password, 10);
+        const pwErrors = validatePasswordComplexity(req.body.password);
+        if (pwErrors.length > 0) {
+          return res.status(400).json({ message: "Password does not meet complexity requirements", errors: pwErrors });
+        }
+        updates.password = await bcrypt.hash(req.body.password, 12);
+        updates.mustChangePassword = true;
+        updates.passwordChangedAt = new Date().toISOString();
       }
       const user = await storage.updateUser(id, updates);
       if (!user) return res.status(404).json({ message: "User not found" });
@@ -263,8 +337,20 @@ export async function registerRoutes(
       if (!user) return res.status(401).json({ message: "Not authenticated" });
       const valid = await bcrypt.compare(currentPassword, user.password);
       if (!valid) return res.status(401).json({ message: "Current password is incorrect" });
-      const hashed = await bcrypt.hash(newPassword, 10);
-      await storage.updateUser(user.id, { password: hashed });
+      const pwErrors = validatePasswordComplexity(newPassword);
+      if (pwErrors.length > 0) {
+        return res.status(400).json({ message: "Password does not meet complexity requirements", errors: pwErrors });
+      }
+      const sameAsOld = await bcrypt.compare(newPassword, user.password);
+      if (sameAsOld) {
+        return res.status(400).json({ message: "New password must be different from your current password" });
+      }
+      const hashed = await bcrypt.hash(newPassword, 12);
+      await storage.updateUser(user.id, {
+        password: hashed,
+        mustChangePassword: false,
+        passwordChangedAt: new Date().toISOString(),
+      } as any);
       res.json({ message: "Password changed successfully" });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -314,11 +400,15 @@ export async function registerRoutes(
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
       const ext = (req.file.originalname || "").toLowerCase().split(".").pop();
       if (ext !== "xlsx" && ext !== "xls") {
+        cleanupFile(req.file.path);
         return res.json({ sheetNames: [] });
       }
-      const workbook = XLSX.read(req.file.buffer, { type: "buffer", bookSheets: true });
-      res.json({ sheetNames: workbook.SheetNames || [] });
+      const fileBuffer = fs.readFileSync(req.file.path);
+      cleanupFile(req.file.path);
+      const sheetNames = await getSheetNamesInWorker(fileBuffer);
+      res.json({ sheetNames });
     } catch (error: any) {
+      if (req.file?.path) cleanupFile(req.file.path);
       res.status(500).json({ message: error.message });
     }
   });
@@ -326,34 +416,13 @@ export async function registerRoutes(
   app.post("/api/upload/preview-headers", upload.single("file"), async (req, res) => {
     try {
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
-      const ext = (req.file.originalname || "").toLowerCase().split(".").pop();
       const selectedSheet = req.body?.sheetName || null;
-      let records: Record<string, string>[];
-      if (ext === "xlsx" || ext === "xls") {
-        const workbook = XLSX.read(req.file.buffer, { type: "buffer", sheetRows: 5 });
-        const sheetName = selectedSheet && workbook.SheetNames.includes(selectedSheet)
-          ? selectedSheet
-          : workbook.SheetNames[0];
-        if (!sheetName) throw new Error("Excel file has no sheets");
-        const sheet = workbook.Sheets[sheetName];
-        const jsonRows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: "" });
-        records = jsonRows.map(row => {
-          const stringRow: Record<string, string> = {};
-          for (const [key, val] of Object.entries(row)) {
-            stringRow[key] = val != null ? String(val) : "";
-          }
-          return stringRow;
-        });
-      } else {
-        const content = req.file.buffer.toString("utf-8");
-        records = parse(content, {
-          columns: true, skip_empty_lines: true, trim: true,
-          relax_column_count: true, relax_quotes: true, to: 5,
-        });
-      }
-      const headers = records.length > 0 ? Object.keys(records[0]) : [];
-      res.json({ headers, sampleRows: records.slice(0, 3) });
+      const fileBuffer = fs.readFileSync(req.file.path);
+      cleanupFile(req.file.path);
+      const result = await previewHeadersInWorker(fileBuffer, req.file.originalname, selectedSheet);
+      res.json(result);
     } catch (error: any) {
+      if (req.file?.path) cleanupFile(req.file.path);
       res.status(500).json({ message: error.message });
     }
   });
@@ -367,7 +436,9 @@ export async function registerRoutes(
       const columnMapping = req.body.columnMapping ? JSON.parse(req.body.columnMapping) : null;
       const selectedSheet = req.body.sheetName || undefined;
 
-      const records = parseFileToRecords(req.file.buffer, req.file.originalname, selectedSheet);
+      const fileBuffer = fs.readFileSync(req.file.path);
+      cleanupFile(req.file.path);
+      const records = await parseFileInWorker(fileBuffer, req.file.originalname, selectedSheet);
 
       if (records.length === 0) {
         return res.status(400).json({ message: "File contains no data rows" });
@@ -961,7 +1032,9 @@ export async function registerRoutes(
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      const wb = XLSX.read(req.file.buffer, { type: "buffer" });
+      const reconFileBuffer = fs.readFileSync(req.file.path);
+      cleanupFile(req.file.path);
+      const wb = XLSX.read(reconFileBuffer, { type: "buffer" });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows: any[] = XLSX.utils.sheet_to_json(ws);
 
@@ -1365,15 +1438,17 @@ export async function registerRoutes(
   });
 
   app.post("/api/recon/upload-gl", upload.single("file"), async (req, res) => {
-    req.setTimeout(600000);
-    res.setTimeout(600000);
+    req.setTimeout(1200000);
+    res.setTimeout(1200000);
     try {
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
       const label = (req.body.label || "GL Dump").trim();
       const batchId = randomUUID();
 
-      const wb = XLSX.read(req.file.buffer, { type: "buffer" });
+      const glFileBuffer = fs.readFileSync(req.file.path);
+      cleanupFile(req.file.path);
+      const wb = XLSX.read(glFileBuffer, { type: "buffer" });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const allRows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, range: 0, defval: "" });
 

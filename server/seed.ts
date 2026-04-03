@@ -314,7 +314,24 @@ export async function seedDefaultAdmin() {
       password: hashedPassword,
       displayName: "Platform Admin",
       role: "platform_admin",
+      mustChangePassword: false,
+      passwordChangedAt: new Date().toISOString(),
     });
     console.log("Seeded default admin user");
   }
+}
+
+export async function migratePasswordFields() {
+  const { eq, isNull } = await import("drizzle-orm");
+  const allUsers = await db.select().from(users);
+  for (const u of allUsers) {
+    if (u.passwordChangedAt === null || u.passwordChangedAt === undefined) {
+      const updates: any = { passwordChangedAt: new Date().toISOString() };
+      if (u.mustChangePassword === null || u.mustChangePassword === undefined) {
+        updates.mustChangePassword = u.role === "platform_admin" ? false : true;
+      }
+      await db.update(users).set(updates).where(eq(users.id, u.id));
+    }
+  }
+  console.log("Migrated password fields for existing users");
 }

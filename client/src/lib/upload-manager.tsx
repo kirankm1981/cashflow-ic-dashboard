@@ -36,7 +36,7 @@ function formatNum(val: number | null | undefined): string {
 function xhrUpload(url: string, formData: FormData, onProgress: (pct: number) => void): Promise<any> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.timeout = 600000;
+    xhr.timeout = 1200000;
     xhr.open("POST", url);
     xhr.upload.addEventListener("progress", (e) => {
       if (e.lengthComputable) {

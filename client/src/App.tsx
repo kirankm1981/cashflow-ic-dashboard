@@ -19,6 +19,7 @@ import IcMatrix from "@/pages/ic-matrix";
 import IcMatrixUpload from "@/pages/ic-matrix-upload";
 import RptDataPage from "@/pages/rpt-data";
 import LoginPage from "@/pages/login";
+import ForceChangePassword from "@/pages/force-change-password";
 import UserManagement from "@/pages/user-management";
 import { useLocation, Redirect } from "wouter";
 import { UploadManagerProvider } from "@/lib/upload-manager";
@@ -117,7 +118,7 @@ function AuthenticatedApp() {
 }
 
 function AppGate() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, mustChangePassword } = useAuth();
 
   if (isLoading) {
     return (
@@ -132,6 +133,10 @@ function AppGate() {
 
   if (!isAuthenticated) {
     return <LoginPage />;
+  }
+
+  if (mustChangePassword) {
+    return <ForceChangePassword />;
   }
 
   return <AuthenticatedApp />;

@@ -25,14 +25,14 @@ declare module "express-session" {
 
 app.use(
   express.json({
-    limit: "50mb",
+    limit: "150mb",
     verify: (req, _res, buf) => {
       req.rawBody = buf;
     },
   }),
 );
 
-app.use(express.urlencoded({ extended: false, limit: "50mb" }));
+app.use(express.urlencoded({ extended: false, limit: "150mb" }));
 
 const PgStore = connectPgSimple(session);
 app.use(
@@ -113,6 +113,11 @@ app.use((req, res, next) => {
     await fixReversalStatuses();
   } catch {}
 
+  try {
+    const { migratePasswordFields } = await import("./seed");
+    await migratePasswordFields();
+  } catch {}
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
@@ -144,9 +149,9 @@ app.use((req, res, next) => {
     }
   }
 
-  httpServer.timeout = 600000;
-  httpServer.keepAliveTimeout = 120000;
-  httpServer.headersTimeout = 620000;
+  httpServer.timeout = 1200000;
+  httpServer.keepAliveTimeout = 300000;
+  httpServer.headersTimeout = 1220000;
 
   const port = parseInt(process.env.PORT || "3000", 10);
   const listenOpts: any = { port, host: "0.0.0.0" };

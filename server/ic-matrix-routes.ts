@@ -4,8 +4,26 @@ import XLSX from "xlsx";
 import { db } from "./db";
 import { icMatrixTbFiles, icMatrixTbData, icMatrixMappingGl, icMatrixMappingCompany } from "@shared/schema";
 import { eq, sql, asc } from "drizzle-orm";
+import os from "os";
+import fs from "fs";
+import path from "path";
+import { randomUUID } from "crypto";
 
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
+const diskStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    const tmpDir = path.join(os.tmpdir(), "ic-uploads");
+    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
+    cb(null, tmpDir);
+  },
+  filename: (_req, file, cb) => {
+    cb(null, `${Date.now()}-${randomUUID()}${path.extname(file.originalname)}`);
+  },
+});
+const upload = multer({ storage: diskStorage, limits: { fileSize: 100 * 1024 * 1024 } });
+
+function cleanupFile(filePath: string) {
+  try { if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch {}
+}
 
 function normalizeText(val: string): string {
   let s = (val || "").trim();
@@ -55,8 +73,8 @@ function parseNum(v: any): number {
 
 export function registerIcMatrixRoutes(app: Express) {
   app.post("/api/ic-matrix/upload-tb", upload.single("file"), async (req, res) => {
-    req.setTimeout(600000);
-    res.setTimeout(600000);
+    req.setTimeout(1200000);
+    res.setTimeout(1200000);
     try {
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
@@ -64,7 +82,9 @@ export function registerIcMatrixRoutes(app: Express) {
       const userPeriodStart = (req.body.periodStart || "").trim();
       const userPeriodEnd = (req.body.periodEnd || "").trim();
 
-      const wb = XLSX.read(req.file.buffer, { type: "buffer" });
+      const fileBuffer = fs.readFileSync(req.file.path);
+      cleanupFile(req.file.path);
+      const wb = XLSX.read(fileBuffer, { type: "buffer" });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const allRows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, range: 0, defval: "" });
 
@@ -185,12 +205,14 @@ export function registerIcMatrixRoutes(app: Express) {
   });
 
   app.post("/api/ic-matrix/upload-mapping", upload.single("file"), async (req, res) => {
-    req.setTimeout(600000);
-    res.setTimeout(600000);
+    req.setTimeout(1200000);
+    res.setTimeout(1200000);
     try {
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
-      const wb = XLSX.read(req.file.buffer, { type: "buffer" });
+      const fileBuffer = fs.readFileSync(req.file.path);
+      cleanupFile(req.file.path);
+      const wb = XLSX.read(fileBuffer, { type: "buffer" });
 
       let glCount = 0;
       let companyCount = 0;

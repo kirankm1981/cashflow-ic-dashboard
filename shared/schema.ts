@@ -10,6 +10,8 @@ export const users = pgTable("users", {
   displayName: text("display_name"),
   role: text("role").notNull().default("recon_user"),
   active: boolean("active").default(true),
+  mustChangePassword: boolean("must_change_password").default(true),
+  passwordChangedAt: text("password_changed_at"),
   createdAt: text("created_at").$defaultFn(() => new Date().toISOString()),
 });
 

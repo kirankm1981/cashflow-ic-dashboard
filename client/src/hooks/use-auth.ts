@@ -6,6 +6,7 @@ interface AuthUser {
   username: string;
   displayName: string | null;
   role: string;
+  mustChangePassword?: boolean;
 }
 
 export function useAuth() {
@@ -47,6 +48,7 @@ export function useAuth() {
     isAuthenticated: !!user,
     isAdmin: user?.role === "platform_admin",
     isViewer: user?.role === "viewer",
+    mustChangePassword: !!user?.mustChangePassword,
     login: loginMutation,
     logout: logoutMutation,
   };

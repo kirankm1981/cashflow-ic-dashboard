@@ -137,8 +137,12 @@ export function AppSidebar() {
       toast({ title: "Passwords do not match", variant: "destructive" });
       return;
     }
-    if (pwFields.newPassword.length < 6) {
-      toast({ title: "Password must be at least 6 characters", variant: "destructive" });
+    const hasUpper = /[A-Z]/.test(pwFields.newPassword);
+    const hasLower = /[a-z]/.test(pwFields.newPassword);
+    const hasNum = /[0-9]/.test(pwFields.newPassword);
+    const hasSpecial = /[!@#$%^&*()_+\-=\[\]{}|;':",.<>?\/\\`~]/.test(pwFields.newPassword);
+    if (pwFields.newPassword.length < 8 || !hasUpper || !hasLower || !hasNum || !hasSpecial) {
+      toast({ title: "Password must be at least 8 characters with uppercase, lowercase, number, and special character", variant: "destructive" });
       return;
     }
     setPwLoading(true);
