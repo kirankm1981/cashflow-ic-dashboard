@@ -24,6 +24,18 @@ if /i not "%CONFIRM%"=="Y" (
     exit /b 0
 )
 
+echo  Checking if server process is running in PM2...
+pm2 describe cashflow-ic >nul 2>nul
+if %errorlevel% neq 0 (
+    echo.
+    echo  [WARNING] The server is not currently running in PM2.
+    echo  Please run windows\start.bat first to start the server,
+    echo  then run this script again to save it for auto-start.
+    echo.
+    pause
+    exit /b 1
+)
+
 echo  Configuring PM2 startup and saving process list...
 cd /d "%PROJECT_ROOT%"
 call pm2 startup
