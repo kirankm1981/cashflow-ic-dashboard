@@ -497,8 +497,8 @@ export default function CashflowDashboard() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList data-testid="tabs-cashflow-dashboard">
-          <TabsTrigger value="dashboard" data-testid="tab-cf-dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="detailed" data-testid="tab-cf-detailed">Detailed MIS</TabsTrigger>
+          <TabsTrigger value="dashboard" data-testid="tab-cf-dashboard">Cashflow Overview</TabsTrigger>
+          <TabsTrigger value="detailed" data-testid="tab-cf-detailed">Cashflow by Project</TabsTrigger>
           <TabsTrigger value="unmapped" data-testid="tab-cf-unmapped" className="relative">
             Unmapped Items
             {totalUnmapped > 0 && (
@@ -512,10 +512,10 @@ export default function CashflowDashboard() {
             )}
           </TabsTrigger>
           <TabsTrigger value="d1" data-testid="tab-d1">CF Statement</TabsTrigger>
-          <TabsTrigger value="d2" data-testid="tab-d2">P&L & WIP</TabsTrigger>
+          <TabsTrigger value="d2" data-testid="tab-d2">PL & WIP</TabsTrigger>
           <TabsTrigger value="d3" data-testid="tab-d3">Working Capital</TabsTrigger>
           <TabsTrigger value="d4" data-testid="tab-d4">Debt & Finance</TabsTrigger>
-          <TabsTrigger value="d5" data-testid="tab-d5">Investor KPIs</TabsTrigger>
+          <TabsTrigger value="d5" data-testid="tab-d5">KPIs</TabsTrigger>
         </TabsList>
 
         {isAnalyticTab && (
