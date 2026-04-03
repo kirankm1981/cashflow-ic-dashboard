@@ -379,7 +379,9 @@ export function registerIcMatrixRoutes(app: Express) {
       XLSX.utils.book_append_sheet(wb, ws, "IC Data");
       const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      res.setHeader("Content-Disposition", "attachment; filename=IC_Data.xlsx");
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const timeStr = new Date().toTimeString().slice(0, 5).replace(":", "");
+      res.setHeader("Content-Disposition", `attachment; filename="IC_Data_${dateStr}_${timeStr}.xlsx"`);
       res.send(buf);
     } catch (error: any) {
       const isOperational = error.status && error.status < 500;
@@ -485,7 +487,9 @@ export function registerIcMatrixRoutes(app: Express) {
       XLSX.utils.book_append_sheet(wb, ws, "Compiled TB");
       const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
 
-      res.setHeader("Content-Disposition", "attachment; filename=IC_Matrix_Compiled_TB.xlsx");
+      const ctbDateStr = new Date().toISOString().slice(0, 10);
+      const ctbTimeStr = new Date().toTimeString().slice(0, 5).replace(":", "");
+      res.setHeader("Content-Disposition", `attachment; filename="IC_Matrix_Compiled_TB_${ctbDateStr}_${ctbTimeStr}.xlsx"`);
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       res.send(buf);
     } catch (error: any) {
@@ -562,7 +566,9 @@ export function registerIcMatrixRoutes(app: Express) {
       XLSX.utils.book_append_sheet(wb, ws, "IC Balance Matrix");
       const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      res.setHeader("Content-Disposition", "attachment; filename=IC_Balance_Matrix.xlsx");
+      const bmDateStr = new Date().toISOString().slice(0, 10);
+      const bmTimeStr = new Date().toTimeString().slice(0, 5).replace(":", "");
+      res.setHeader("Content-Disposition", `attachment; filename="IC_Balance_Matrix_${bmDateStr}_${bmTimeStr}.xlsx"`);
       res.send(buf);
     } catch (error: any) {
       const isOperational = error.status && error.status < 500;
@@ -694,7 +700,9 @@ export function registerIcMatrixRoutes(app: Express) {
 
       const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      res.setHeader("Content-Disposition", "attachment; filename=IC_Netoff_Matrix.xlsx");
+      const noDateStr = new Date().toISOString().slice(0, 10);
+      const noTimeStr = new Date().toTimeString().slice(0, 5).replace(":", "");
+      res.setHeader("Content-Disposition", `attachment; filename="IC_Netoff_Matrix_${noDateStr}_${noTimeStr}.xlsx"`);
       res.send(buf);
     } catch (error: any) {
       const isOperational = error.status && error.status < 500;

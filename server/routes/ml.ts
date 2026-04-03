@@ -55,7 +55,7 @@ export function registerMlRoutes(app: Express) {
         return res.status(400).json({ message: "One or both lines are no longer unmatched. Suggestion auto-rejected." });
       }
 
-      const groups = await storage.getReconGroups();
+      const { groups } = await storage.getReconGroups(10000, 0);
       let maxNum = 0;
       for (const g of groups) {
         const m = g.reconId.match(/^REC-(\d+)$/);

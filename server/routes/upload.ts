@@ -318,7 +318,7 @@ export function registerUploadRoutes(app: Express) {
       let groupsCreated = 0;
       const errors: string[] = [];
 
-      const existingGroups = await storage.getReconGroups();
+      const { groups: existingGroups } = await storage.getReconGroups(10000, 0);
       let maxNum = 0;
       for (const g of existingGroups) {
         const m = g.reconId.match(/^REC-(\d+)$/);

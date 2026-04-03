@@ -70,7 +70,7 @@ export interface IStorage {
   updateRule(id: number, rule: Partial<InsertRule>): Promise<Rule | undefined>;
   deleteRule(id: number): Promise<void>;
 
-  getReconGroups(): Promise<ReconGroup[]>;
+  getReconGroups(limit?: number, offset?: number): Promise<{ groups: ReconGroup[]; total: number }>;
   insertReconGroup(group: InsertReconGroup): Promise<ReconGroup>;
   unmatchReconGroup(reconId: string): Promise<number>;
 
@@ -275,8 +275,14 @@ export class DatabaseStorage implements IStorage {
     await db.delete(reconciliationRules).where(eq(reconciliationRules.id, id));
   }
 
-  async getReconGroups(): Promise<ReconGroup[]> {
-    return await db.select().from(reconciliationGroups).orderBy(desc(reconciliationGroups.createdAt));
+  async getReconGroups(limit = 50, offset = 0): Promise<{ groups: ReconGroup[]; total: number }> {
+    const [countResult] = await db.select({ count: sql<number>`count(*)::int` }).from(reconciliationGroups);
+    const total = countResult?.count ?? 0;
+    const groups = await db.select().from(reconciliationGroups)
+      .orderBy(desc(reconciliationGroups.createdAt))
+      .limit(limit)
+      .offset(offset);
+    return { groups, total };
   }
 
   async insertReconGroup(group: InsertReconGroup): Promise<ReconGroup> {

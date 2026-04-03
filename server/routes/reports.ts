@@ -51,10 +51,17 @@ export function registerReportRoutes(app: Express) {
 
       const xlsxBuffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
 
-      const company = (req.query.company as string) || "all";
-      const counterParty = (req.query.counterParty as string) || "all";
+      const companyPart = req.query.companies
+        ? (req.query.companies as string).split(",").slice(0, 3).join("_")
+        : (req.query.company as string) || "all";
+      const counterPartyPart = req.query.counterParty
+        ? (req.query.counterParty as string).split(",").slice(0, 3).join("_")
+        : "all";
+      const statusPart = (req.query.reconStatus as string) || "all";
       const dateStr = new Date().toISOString().slice(0, 10);
-      const filename = `recon_${company}_${counterParty}_${dateStr}.xlsx`;
+      const timeStr = new Date().toTimeString().slice(0, 5).replace(":", "");
+      const sanitize = (s: string) => s.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 40);
+      const filename = `IC_Recon_${sanitize(companyPart)}_vs_${sanitize(counterPartyPart)}_${sanitize(statusPart)}_${dateStr}_${timeStr}.xlsx`;
 
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);

@@ -61,7 +61,7 @@ export function registerReconciliationRoutes(app: Express) {
       if (totalPos <= 0 || totalNeg <= 0 || Math.abs(totalPos - totalNeg) >= 0.01) {
         return res.status(400).json({ message: `Amounts do not balance: debits (${totalPos.toFixed(2)}) must equal credits (${totalNeg.toFixed(2)})` });
       }
-      const groups = await storage.getReconGroups();
+      const { groups } = await storage.getReconGroups(10000, 0);
       let maxNum = 0;
       for (const g of groups) {
         const m = g.reconId.match(/^REC-(\d+)$/);
@@ -284,10 +284,13 @@ export function registerReconciliationRoutes(app: Express) {
     }
   });
 
-  app.get("/api/recon-groups", requireAuth, async (_req, res) => {
+  app.get("/api/recon-groups", requireAuth, async (req, res) => {
     try {
-      const groups = await storage.getReconGroups();
-      res.json(groups);
+      const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 50, 1), 200);
+      const page = Math.max(parseInt(req.query.page as string) || 1, 1);
+      const offset = (page - 1) * limit;
+      const { groups, total } = await storage.getReconGroups(limit, offset);
+      res.json({ groups, total, page, limit, totalPages: Math.ceil(total / limit) });
     } catch (error: any) {
       const isOperational = error.status && error.status < 500;
       const message = isOperational ? error.message : "Internal server error";

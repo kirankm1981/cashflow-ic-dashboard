@@ -503,7 +503,9 @@ export function registerReconGlRoutes(app: Express) {
       XLSX.utils.book_append_sheet(wb, ws, "Mapped Data");
       const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      res.setHeader("Content-Disposition", "attachment; filename=IC_Recon_Mapped_Data.xlsx");
+      const mdDateStr = new Date().toISOString().slice(0, 10);
+      const mdTimeStr = new Date().toTimeString().slice(0, 5).replace(":", "");
+      res.setHeader("Content-Disposition", `attachment; filename="IC_Recon_Mapped_Data_${mdDateStr}_${mdTimeStr}.xlsx"`);
       res.send(buf);
     } catch (error: any) {
       const isOperational = error.status && error.status < 500;
@@ -693,7 +695,9 @@ export function registerReconGlRoutes(app: Express) {
       ];
       const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      res.setHeader("Content-Disposition", "attachment; filename=IC_Recon_RPT_Summary.xlsx");
+      const rsDateStr = new Date().toISOString().slice(0, 10);
+      const rsTimeStr = new Date().toTimeString().slice(0, 5).replace(":", "");
+      res.setHeader("Content-Disposition", `attachment; filename="IC_Recon_RPT_Summary_${rsDateStr}_${rsTimeStr}.xlsx"`);
       res.send(buf);
     } catch (error: any) {
       const isOperational = error.status && error.status < 500;
@@ -733,7 +737,9 @@ export function registerReconGlRoutes(app: Express) {
       XLSX.utils.book_append_sheet(wb, ws, "RPT Data");
       const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      res.setHeader("Content-Disposition", "attachment; filename=IC_Recon_RPT_Data.xlsx");
+      const rdDateStr = new Date().toISOString().slice(0, 10);
+      const rdTimeStr = new Date().toTimeString().slice(0, 5).replace(":", "");
+      res.setHeader("Content-Disposition", `attachment; filename="IC_Recon_RPT_Data_${rdDateStr}_${rdTimeStr}.xlsx"`);
       res.send(buf);
     } catch (error: any) {
       const isOperational = error.status && error.status < 500;

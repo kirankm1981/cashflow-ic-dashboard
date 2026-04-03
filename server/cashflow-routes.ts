@@ -660,7 +660,9 @@ export function registerCashflowRoutes(app: Express) {
 
       const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      res.setHeader("Content-Disposition", "attachment; filename=Cashflow_Mapped_TB.xlsx");
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const timeStr = new Date().toTimeString().slice(0, 5).replace(":", "");
+      res.setHeader("Content-Disposition", `attachment; filename="Cashflow_Mapped_TB_${dateStr}_${timeStr}.xlsx"`);
       res.send(buffer);
     } catch (error: any) {
       const isOperational = error.status && error.status < 500;
@@ -942,7 +944,9 @@ export function registerCashflowRoutes(app: Express) {
       XLSX.utils.book_append_sheet(wb, ws, "Detailed Cashflow");
       const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      res.setHeader("Content-Disposition", "attachment; filename=Cashflow_Detailed.xlsx");
+      const cfDateStr = new Date().toISOString().slice(0, 10);
+      const cfTimeStr = new Date().toTimeString().slice(0, 5).replace(":", "");
+      res.setHeader("Content-Disposition", `attachment; filename="Cashflow_Detailed_${cfDateStr}_${cfTimeStr}.xlsx"`);
       res.send(buf);
     } catch (error: any) {
       const isOperational = error.status && error.status < 500;
@@ -995,7 +999,9 @@ export function registerCashflowRoutes(app: Express) {
 
       const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      res.setHeader("Content-Disposition", "attachment; filename=Cashflow_Unmapped_Items.xlsx");
+      const umDateStr = new Date().toISOString().slice(0, 10);
+      const umTimeStr = new Date().toTimeString().slice(0, 5).replace(":", "");
+      res.setHeader("Content-Disposition", `attachment; filename="Cashflow_Unmapped_Items_${umDateStr}_${umTimeStr}.xlsx"`);
       res.send(buf);
     } catch (error: any) {
       const isOperational = error.status && error.status < 500;
@@ -1025,7 +1031,9 @@ export function registerCashflowRoutes(app: Express) {
       XLSX.utils.book_append_sheet(wb, ws, "Past Losses");
       const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      res.setHeader("Content-Disposition", "attachment; filename=Cashflow_Past_Losses.xlsx");
+      const plDateStr = new Date().toISOString().slice(0, 10);
+      const plTimeStr = new Date().toTimeString().slice(0, 5).replace(":", "");
+      res.setHeader("Content-Disposition", `attachment; filename="Cashflow_Past_Losses_${plDateStr}_${plTimeStr}.xlsx"`);
       res.send(buf);
     } catch (error: any) {
       const isOperational = error.status && error.status < 500;
@@ -1303,7 +1311,9 @@ export function registerCashflowRoutes(app: Express) {
 
       const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      res.setHeader("Content-Disposition", "attachment; filename=MIS_Mapping_File.xlsx");
+      const mfDateStr = new Date().toISOString().slice(0, 10);
+      const mfTimeStr = new Date().toTimeString().slice(0, 5).replace(":", "");
+      res.setHeader("Content-Disposition", `attachment; filename="MIS_Mapping_File_${mfDateStr}_${mfTimeStr}.xlsx"`);
       res.send(buf);
     } catch (error: any) {
       const isOperational = error.status && error.status < 500;
