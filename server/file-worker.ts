@@ -81,6 +81,12 @@ parentPort?.on("message", (msg) => {
       case "preview":
         result = previewHeaders(buf, filename, selectedSheet);
         break;
+      case "parseTbSheet": {
+        const wb = XLSX.read(buf, { type: "buffer" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        result = XLSX.utils.sheet_to_json(ws, { header: 1, range: 0, defval: "" });
+        break;
+      }
       default:
         throw new Error(`Unknown action: ${action}`);
     }

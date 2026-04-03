@@ -69,10 +69,10 @@ function runWorker(workerData: any): Promise<any> {
   });
 }
 
-export async function parseFileInWorker(filePath: string, filename: string, selectedSheet?: string): Promise<Record<string, string>[]> {
+export async function parseFileInWorker(filePath: string, filename: string, selectedSheet?: string, action: string = "parse"): Promise<any> {
   try {
     return await runWorker({
-      action: "parse",
+      action,
       filePath,
       filename,
       selectedSheet,

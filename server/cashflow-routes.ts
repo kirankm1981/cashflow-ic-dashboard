@@ -14,6 +14,7 @@ import os from "os";
 import fsModule from "fs";
 import pathModule from "path";
 import { randomUUID } from "crypto";
+import { parseFileInWorker } from "./file-processor";
 
 const diskStorage = multer.diskStorage({
   destination: (_req, _file, cb) => {
@@ -109,11 +110,7 @@ export function registerCashflowRoutes(app: Express) {
 
       const label = (req.body.label || "TB").trim();
 
-      const fileBuffer = fsModule.readFileSync(req.file.path);
-      cleanupFile(req.file.path);
-      const wb = XLSX.read(fileBuffer, { type: "buffer" });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const allRows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, range: 0, defval: "" });
+      const allRows: any[][] = await parseFileInWorker(req.file.path, "tb.xlsx", undefined, "parseTbSheet");
 
       const enterpriseRaw = String(allRows[1]?.[0] || "").trim();
       const enterprise = enterpriseRaw.replace(/^Enterprise\s*:\s*/i, "").trim();
