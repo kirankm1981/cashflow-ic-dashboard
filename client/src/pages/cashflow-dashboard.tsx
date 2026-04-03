@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { IndianRupee, TrendingUp, TrendingDown, ChevronRight, ChevronDown, Download, FileDown, ArrowRightLeft } from "lucide-react";
+import { IndianRupee, TrendingUp, TrendingDown, ChevronRight, ChevronDown, Download, FileDown } from "lucide-react";
 import { useState, useMemo, Fragment } from "react";
 import { useLocation } from "wouter";
 import {
@@ -79,7 +79,7 @@ export default function CashflowDashboard() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [dashFilters, setDashFilters] = useState<FilterState>({ companies: [], projects: [], period: null });
+  const [dashFilters, setDashFilters] = useState<FilterState>({ companies: [], projects: [], period: null, status: null });
   const { getFormat } = useDashboardSettings();
   const cfFmt = getFormat("cf-amounts");
 
@@ -232,8 +232,8 @@ export default function CashflowDashboard() {
           <h1 className="text-2xl font-bold tracking-tight">MIS</h1>
           <p className="text-muted-foreground text-sm mt-1">Monitor and analyze cashflows across entities</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map(i => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3].map(i => (
             <Card key={i}><CardContent className="p-5"><Skeleton className="h-4 w-24 mb-2" /><Skeleton className="h-8 w-16" /></CardContent></Card>
           ))}
         </div>
@@ -362,7 +362,6 @@ export default function CashflowDashboard() {
             <DashboardFilters
               companies={dashboardData?.companies || []}
               projects={dashboardData?.projects || []}
-              periods={dashboardData?.periods || []}
               filters={dashFilters}
               onChange={setDashFilters}
             />
@@ -386,12 +385,11 @@ export default function CashflowDashboard() {
         )}
 
         <TabsContent value="dashboard" className="space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {([
               { label: "Total Inflow", value: totalInflow, icon: TrendingUp, flow: "inflow" as FlowColor, testId: "card-total-inflows" },
               { label: "Total Outflow", value: totalOutflow, icon: TrendingDown, flow: "outflow" as FlowColor, testId: "card-total-outflows" },
               { label: "Cash & Bank", value: totalCashBank, icon: IndianRupee, flow: "cash" as FlowColor, testId: "card-cash-bank" },
-              { label: "Net Cashflow", value: totalInflow + totalOutflow + totalCashBank, icon: ArrowRightLeft, flow: "sign" as FlowColor, testId: "card-net-cashflow" },
             ]).map(k => {
               const bgClass = k.flow === "sign"
                 ? (k.value >= 0 ? FLOW_BG_COLOR.inflow : FLOW_BG_COLOR.outflow)
@@ -476,7 +474,7 @@ export default function CashflowDashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={400}>
                 <BarChart
                   data={cashflowByProject}
                   margin={{ top: 16, right: 16, left: 8, bottom: 8 }}
@@ -724,7 +722,7 @@ export default function CashflowDashboard() {
               allRows={allDashRows}
               formatConfig={cfFmt}
               onProjectFilter={(project) => {
-                setDashFilters(prev => ({ ...prev, projects: [project] }));
+                setDashFilters(prev => ({ ...prev, projects: [project], status: prev.status }));
               }}
             />
           )}
