@@ -712,7 +712,7 @@ export function registerCashflowRoutes(app: Express) {
       const pastLossRows = plRows
         .filter(pl => entityCompanyKeys.has(normalizeText(pl.company || "")))
         .map(pl => {
-          const companyBUs = entityMappings.filter(e => normalizeText(e.companyNameErp || e.companyName || "") === normalizeText(pl.company || ""));
+          const companyBUs = entityCached.mappings.filter(e => normalizeText(e.companyNameErp || e.companyName || "") === normalizeText(pl.company || ""));
           const matchedBU = companyBUs.find(e => normalizeText(e.projectName || "") === normalizeText(pl.project || ""));
           return {
             company: pl.company || "",
