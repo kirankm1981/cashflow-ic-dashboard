@@ -96,11 +96,21 @@ export function registerCashflowRoutes(app: Express) {
       const groupingMappings = await db.select().from(cashflowMappingGroupings);
       const entityMappings = await db.select().from(cashflowMappingEntities);
 
-      const groupingMap = new Map<string, { cashflow: string | null; cfHead: string | null }>();
+      type GroupingInfo = {
+        cashflow: string | null; cfHead: string | null;
+        activityType: string | null; cfStatementLine: string | null;
+        plCategory: string | null; plSign: number;
+        wipComponent: string | null; wcBucket: string | null; wcSign: number;
+        debtBucket: string | null; kpiTag: string | null;
+      };
+      const groupingMap = new Map<string, GroupingInfo>();
       for (const g of groupingMappings) {
         groupingMap.set(normalizeText(g.accountHead || ""), {
-          cashflow: g.cashflow,
-          cfHead: g.cfHead,
+          cashflow: g.cashflow, cfHead: g.cfHead,
+          activityType: g.activityType || null, cfStatementLine: g.cfStatementLine || null,
+          plCategory: g.plCategory || null, plSign: g.plSign || 0,
+          wipComponent: g.wipComponent || null, wcBucket: g.wcBucket || null, wcSign: g.wcSign || 0,
+          debtBucket: g.debtBucket || null, kpiTag: g.kpiTag || null,
         });
       }
 
@@ -171,6 +181,15 @@ export function registerCashflowRoutes(app: Express) {
             netClosingBalance: closingDebit - closingCredit,
             cashflow: grouping?.cashflow || null,
             cfHead: grouping?.cfHead || null,
+            activityType: grouping?.activityType || null,
+            cfStatementLine: grouping?.cfStatementLine || null,
+            plCategory: grouping?.plCategory || null,
+            plSign: grouping?.plSign || 0,
+            wipComponent: grouping?.wipComponent || null,
+            wcBucket: grouping?.wcBucket || null,
+            wcSign: grouping?.wcSign || 0,
+            debtBucket: grouping?.debtBucket || null,
+            kpiTag: grouping?.kpiTag || null,
             structure,
             projectName: buMapping?.projectName || null,
             entityStatus: buMapping?.entityStatus || null,
@@ -220,14 +239,43 @@ export function registerCashflowRoutes(app: Express) {
         await db.delete(cashflowMappingGroupings);
         const ws = wb.Sheets[groupingsSheet];
         const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
-        const dataRows = rows.slice(1).filter(r => String(r[0] || "").trim() !== "");
+        const headers = (rows[0] || []).map((h: any) => String(h || "").trim().toLowerCase().replace(/\s+/g, ""));
+        const colIdx = (name: string) => {
+          const n = name.toLowerCase().replace(/\s+/g, "");
+          return headers.indexOf(n);
+        };
+        const iAH = colIdx("accounthead");
+        const iCF = colIdx("cashflow");
+        const iCFH = colIdx("cfhead");
+        const iAT = colIdx("activitytype");
+        const iCSL = colIdx("cfstatementline");
+        const iPLC = colIdx("plcategory");
+        const iPLS = colIdx("plsign");
+        const iWC = colIdx("wipcomponent");
+        const iWCB = colIdx("wcbucket");
+        const iWCS = colIdx("wcsign");
+        const iDB = colIdx("debtbucket");
+        const iKPI = colIdx("kpitag");
+        const ahCol = iAH >= 0 ? iAH : 0;
+        const cfCol = iCF >= 0 ? iCF : 1;
+        const cfhCol = iCFH >= 0 ? iCFH : 2;
+        const dataRows = rows.slice(1).filter(r => String(r[ahCol] || "").trim() !== "");
         const BATCH = 500;
         for (let i = 0; i < dataRows.length; i += BATCH) {
           const batch = dataRows.slice(i, i + BATCH);
           const values = batch.map(r => ({
-            accountHead: String(r[0] || "").trim(),
-            cashflow: String(r[1] || "").trim() || null,
-            cfHead: String(r[2] || "").trim() || null,
+            accountHead: String(r[ahCol] || "").trim(),
+            cashflow: String(r[cfCol] || "").trim() || null,
+            cfHead: String(r[cfhCol] || "").trim() || null,
+            activityType: iAT >= 0 ? (String(r[iAT] || "").trim() || null) : null,
+            cfStatementLine: iCSL >= 0 ? (String(r[iCSL] || "").trim() || null) : null,
+            plCategory: iPLC >= 0 ? (String(r[iPLC] || "").trim() || null) : null,
+            plSign: iPLS >= 0 ? (parseFloat(r[iPLS]) || 0) : 0,
+            wipComponent: iWC >= 0 ? (String(r[iWC] || "").trim() || null) : null,
+            wcBucket: iWCB >= 0 ? (String(r[iWCB] || "").trim() || null) : null,
+            wcSign: iWCS >= 0 ? (parseFloat(r[iWCS]) || 0) : 0,
+            debtBucket: iDB >= 0 ? (String(r[iDB] || "").trim() || null) : null,
+            kpiTag: iKPI >= 0 ? (String(r[iKPI] || "").trim() || null) : null,
           }));
           await db.insert(cashflowMappingGroupings).values(values);
           groupingsInserted += values.length;
@@ -403,11 +451,21 @@ export function registerCashflowRoutes(app: Express) {
       const groupingMappings = await db.select().from(cashflowMappingGroupings);
       const entityMappings = await db.select().from(cashflowMappingEntities);
 
-      const groupingMap = new Map<string, { cashflow: string | null; cfHead: string | null }>();
+      type GroupingInfo2 = {
+        cashflow: string | null; cfHead: string | null;
+        activityType: string | null; cfStatementLine: string | null;
+        plCategory: string | null; plSign: number;
+        wipComponent: string | null; wcBucket: string | null; wcSign: number;
+        debtBucket: string | null; kpiTag: string | null;
+      };
+      const groupingMap = new Map<string, GroupingInfo2>();
       for (const g of groupingMappings) {
         groupingMap.set(normalizeText(g.accountHead || ""), {
-          cashflow: g.cashflow,
-          cfHead: g.cfHead,
+          cashflow: g.cashflow, cfHead: g.cfHead,
+          activityType: g.activityType || null, cfStatementLine: g.cfStatementLine || null,
+          plCategory: g.plCategory || null, plSign: g.plSign || 0,
+          wipComponent: g.wipComponent || null, wcBucket: g.wcBucket || null, wcSign: g.wcSign || 0,
+          debtBucket: g.debtBucket || null, kpiTag: g.kpiTag || null,
         });
       }
 
@@ -433,46 +491,39 @@ export function registerCashflowRoutes(app: Express) {
       let updated = 0;
 
       for (let offset = 0; offset < total; offset += BATCH) {
-        const batch = await db.select({
-          id: cashflowTbData.id,
-          company: cashflowTbData.company,
-          businessUnit: cashflowTbData.businessUnit,
-          accountHead: cashflowTbData.accountHead,
-          cashflow: cashflowTbData.cashflow,
-          cfHead: cashflowTbData.cfHead,
-          structure: cashflowTbData.structure,
-          projectName: cashflowTbData.projectName,
-          entityStatus: cashflowTbData.entityStatus,
-        }).from(cashflowTbData).orderBy(asc(cashflowTbData.id)).limit(BATCH).offset(offset);
-
-        const updates: { id: number; cashflow: string | null; cfHead: string | null; structure: string | null; projectName: string | null; entityStatus: string | null }[] = [];
+        const batch = await db.select().from(cashflowTbData).orderBy(asc(cashflowTbData.id)).limit(BATCH).offset(offset);
 
         for (const row of batch) {
           const grouping = groupingMap.get(normalizeText(row.accountHead || ""));
           const buMapping = buMap.get(normalizeText(row.businessUnit || ""));
 
-          const newCashflow = grouping?.cashflow || null;
-          const newCfHead = grouping?.cfHead || null;
-          const newStructure = companyStructureMap.get(normalizeText(row.company || "")) || null;
-          const newProjectName = buMapping?.projectName || null;
-          const newEntityStatus = buMapping?.entityStatus || null;
+          const newFields = {
+            cashflow: grouping?.cashflow || null,
+            cfHead: grouping?.cfHead || null,
+            activityType: grouping?.activityType || null,
+            cfStatementLine: grouping?.cfStatementLine || null,
+            plCategory: grouping?.plCategory || null,
+            plSign: grouping?.plSign || 0,
+            wipComponent: grouping?.wipComponent || null,
+            wcBucket: grouping?.wcBucket || null,
+            wcSign: grouping?.wcSign || 0,
+            debtBucket: grouping?.debtBucket || null,
+            kpiTag: grouping?.kpiTag || null,
+            structure: companyStructureMap.get(normalizeText(row.company || "")) || null,
+            projectName: buMapping?.projectName || null,
+            entityStatus: buMapping?.entityStatus || null,
+          };
 
-          if (
-            newCashflow !== row.cashflow ||
-            newCfHead !== row.cfHead ||
-            newStructure !== row.structure ||
-            newProjectName !== row.projectName ||
-            newEntityStatus !== row.entityStatus
-          ) {
-            updates.push({ id: row.id, cashflow: newCashflow, cfHead: newCfHead, structure: newStructure, projectName: newProjectName, entityStatus: newEntityStatus });
+          const changed = newFields.cashflow !== row.cashflow || newFields.cfHead !== row.cfHead ||
+            newFields.activityType !== row.activityType || newFields.plCategory !== row.plCategory ||
+            newFields.wcBucket !== row.wcBucket || newFields.debtBucket !== row.debtBucket ||
+            newFields.kpiTag !== row.kpiTag || newFields.structure !== row.structure ||
+            newFields.projectName !== row.projectName || newFields.entityStatus !== row.entityStatus;
+
+          if (changed) {
+            await db.update(cashflowTbData).set(newFields).where(eq(cashflowTbData.id, row.id));
+            updated++;
           }
-        }
-
-        for (const u of updates) {
-          await db.update(cashflowTbData)
-            .set({ cashflow: u.cashflow, cfHead: u.cfHead, structure: u.structure, projectName: u.projectName, entityStatus: u.entityStatus })
-            .where(eq(cashflowTbData.id, u.id));
-          updated++;
         }
       }
 
@@ -636,6 +687,65 @@ export function registerCashflowRoutes(app: Express) {
         totalCount: unified.length,
         excludedCount: excludedTbCount,
       });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/cashflow/dashboard-data", async (_req, res) => {
+    try {
+      const entityMappings = await db.select().from(cashflowMappingEntities);
+      const entityCompanyKeys = new Set(entityMappings.map(e => normalizeText(e.companyNameErp || e.companyName || "")).filter(Boolean));
+
+      const files = await db.select().from(cashflowTbFiles);
+      const fileMap = new Map(files.map(f => [f.id, f]));
+
+      const allData = await db.select({
+        tbFileId: cashflowTbData.tbFileId,
+        company: cashflowTbData.company,
+        projectName: cashflowTbData.projectName,
+        entityStatus: cashflowTbData.entityStatus,
+        accountHead: cashflowTbData.accountHead,
+        cashflow: cashflowTbData.cashflow,
+        cfHead: cashflowTbData.cfHead,
+        activityType: cashflowTbData.activityType,
+        cfStatementLine: cashflowTbData.cfStatementLine,
+        plCategory: cashflowTbData.plCategory,
+        plSign: cashflowTbData.plSign,
+        wipComponent: cashflowTbData.wipComponent,
+        wcBucket: cashflowTbData.wcBucket,
+        wcSign: cashflowTbData.wcSign,
+        debtBucket: cashflowTbData.debtBucket,
+        kpiTag: cashflowTbData.kpiTag,
+        openingDebit: cashflowTbData.openingDebit,
+        openingCredit: cashflowTbData.openingCredit,
+        periodDebit: cashflowTbData.periodDebit,
+        periodCredit: cashflowTbData.periodCredit,
+        closingDebit: cashflowTbData.closingDebit,
+        closingCredit: cashflowTbData.closingCredit,
+        netOpeningBalance: cashflowTbData.netOpeningBalance,
+        netClosingBalance: cashflowTbData.netClosingBalance,
+      }).from(cashflowTbData);
+
+      const rows = allData
+        .filter(r => entityCompanyKeys.has(normalizeText(r.company || "")))
+        .map(r => {
+          const f = fileMap.get(r.tbFileId);
+          return {
+            ...r,
+            periodTag: f?.period || null,
+            enterprise: f?.enterprise || null,
+            openingNet: (r.openingDebit || 0) - (r.openingCredit || 0),
+            periodNet: (r.periodDebit || 0) - (r.periodCredit || 0),
+            closingNet: (r.closingDebit || 0) - (r.closingCredit || 0),
+          };
+        });
+
+      const companies = [...new Set(rows.map(r => r.company).filter(Boolean))].sort();
+      const projects = [...new Set(rows.map(r => r.projectName).filter(Boolean))].sort();
+      const periods = [...new Set(rows.map(r => r.periodTag).filter(Boolean))].sort();
+
+      res.json({ rows, companies, projects, periods });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

@@ -30,6 +30,13 @@ import {
 import { useDashboardSettings } from "@/hooks/use-dashboard-settings";
 import { formatAmount, SCALE_SUFFIXES } from "@/lib/number-format";
 import { ChartFormatSettings } from "@/components/chart-format-settings";
+import { DashboardFilters } from "@/components/mis-dashboards/dashboard-filters";
+import { D1CashflowStatement } from "@/components/mis-dashboards/d1-cashflow-statement";
+import { D2PlWip } from "@/components/mis-dashboards/d2-pl-wip";
+import { D3WorkingCapital } from "@/components/mis-dashboards/d3-working-capital";
+import { D4DebtFinancing } from "@/components/mis-dashboards/d4-debt-financing";
+import { D5InvestorKpis } from "@/components/mis-dashboards/d5-investor-kpis";
+import { filterRows, type FilterState, type DashboardDataResponse } from "@/components/mis-dashboards/types";
 
 
 interface UnifiedRow {
@@ -92,6 +99,7 @@ export default function CashflowDashboard() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [dashFilters, setDashFilters] = useState<FilterState>({ companies: [], projects: [], period: null });
   const { getFormat } = useDashboardSettings();
   const cfFmt = getFormat("cf-amounts");
 
@@ -113,6 +121,19 @@ export default function CashflowDashboard() {
   }>>({
     queryKey: ["/api/cashflow/past-losses"],
   });
+
+  const { data: dashboardData, isLoading: loadingDashData } = useQuery<DashboardDataResponse>({
+    queryKey: ["/api/cashflow/dashboard-data"],
+  });
+
+  const filteredDashRows = useMemo(() => {
+    if (!dashboardData?.rows) return [];
+    return filterRows(dashboardData.rows, dashFilters);
+  }, [dashboardData, dashFilters]);
+
+  const allDashRows = dashboardData?.rows || [];
+
+  const isAnalyticTab = ["d1", "d2", "d3", "d4", "d5"].includes(activeTab);
 
   const unified = unifiedResult?.data || [];
 
@@ -365,7 +386,24 @@ export default function CashflowDashboard() {
               <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5 py-0 h-4">{pastLossesData?.length}</Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="d1" data-testid="tab-d1">CF Statement</TabsTrigger>
+          <TabsTrigger value="d2" data-testid="tab-d2">P&L & WIP</TabsTrigger>
+          <TabsTrigger value="d3" data-testid="tab-d3">Working Capital</TabsTrigger>
+          <TabsTrigger value="d4" data-testid="tab-d4">Debt & Finance</TabsTrigger>
+          <TabsTrigger value="d5" data-testid="tab-d5">Investor KPIs</TabsTrigger>
         </TabsList>
+
+        {isAnalyticTab && (
+          <div className="mt-3">
+            <DashboardFilters
+              companies={dashboardData?.companies || []}
+              projects={dashboardData?.projects || []}
+              periods={dashboardData?.periods || []}
+              filters={dashFilters}
+              onChange={setDashFilters}
+            />
+          </div>
+        )}
 
         <TabsContent value="dashboard" className="space-y-4">
           <div className="flex items-center gap-2 flex-wrap" data-testid="status-filter-buttons">
@@ -772,6 +810,52 @@ export default function CashflowDashboard() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="d1">
+          {loadingDashData ? (
+            <div className="space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-24 w-full" />)}</div>
+          ) : (
+            <D1CashflowStatement rows={filteredDashRows} />
+          )}
+        </TabsContent>
+
+        <TabsContent value="d2">
+          {loadingDashData ? (
+            <div className="space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-24 w-full" />)}</div>
+          ) : (
+            <D2PlWip rows={filteredDashRows} />
+          )}
+        </TabsContent>
+
+        <TabsContent value="d3">
+          {loadingDashData ? (
+            <div className="space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-24 w-full" />)}</div>
+          ) : (
+            <D3WorkingCapital rows={filteredDashRows} />
+          )}
+        </TabsContent>
+
+        <TabsContent value="d4">
+          {loadingDashData ? (
+            <div className="space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-24 w-full" />)}</div>
+          ) : (
+            <D4DebtFinancing rows={filteredDashRows} allRows={allDashRows} />
+          )}
+        </TabsContent>
+
+        <TabsContent value="d5">
+          {loadingDashData ? (
+            <div className="space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-24 w-full" />)}</div>
+          ) : (
+            <D5InvestorKpis
+              rows={filteredDashRows}
+              allRows={allDashRows}
+              onProjectFilter={(project) => {
+                setDashFilters(prev => ({ ...prev, projects: [project] }));
+              }}
+            />
+          )}
         </TabsContent>
       </Tabs>
     </div>
