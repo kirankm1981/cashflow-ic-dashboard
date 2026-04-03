@@ -16,6 +16,7 @@ import {
   KeyRound,
   Check,
   X,
+  AlertTriangle,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -53,6 +54,7 @@ const icReconAdminItems = [
 function getCashflowItems(isViewer: boolean) {
   const items = [
     { title: "Dashboard", url: "/cashflow", icon: IndianRupee },
+    { title: "Unmapped Items", url: "/cashflow/unmapped", icon: AlertTriangle },
     ...(!isViewer ? [{ title: "Upload", url: "/cashflow/upload", icon: Upload }] : []),
   ];
   return items;

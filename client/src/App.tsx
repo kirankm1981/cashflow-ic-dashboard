@@ -15,6 +15,7 @@ import AuditTrail from "@/pages/audit-trail";
 import Reports from "@/pages/reports";
 import CashflowDashboard from "@/pages/cashflow-dashboard";
 import CashflowUpload from "@/pages/cashflow-upload";
+import CashflowUnmapped from "@/pages/cashflow-unmapped";
 import IcMatrix from "@/pages/ic-matrix";
 import IcMatrixUpload from "@/pages/ic-matrix-upload";
 import RptDataPage from "@/pages/rpt-data";
@@ -39,6 +40,7 @@ function PageTitle() {
     "/recon/audit": "Audit Trail",
     "/cashflow": "MIS",
     "/cashflow/upload": "MIS Upload",
+    "/cashflow/unmapped": "Unmapped Items",
     "/ic-matrix": "IC Matrix",
     "/ic-matrix/upload": "Upload TB Files",
     "/admin/users": "User Management",
@@ -94,6 +96,7 @@ function Router() {
       <Route path="/recon/audit">{() => <ModuleGuard module="ic_recon" component={AuditTrail} />}</Route>
       <Route path="/recon/reports">{() => <ModuleGuard module="ic_recon" component={Reports} />}</Route>
       <Route path="/cashflow">{() => <ModuleGuard module="cashflow" component={CashflowDashboard} />}</Route>
+      <Route path="/cashflow/unmapped">{() => <ModuleViewerGuard module="cashflow" component={CashflowUnmapped} />}</Route>
       <Route path="/cashflow/upload">{() => <ModuleViewerGuard module="cashflow" component={CashflowUpload} />}</Route>
       <Route path="/ic-matrix">{() => <ModuleGuard module="ic_matrix" component={IcMatrix} />}</Route>
       <Route path="/ic-matrix/upload">{() => <ModuleViewerGuard module="ic_matrix" component={IcMatrixUpload} />}</Route>
