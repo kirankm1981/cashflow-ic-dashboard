@@ -46,6 +46,7 @@ export function useAuth() {
     isLoading,
     isAuthenticated: !!user,
     isAdmin: user?.role === "platform_admin",
+    isViewer: user?.role === "viewer",
     login: loginMutation,
     logout: logoutMutation,
   };

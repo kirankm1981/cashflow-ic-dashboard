@@ -183,7 +183,7 @@ export async function registerRoutes(
       if (!username || !password) {
         return res.status(400).json({ message: "Username and password are required" });
       }
-      if (role && !["platform_admin", "recon_user"].includes(role)) {
+      if (role && !["platform_admin", "recon_user", "viewer"].includes(role)) {
         return res.status(400).json({ message: "Invalid role" });
       }
       const existing = await storage.getUserByUsername(username);
@@ -216,7 +216,7 @@ export async function registerRoutes(
       const updates: any = {};
       if (req.body.displayName !== undefined) updates.displayName = req.body.displayName;
       if (req.body.role !== undefined) {
-        if (!["platform_admin", "recon_user"].includes(req.body.role)) {
+        if (!["platform_admin", "recon_user", "viewer"].includes(req.body.role)) {
           return res.status(400).json({ message: "Invalid role" });
         }
         updates.role = req.body.role;

@@ -133,7 +133,7 @@ export default function UserManagement() {
                     <span>@{u.username}</span>
                     <span className="text-muted-foreground/40">|</span>
                     <Badge variant={u.role === "platform_admin" ? "default" : "secondary"} className="text-[10px]">
-                      {u.role === "platform_admin" ? "Admin" : "Recon User"}
+                      {u.role === "platform_admin" ? "Admin" : u.role === "viewer" ? "Viewer" : "Recon User"}
                     </Badge>
                     {!u.active && (
                       <Badge variant="destructive" className="text-[10px]">Disabled</Badge>
@@ -210,6 +210,7 @@ export default function UserManagement() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="viewer">Viewer</SelectItem>
                   <SelectItem value="recon_user">Recon User</SelectItem>
                   <SelectItem value="platform_admin">Platform Admin</SelectItem>
                 </SelectContent>
@@ -291,6 +292,7 @@ export default function UserManagement() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="viewer">Viewer</SelectItem>
                   <SelectItem value="recon_user">Recon User</SelectItem>
                   <SelectItem value="platform_admin">Platform Admin</SelectItem>
                 </SelectContent>

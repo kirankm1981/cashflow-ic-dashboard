@@ -20,7 +20,7 @@ import IcMatrixUpload from "@/pages/ic-matrix-upload";
 import RptDataPage from "@/pages/rpt-data";
 import LoginPage from "@/pages/login";
 import UserManagement from "@/pages/user-management";
-import { useLocation } from "wouter";
+import { useLocation, Redirect } from "wouter";
 import { UploadManagerProvider } from "@/lib/upload-manager";
 import GlobalUploadNotifications from "@/components/global-upload-notifications";
 import { useAuth } from "@/hooks/use-auth";
@@ -62,21 +62,27 @@ function PageTitle() {
   );
 }
 
+function ViewerGuard({ component: Component }: { component: React.ComponentType }) {
+  const { isViewer } = useAuth();
+  if (isViewer) return <Redirect to="/" />;
+  return <Component />;
+}
+
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Landing} />
       <Route path="/recon" component={Dashboard} />
-      <Route path="/recon/upload" component={UploadPage} />
+      <Route path="/recon/upload">{() => <ViewerGuard component={UploadPage} />}</Route>
       <Route path="/recon/workspace" component={Workspace} />
       <Route path="/recon/rpt-data" component={RptDataPage} />
       <Route path="/recon/rules" component={RuleConfig} />
       <Route path="/recon/audit" component={AuditTrail} />
       <Route path="/recon/reports" component={Reports} />
       <Route path="/cashflow" component={CashflowDashboard} />
-      <Route path="/cashflow/upload" component={CashflowUpload} />
+      <Route path="/cashflow/upload">{() => <ViewerGuard component={CashflowUpload} />}</Route>
       <Route path="/ic-matrix" component={IcMatrix} />
-      <Route path="/ic-matrix/upload" component={IcMatrixUpload} />
+      <Route path="/ic-matrix/upload">{() => <ViewerGuard component={IcMatrixUpload} />}</Route>
       <Route path="/admin/users" component={UserManagement} />
       <Route component={NotFound} />
     </Switch>

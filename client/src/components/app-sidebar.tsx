@@ -35,25 +35,34 @@ import {
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 
-const icReconItems = [
-  { title: "Dashboard", url: "/recon", icon: LayoutDashboard },
-  { title: "Upload", url: "/recon/upload", icon: Upload },
-  { title: "RPT Data", url: "/recon/rpt-data", icon: Database },
-];
+function getIcReconItems(isViewer: boolean) {
+  const items = [
+    { title: "Dashboard", url: "/recon", icon: LayoutDashboard },
+    ...(!isViewer ? [{ title: "Upload", url: "/recon/upload", icon: Upload }] : []),
+    { title: "RPT Data", url: "/recon/rpt-data", icon: Database },
+  ];
+  return items;
+}
 
 const icReconAdminItems = [
   { title: "Rules", url: "/recon/rules", icon: Settings2 },
 ];
 
-const cashflowItems = [
-  { title: "Dashboard", url: "/cashflow", icon: IndianRupee },
-  { title: "Upload", url: "/cashflow/upload", icon: Upload },
-];
+function getCashflowItems(isViewer: boolean) {
+  const items = [
+    { title: "Dashboard", url: "/cashflow", icon: IndianRupee },
+    ...(!isViewer ? [{ title: "Upload", url: "/cashflow/upload", icon: Upload }] : []),
+  ];
+  return items;
+}
 
-const icMatrixItems = [
-  { title: "Dashboard", url: "/ic-matrix", icon: Grid3X3 },
-  { title: "Upload", url: "/ic-matrix/upload", icon: Upload },
-];
+function getIcMatrixItems(isViewer: boolean) {
+  const items = [
+    { title: "Dashboard", url: "/ic-matrix", icon: Grid3X3 },
+    ...(!isViewer ? [{ title: "Upload", url: "/ic-matrix/upload", icon: Upload }] : []),
+  ];
+  return items;
+}
 
 interface NavGroupProps {
   label: string;
@@ -117,7 +126,7 @@ function NavGroup({ label, icon: Icon, items, defaultOpen, location, testId, lin
 
 export function AppSidebar() {
   const [location] = useLocation();
-  const { user, isAdmin, logout } = useAuth();
+  const { user, isAdmin, isViewer, logout } = useAuth();
   const { toast } = useToast();
   const [showChangePw, setShowChangePw] = useState(false);
   const [pwFields, setPwFields] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
@@ -172,7 +181,7 @@ export function AppSidebar() {
           <NavGroup
             label="Cashflow"
             icon={IndianRupee}
-            items={cashflowItems}
+            items={getCashflowItems(isViewer)}
             defaultOpen={isCashflowActive}
             location={location}
             testId="group-cashflow"
@@ -181,7 +190,7 @@ export function AppSidebar() {
           <NavGroup
             label="IC Matrix"
             icon={Grid3X3}
-            items={icMatrixItems}
+            items={getIcMatrixItems(isViewer)}
             defaultOpen={isMatrixActive}
             location={location}
             testId="group-ic-matrix"
@@ -190,7 +199,7 @@ export function AppSidebar() {
           <NavGroup
             label="IC Recon"
             icon={GitCompare}
-            items={isAdmin ? [...icReconItems, ...icReconAdminItems] : icReconItems}
+            items={isAdmin ? [...getIcReconItems(isViewer), ...icReconAdminItems] : getIcReconItems(isViewer)}
             defaultOpen={isReconActive}
             location={location}
             testId="group-ic-recon"
@@ -222,7 +231,7 @@ export function AppSidebar() {
         </SidebarContent>
         <SidebarFooter className="border-t border-sidebar-border p-3 space-y-2">
           <div className="flex items-center gap-3">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isAdmin ? "bg-amber-500/15 text-amber-400" : "bg-blue-500/15 text-blue-400"}`}>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isAdmin ? "bg-amber-500/15 text-amber-400" : isViewer ? "bg-slate-500/15 text-slate-400" : "bg-blue-500/15 text-blue-400"}`}>
               {isAdmin ? <Shield className="w-4 h-4" /> : <User className="w-4 h-4" />}
             </div>
             <div className="flex-1 min-w-0">
@@ -230,7 +239,7 @@ export function AppSidebar() {
                 {user?.displayName || user?.username}
               </p>
               <p className="text-[10px] text-sidebar-foreground/50">
-                {isAdmin ? "Admin" : "Recon User"}
+                {isAdmin ? "Admin" : isViewer ? "Viewer" : "Recon User"}
               </p>
             </div>
             <button
