@@ -35,7 +35,29 @@ const diskStorage = multer.diskStorage({
   },
 });
 
-export const upload = multer({ storage: diskStorage, limits: { fileSize: 100 * 1024 * 1024 } });
+const ALLOWED_EXTENSIONS = new Set([".xlsx", ".xls", ".csv"]);
+const ALLOWED_MIMETYPES = new Set([
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-excel",
+  "text/csv",
+  "application/csv",
+  "text/plain",
+]);
+
+export const upload = multer({
+  storage: diskStorage,
+  limits: { fileSize: 100 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!ALLOWED_EXTENSIONS.has(ext)) {
+      return cb(new Error(`File type not allowed. Only xlsx, xls, csv permitted. Got: ${ext}`));
+    }
+    if (!ALLOWED_MIMETYPES.has(file.mimetype)) {
+      return cb(new Error(`MIME type not permitted: ${file.mimetype}`));
+    }
+    cb(null, true);
+  },
+});
 
 export function cleanupFile(filePath: string) {
   try {
