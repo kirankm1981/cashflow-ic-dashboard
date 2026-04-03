@@ -239,43 +239,55 @@ export function registerCashflowRoutes(app: Express) {
         await db.delete(cashflowMappingGroupings);
         const ws = wb.Sheets[groupingsSheet];
         const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
-        const headers = (rows[0] || []).map((h: any) => String(h || "").trim().toLowerCase().replace(/\s+/g, ""));
-        const colIdx = (name: string) => {
-          const n = name.toLowerCase().replace(/\s+/g, "");
-          return headers.indexOf(n);
+        const rawHeaders = (rows[0] || []).map((h: any) => String(h || "").trim());
+        const headers = rawHeaders.map(h => h.toLowerCase().replace(/[^a-z0-9]/g, ""));
+        const colIdx = (...aliases: string[]) => {
+          for (const alias of aliases) {
+            const norm = alias.toLowerCase().replace(/[^a-z0-9]/g, "");
+            const idx = headers.findIndex(h => h === norm || h.includes(norm));
+            if (idx >= 0) return idx;
+          }
+          return -1;
         };
+        const iG1 = colIdx("group1");
+        const iG2 = colIdx("group2");
+        const iG3 = colIdx("group3");
+        const iG4 = colIdx("group4");
+        const iG5 = colIdx("group5");
         const iAH = colIdx("accounthead");
         const iCF = colIdx("cashflow");
         const iCFH = colIdx("cfhead");
         const iAT = colIdx("activitytype");
         const iCSL = colIdx("cfstatementline");
-        const iPLC = colIdx("plcategory");
+        const iPLC = colIdx("plcategory", "plcat");
         const iPLS = colIdx("plsign");
-        const iWC = colIdx("wipcomponent");
+        const iWC = colIdx("wipcomponent", "wipcomp");
         const iWCB = colIdx("wcbucket");
         const iWCS = colIdx("wcsign");
         const iDB = colIdx("debtbucket");
         const iKPI = colIdx("kpitag");
-        const ahCol = iAH >= 0 ? iAH : 0;
-        const cfCol = iCF >= 0 ? iCF : 1;
-        const cfhCol = iCFH >= 0 ? iCFH : 2;
+        console.log(`[Groupings] Headers detected: ${rawHeaders.join(", ")}`);
+        console.log(`[Groupings] Column indices: G1=${iG1} G2=${iG2} G3=${iG3} G4=${iG4} G5=${iG5} AH=${iAH} CF=${iCF} CFH=${iCFH} AT=${iAT} CSL=${iCSL} PLC=${iPLC} PLS=${iPLS} WC=${iWC} WCB=${iWCB} WCS=${iWCS} DB=${iDB} KPI=${iKPI}`);
+        const str = (r: any[], i: number) => i >= 0 ? (String(r[i] || "").trim() || null) : null;
+        const num = (r: any[], i: number) => i >= 0 ? (parseFloat(r[i]) || 0) : 0;
+        const ahCol = iAH >= 0 ? iAH : (iG5 >= 0 ? iG5 + 1 : 5);
         const dataRows = rows.slice(1).filter(r => String(r[ahCol] || "").trim() !== "");
         const BATCH = 500;
         for (let i = 0; i < dataRows.length; i += BATCH) {
           const batch = dataRows.slice(i, i + BATCH);
           const values = batch.map(r => ({
             accountHead: String(r[ahCol] || "").trim(),
-            cashflow: String(r[cfCol] || "").trim() || null,
-            cfHead: String(r[cfhCol] || "").trim() || null,
-            activityType: iAT >= 0 ? (String(r[iAT] || "").trim() || null) : null,
-            cfStatementLine: iCSL >= 0 ? (String(r[iCSL] || "").trim() || null) : null,
-            plCategory: iPLC >= 0 ? (String(r[iPLC] || "").trim() || null) : null,
-            plSign: iPLS >= 0 ? (parseFloat(r[iPLS]) || 0) : 0,
-            wipComponent: iWC >= 0 ? (String(r[iWC] || "").trim() || null) : null,
-            wcBucket: iWCB >= 0 ? (String(r[iWCB] || "").trim() || null) : null,
-            wcSign: iWCS >= 0 ? (parseFloat(r[iWCS]) || 0) : 0,
-            debtBucket: iDB >= 0 ? (String(r[iDB] || "").trim() || null) : null,
-            kpiTag: iKPI >= 0 ? (String(r[iKPI] || "").trim() || null) : null,
+            cashflow: str(r, iCF >= 0 ? iCF : ahCol + 1),
+            cfHead: str(r, iCFH >= 0 ? iCFH : ahCol + 2),
+            activityType: str(r, iAT),
+            cfStatementLine: str(r, iCSL),
+            plCategory: str(r, iPLC),
+            plSign: num(r, iPLS),
+            wipComponent: str(r, iWC),
+            wcBucket: str(r, iWCB),
+            wcSign: num(r, iWCS),
+            debtBucket: str(r, iDB),
+            kpiTag: str(r, iKPI),
           }));
           await db.insert(cashflowMappingGroupings).values(values);
           groupingsInserted += values.length;
@@ -287,34 +299,43 @@ export function registerCashflowRoutes(app: Express) {
         await db.delete(cashflowMappingEntities);
         const ws = wb.Sheets[entitySheet];
         const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
-        const headers = (rows[0] || []).map((h: any) => String(h || "").trim().toLowerCase().replace(/\s+/g, ""));
-        const hasBusinessUnit = headers.includes("businessunit") || headers.some(h => h === "bu" || h === "business_unit");
-        const dataRows = rows.slice(1).filter(r => String(r[0] || "").trim() !== "");
+        const rawHeaders = (rows[0] || []).map((h: any) => String(h || "").trim());
+        const headers = rawHeaders.map(h => h.toLowerCase().replace(/[^a-z0-9]/g, ""));
+        const colIdx = (...aliases: string[]) => {
+          for (const alias of aliases) {
+            const norm = alias.toLowerCase().replace(/[^a-z0-9]/g, "");
+            const idx = headers.findIndex(h => h === norm || h.includes(norm));
+            if (idx >= 0) return idx;
+          }
+          return -1;
+        };
+        const iCN = colIdx("companyname", "company");
+        const iCNE = colIdx("companynameerp", "erpname", "companyerp");
+        const iST = colIdx("structure");
+        const iBU = colIdx("businessunit", "bu");
+        const iPN = colIdx("projectname", "project");
+        const iES = colIdx("entitystatus", "status");
+        const iRM = colIdx("remarks", "remark");
+        console.log(`[Entity] Headers detected: ${rawHeaders.join(", ")}`);
+        console.log(`[Entity] Column indices: CN=${iCN} CNE=${iCNE} ST=${iST} BU=${iBU} PN=${iPN} ES=${iES} RM=${iRM}`);
+        const firstCol = iCN >= 0 ? iCN : (iCNE >= 0 ? iCNE : 0);
+        const dataRows = rows.slice(1).filter(r => String(r[firstCol] || "").trim() !== "");
         const BATCH = 500;
         for (let i = 0; i < dataRows.length; i += BATCH) {
           const batch = dataRows.slice(i, i + BATCH);
-          let values;
-          if (hasBusinessUnit) {
-            values = batch.map(r => ({
-              companyName: String(r[0] || "").trim() || null,
-              companyNameErp: String(r[0] || "").trim(),
-              structure: String(r[1] || "").trim() || null,
-              businessUnit: String(r[2] || "").trim() || null,
-              projectName: String(r[3] || "").trim() || null,
-              entityStatus: String(r[4] || "").trim() || null,
-              remarks: String(r[5] || "").trim() || null,
-            }));
-          } else {
-            values = batch.map(r => ({
-              companyName: String(r[0] || "").trim() || null,
-              companyNameErp: String(r[1] || "").trim(),
-              structure: String(r[2] || "").trim() || null,
-              businessUnit: null,
-              projectName: String(r[3] || "").trim() || null,
-              entityStatus: String(r[4] || "").trim() || null,
-              remarks: String(r[5] || "").trim() || null,
-            }));
-          }
+          const values = batch.map(r => {
+            const companyName = iCN >= 0 ? (String(r[iCN] || "").trim() || null) : (String(r[firstCol] || "").trim() || null);
+            const companyNameErp = iCNE >= 0 ? String(r[iCNE] || "").trim() : (companyName || "");
+            return {
+              companyName,
+              companyNameErp: companyNameErp || String(r[firstCol] || "").trim(),
+              structure: iST >= 0 ? (String(r[iST] || "").trim() || null) : null,
+              businessUnit: iBU >= 0 ? (String(r[iBU] || "").trim() || null) : null,
+              projectName: iPN >= 0 ? (String(r[iPN] || "").trim() || null) : null,
+              entityStatus: iES >= 0 ? (String(r[iES] || "").trim() || null) : null,
+              remarks: iRM >= 0 ? (String(r[iRM] || "").trim() || null) : null,
+            };
+          });
           await db.insert(cashflowMappingEntities).values(values);
           entitiesInserted += values.length;
         }
@@ -325,33 +346,59 @@ export function registerCashflowRoutes(app: Express) {
         await db.delete(cashflowPastLosses);
         const ws = wb.Sheets[pastLossesSheet];
         const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
-        console.log(`Past Losses sheet: ${rows.length} total rows`);
-        console.log(`Past Losses first 5 rows:`, JSON.stringify(rows.slice(0, 5).map(r => [String(r[0]||""), String(r[1]||""), String(r[2]||""), String(r[3]||""), String(r[4]||"")])));
-        const headerIdx = rows.findIndex(r => {
-          const colA = String(r[0] || "").trim().toLowerCase().replace(/\s+/g, "");
-          const colB = String(r[1] || "").trim().toLowerCase().replace(/\s+/g, "");
-          return (colA.includes("company") || colA.includes("entity")) && (colB.includes("project") || colB.includes("name"));
-        });
-        console.log(`Past Losses header row index: ${headerIdx}`);
-        if (headerIdx >= 0) {
-          console.log(`Past Losses header row: ${JSON.stringify(rows[headerIdx])}`);
-          const dataRows = rows.slice(headerIdx + 1).filter(r => String(r[0] || "").trim() !== "");
-          console.log(`Past Losses data rows found: ${dataRows.length}`);
-          const BATCH = 200;
-          for (let i = 0; i < dataRows.length; i += BATCH) {
-            const batch = dataRows.slice(i, i + BATCH);
-            const values = batch.map(r => ({
-              company: String(r[0] || "").trim() || null,
-              project: String(r[1] || "").trim() || null,
-              cashflow: String(r[2] || "").trim() || null,
-              cfHead: String(r[3] || "").trim() || null,
-              amount: parseNum(r[4]),
-              asPerFs: String(r[5] || "").trim() || null,
-              lossesUpto: excelDateToString(r[6]),
-            }));
-            await db.insert(cashflowPastLosses).values(values);
-            pastLossesInserted += values.length;
+        const rawHeaders = (rows[0] || []).map((h: any) => String(h || "").trim());
+        const hdrs = rawHeaders.map(h => h.toLowerCase().replace(/[^a-z0-9]/g, ""));
+        const colIdx = (...aliases: string[]) => {
+          for (const alias of aliases) {
+            const norm = alias.toLowerCase().replace(/[^a-z0-9]/g, "");
+            const idx = hdrs.findIndex(h => h === norm || h.includes(norm));
+            if (idx >= 0) return idx;
           }
+          return -1;
+        };
+        let headerIdx = 0;
+        const iCo = colIdx("company", "entity");
+        if (iCo < 0) {
+          headerIdx = rows.findIndex(r => {
+            const colA = String(r[0] || "").trim().toLowerCase().replace(/\s+/g, "");
+            return colA.includes("company") || colA.includes("entity");
+          });
+          if (headerIdx < 0) headerIdx = 0;
+        }
+        const plHeaders = (rows[headerIdx] || []).map((h: any) => String(h || "").trim().toLowerCase().replace(/[^a-z0-9]/g, ""));
+        const plCol = (...aliases: string[]) => {
+          for (const alias of aliases) {
+            const norm = alias.toLowerCase().replace(/[^a-z0-9]/g, "");
+            const idx = plHeaders.findIndex(h => h === norm || h.includes(norm));
+            if (idx >= 0) return idx;
+          }
+          return -1;
+        };
+        const iPLCo = plCol("company", "entity");
+        const iPLPr = plCol("project");
+        const iPLCf = plCol("cashflow");
+        const iPLCH = plCol("cfhead");
+        const iPLAm = plCol("amount");
+        const iPLFs = plCol("asperfs", "perfs", "fs");
+        const iPLLu = plCol("lossesupto", "upto", "losses");
+        console.log(`[PastLosses] Header row ${headerIdx}: ${rawHeaders.join(", ")}`);
+        console.log(`[PastLosses] Column indices: Co=${iPLCo} Pr=${iPLPr} Cf=${iPLCf} CH=${iPLCH} Am=${iPLAm} Fs=${iPLFs} Lu=${iPLLu}`);
+        const coCol = iPLCo >= 0 ? iPLCo : 0;
+        const dataRows = rows.slice(headerIdx + 1).filter(r => String(r[coCol] || "").trim() !== "");
+        const BATCH = 200;
+        for (let i = 0; i < dataRows.length; i += BATCH) {
+          const batch = dataRows.slice(i, i + BATCH);
+          const values = batch.map(r => ({
+            company: String(r[iPLCo >= 0 ? iPLCo : 0] || "").trim() || null,
+            project: String(r[iPLPr >= 0 ? iPLPr : 1] || "").trim() || null,
+            cashflow: String(r[iPLCf >= 0 ? iPLCf : 2] || "").trim() || null,
+            cfHead: String(r[iPLCH >= 0 ? iPLCH : 3] || "").trim() || null,
+            amount: parseNum(r[iPLAm >= 0 ? iPLAm : 4]),
+            asPerFs: String(r[iPLFs >= 0 ? iPLFs : 5] || "").trim() || null,
+            lossesUpto: excelDateToString(r[iPLLu >= 0 ? iPLLu : 6]),
+          }));
+          await db.insert(cashflowPastLosses).values(values);
+          pastLossesInserted += values.length;
         }
       }
 
