@@ -3,6 +3,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import compression from "compression";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
+import rateLimit from "express-rate-limit";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
@@ -68,6 +69,17 @@ app.use(
     },
   })
 );
+
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 300,
+  keyGenerator: (req) => (req.session as any)?.userId || req.ip || "unknown",
+  skip: (req) => req.path.startsWith("/api/upload") ||
+                 req.path.startsWith("/api/recon/upload") ||
+                 req.path.startsWith("/api/cashflow/upload"),
+  message: { message: "Too many requests. Please slow down." },
+});
+app.use("/api", apiLimiter);
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {

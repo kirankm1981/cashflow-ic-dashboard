@@ -1,8 +1,18 @@
 import type { Express, Request, Response } from "express";
 import bcrypt from "bcryptjs";
+import rateLimit from "express-rate-limit";
 import { storage } from "../storage";
 import { loginSchema } from "@shared/schema";
 import { requireAuth, requireAdmin, userCache } from "../middleware/auth";
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many login attempts. Please try again in 15 minutes." },
+  skipSuccessfulRequests: true,
+});
 
 const PASSWORD_MIN_LENGTH = 8;
 const PASSWORD_MAX_AGE_DAYS = 90;
@@ -40,7 +50,7 @@ export function registerAuthRoutes(app: Express) {
     });
   });
 
-  app.post("/api/auth/login", async (req, res) => {
+  app.post("/api/auth/login", loginLimiter, async (req, res) => {
     try {
       const parsed = loginSchema.safeParse(req.body);
       if (!parsed.success) {
