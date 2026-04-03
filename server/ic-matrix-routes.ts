@@ -9,6 +9,7 @@ import fs from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 import { parseFileInWorker } from "./file-processor";
+import { requireAuth } from "./middleware/auth";
 
 const diskStorage = multer.diskStorage({
   destination: (_req, _file, cb) => {
@@ -56,6 +57,8 @@ function parseNum(v: any): number {
 }
 
 export function registerIcMatrixRoutes(app: Express) {
+  app.use("/api/ic-matrix", requireAuth);
+
   app.post("/api/ic-matrix/upload-tb", upload.single("file"), async (req, res) => {
     req.setTimeout(1200000);
     res.setTimeout(1200000);

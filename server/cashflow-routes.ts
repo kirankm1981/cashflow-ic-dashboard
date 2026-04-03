@@ -15,6 +15,7 @@ import fsModule from "fs";
 import pathModule from "path";
 import { randomUUID } from "crypto";
 import { parseFileInWorker } from "./file-processor";
+import { requireAuth } from "./middleware/auth";
 
 const diskStorage = multer.diskStorage({
   destination: (_req, _file, cb) => {
@@ -102,6 +103,8 @@ function excelDateToString(val: any): string {
 }
 
 export function registerCashflowRoutes(app: Express) {
+  app.use("/api/cashflow", requireAuth);
+
   app.post("/api/cashflow/upload-tb", upload.single("file"), async (req, res) => {
     req.setTimeout(1200000);
     res.setTimeout(1200000);

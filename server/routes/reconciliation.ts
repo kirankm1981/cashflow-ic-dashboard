@@ -1,11 +1,11 @@
 import type { Express } from "express";
 import { storage } from "../storage";
-import { requireAdmin } from "../middleware/auth";
+import { requireAuth, requireAdmin } from "../middleware/auth";
 import { runReconciliation } from "../reconciliation-engine";
 import { learnFromManualMatch, learnFromUnmatch } from "../ml-engine";
 
 export function registerReconciliationRoutes(app: Express) {
-  app.get("/api/summarized-lines", async (req, res) => {
+  app.get("/api/summarized-lines", requireAuth, async (req, res) => {
     try {
       const filters: any = {};
       if (req.query.companies) {
@@ -31,7 +31,7 @@ export function registerReconciliationRoutes(app: Express) {
     }
   });
 
-  app.post("/api/reconcile", async (_req, res) => {
+  app.post("/api/reconcile", requireAdmin, async (_req, res) => {
     try {
       const result = await runReconciliation();
       res.json(result);
@@ -41,7 +41,7 @@ export function registerReconciliationRoutes(app: Express) {
     }
   });
 
-  app.post("/api/manual-reconcile", async (req, res) => {
+  app.post("/api/manual-reconcile", requireAuth, async (req, res) => {
     try {
       const { transactionIds } = req.body;
       if (!transactionIds || !Array.isArray(transactionIds) || transactionIds.length < 2) {
@@ -90,7 +90,7 @@ export function registerReconciliationRoutes(app: Express) {
     }
   });
 
-  app.post("/api/unmatch", async (req, res) => {
+  app.post("/api/unmatch", requireAuth, async (req, res) => {
     try {
       const { reconId } = req.body;
       if (!reconId) {
@@ -109,7 +109,7 @@ export function registerReconciliationRoutes(app: Express) {
     }
   });
 
-  app.post("/api/rules/reset", async (_req, res) => {
+  app.post("/api/rules/reset", requireAdmin, async (_req, res) => {
     try {
       const { db } = await import("../db");
       const { reconciliationRules } = await import("@shared/schema");
@@ -194,7 +194,7 @@ export function registerReconciliationRoutes(app: Express) {
     }
   });
 
-  app.get("/api/dashboard", async (_req, res) => {
+  app.get("/api/dashboard", requireAuth, async (_req, res) => {
     try {
       const stats = await storage.getDashboardStats();
       res.json(stats);
@@ -203,7 +203,7 @@ export function registerReconciliationRoutes(app: Express) {
     }
   });
 
-  app.get("/api/company-name-map", async (_req, res) => {
+  app.get("/api/company-name-map", requireAuth, async (_req, res) => {
     try {
       const { db } = await import("../db");
       const { icMatrixMappingCompany } = await import("@shared/schema");
@@ -218,7 +218,7 @@ export function registerReconciliationRoutes(app: Express) {
     }
   });
 
-  app.get("/api/companies", async (_req, res) => {
+  app.get("/api/companies", requireAuth, async (_req, res) => {
     try {
       const companies = await storage.getCompanies();
       res.json(companies);
@@ -227,7 +227,7 @@ export function registerReconciliationRoutes(app: Express) {
     }
   });
 
-  app.get("/api/counterparties", async (_req, res) => {
+  app.get("/api/counterparties", requireAuth, async (_req, res) => {
     try {
       const counterParties = await storage.getCounterParties();
       res.json(counterParties);
@@ -236,7 +236,7 @@ export function registerReconciliationRoutes(app: Express) {
     }
   });
 
-  app.get("/api/upload-batches", async (_req, res) => {
+  app.get("/api/upload-batches", requireAuth, async (_req, res) => {
     try {
       const batches = await storage.getUploadBatches();
       res.json(batches);
@@ -245,7 +245,7 @@ export function registerReconciliationRoutes(app: Express) {
     }
   });
 
-  app.get("/api/company-pairs", async (_req, res) => {
+  app.get("/api/company-pairs", requireAuth, async (_req, res) => {
     try {
       const pairs = await storage.getCompanyPairs();
       res.json(pairs);
@@ -254,7 +254,7 @@ export function registerReconciliationRoutes(app: Express) {
     }
   });
 
-  app.get("/api/recon-groups", async (_req, res) => {
+  app.get("/api/recon-groups", requireAuth, async (_req, res) => {
     try {
       const groups = await storage.getReconGroups();
       res.json(groups);
@@ -263,7 +263,7 @@ export function registerReconciliationRoutes(app: Express) {
     }
   });
 
-  app.get("/api/dashboard-settings", async (req, res) => {
+  app.get("/api/dashboard-settings", requireAuth, async (req, res) => {
     try {
       const settings = await storage.getDashboardSettings(req.session.userId!);
       res.json(settings);
@@ -272,7 +272,7 @@ export function registerReconciliationRoutes(app: Express) {
     }
   });
 
-  app.put("/api/dashboard-settings/:chartId", async (req, res) => {
+  app.put("/api/dashboard-settings/:chartId", requireAuth, async (req, res) => {
     try {
       const { chartId } = req.params;
       const { numberScale, decimalPlaces } = req.body;
