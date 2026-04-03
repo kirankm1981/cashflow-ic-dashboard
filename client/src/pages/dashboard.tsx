@@ -142,14 +142,72 @@ function EntitySummaryContent({ stats, nameMap }: { stats: DashboardStats; nameM
     );
   }
 
+  const totals = stats.companySummary.reduce((acc, cs) => ({
+    total: acc.total + cs.total,
+    matched: acc.matched + cs.matched,
+    reversal: acc.reversal + cs.reversal,
+    review: acc.review + cs.review,
+    suggested: acc.suggested + cs.suggested,
+    unmatched: acc.unmatched + cs.unmatched,
+  }), { total: 0, matched: 0, reversal: 0, review: 0, suggested: 0, unmatched: 0 });
+  const totalReconciled = totals.matched + totals.reversal + totals.review + totals.suggested;
+  const overallRate = totals.total > 0 ? (totalReconciled / totals.total) * 100 : 0;
+  const entityCount = stats.companySummary.length;
+  const fullyReconciledCount = stats.companySummary.filter(cs => {
+    const rec = cs.matched + cs.reversal + cs.review + cs.suggested;
+    return cs.total > 0 && rec === cs.total;
+  }).length;
+
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">Entity Summary</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm" data-testid="table-entity-summary">
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Entities</p>
+            <p className="text-2xl font-bold mt-1" data-testid="text-entity-count">{formatNumber(entityCount)}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{fullyReconciledCount} fully reconciled</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Total Lines</p>
+            <p className="text-2xl font-bold mt-1" data-testid="text-entity-total-lines">{formatNumber(totals.total)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Reconciled</p>
+            <p className="text-2xl font-bold mt-1 text-emerald-600" data-testid="text-entity-reconciled">{formatNumber(totalReconciled)}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{overallRate.toFixed(1)}% rate</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Unmatched</p>
+            <p className="text-2xl font-bold mt-1 text-red-600" data-testid="text-entity-unmatched">{formatNumber(totals.unmatched)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Reversals</p>
+            <p className="text-2xl font-bold mt-1 text-purple-600" data-testid="text-entity-reversals">{formatNumber(totals.reversal)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Review + Suggested</p>
+            <p className="text-2xl font-bold mt-1 text-teal-600" data-testid="text-entity-review-suggested">{formatNumber(totals.review + totals.suggested)}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Entity Summary</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm" data-testid="table-entity-summary">
             <thead>
               <tr className="border-b">
                 <th className="text-left py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">Entity</th>
@@ -214,10 +272,11 @@ function EntitySummaryContent({ stats, nameMap }: { stats: DashboardStats; nameM
                 );
               })()}
             </tfoot>
-          </table>
-        </div>
-      </CardContent>
-    </Card>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
