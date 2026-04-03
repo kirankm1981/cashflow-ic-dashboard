@@ -1,9 +1,11 @@
 import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { GitCompare, IndianRupee, Grid3X3, ArrowRight } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
-const modules = [
+const allModules = [
   {
+    key: "cashflow",
     title: "Cashflow Dashboard",
     description: "Monitor and analyze intercompany cash flows, track inflows and outflows across all entities",
     icon: IndianRupee,
@@ -17,6 +19,7 @@ const modules = [
     ],
   },
   {
+    key: "ic_matrix",
     title: "IC Matrix",
     description: "Intercompany balance matrix showing positions between entity pairs and net balances",
     icon: Grid3X3,
@@ -30,6 +33,7 @@ const modules = [
     ],
   },
   {
+    key: "ic_recon",
     title: "IC Recon",
     description: "Intercompany reconciliation with auto matching rules and exception management",
     icon: GitCompare,
@@ -46,6 +50,8 @@ const modules = [
 
 export default function Landing() {
   const [, navigate] = useLocation();
+  const { hasModule } = useAuth();
+  const modules = allModules.filter(m => hasModule(m.key));
 
   return (
     <div className="flex flex-col items-center justify-center min-h-full p-6 md:p-10" data-testid="page-landing">

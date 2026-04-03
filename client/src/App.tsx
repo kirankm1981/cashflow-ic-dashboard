@@ -69,21 +69,34 @@ function ViewerGuard({ component: Component }: { component: React.ComponentType 
   return <Component />;
 }
 
+function ModuleGuard({ module, component: Component }: { module: string; component: React.ComponentType }) {
+  const { hasModule } = useAuth();
+  if (!hasModule(module)) return <Redirect to="/" />;
+  return <Component />;
+}
+
+function ModuleViewerGuard({ module, component: Component }: { module: string; component: React.ComponentType }) {
+  const { isViewer, hasModule } = useAuth();
+  if (!hasModule(module)) return <Redirect to="/" />;
+  if (isViewer) return <Redirect to="/" />;
+  return <Component />;
+}
+
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Landing} />
-      <Route path="/recon" component={Dashboard} />
-      <Route path="/recon/upload">{() => <ViewerGuard component={UploadPage} />}</Route>
-      <Route path="/recon/workspace" component={Workspace} />
-      <Route path="/recon/rpt-data" component={RptDataPage} />
-      <Route path="/recon/rules" component={RuleConfig} />
-      <Route path="/recon/audit" component={AuditTrail} />
-      <Route path="/recon/reports" component={Reports} />
-      <Route path="/cashflow" component={CashflowDashboard} />
-      <Route path="/cashflow/upload">{() => <ViewerGuard component={CashflowUpload} />}</Route>
-      <Route path="/ic-matrix" component={IcMatrix} />
-      <Route path="/ic-matrix/upload">{() => <ViewerGuard component={IcMatrixUpload} />}</Route>
+      <Route path="/recon">{() => <ModuleGuard module="ic_recon" component={Dashboard} />}</Route>
+      <Route path="/recon/upload">{() => <ModuleViewerGuard module="ic_recon" component={UploadPage} />}</Route>
+      <Route path="/recon/workspace">{() => <ModuleGuard module="ic_recon" component={Workspace} />}</Route>
+      <Route path="/recon/rpt-data">{() => <ModuleGuard module="ic_recon" component={RptDataPage} />}</Route>
+      <Route path="/recon/rules">{() => <ModuleGuard module="ic_recon" component={RuleConfig} />}</Route>
+      <Route path="/recon/audit">{() => <ModuleGuard module="ic_recon" component={AuditTrail} />}</Route>
+      <Route path="/recon/reports">{() => <ModuleGuard module="ic_recon" component={Reports} />}</Route>
+      <Route path="/cashflow">{() => <ModuleGuard module="cashflow" component={CashflowDashboard} />}</Route>
+      <Route path="/cashflow/upload">{() => <ModuleViewerGuard module="cashflow" component={CashflowUpload} />}</Route>
+      <Route path="/ic-matrix">{() => <ModuleGuard module="ic_matrix" component={IcMatrix} />}</Route>
+      <Route path="/ic-matrix/upload">{() => <ModuleViewerGuard module="ic_matrix" component={IcMatrixUpload} />}</Route>
       <Route path="/admin/users" component={UserManagement} />
       <Route component={NotFound} />
     </Switch>

@@ -154,7 +154,7 @@ function PasswordHints({ password }: { password: string }) {
 
 export function AppSidebar() {
   const [location] = useLocation();
-  const { user, isAdmin, isViewer, logout } = useAuth();
+  const { user, isAdmin, isViewer, hasModule, logout } = useAuth();
   const { toast } = useToast();
   const [showChangePw, setShowChangePw] = useState(false);
   const [pwFields, setPwFields] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
@@ -210,33 +210,39 @@ export function AppSidebar() {
           </Link>
         </SidebarHeader>
         <SidebarContent>
-          <NavGroup
-            label="Cashflow"
-            icon={IndianRupee}
-            items={getCashflowItems(isViewer)}
-            defaultOpen={isCashflowActive}
-            location={location}
-            testId="group-cashflow"
-            linkPrefix="cashflow"
-          />
-          <NavGroup
-            label="IC Matrix"
-            icon={Grid3X3}
-            items={getIcMatrixItems(isViewer)}
-            defaultOpen={isMatrixActive}
-            location={location}
-            testId="group-ic-matrix"
-            linkPrefix="matrix"
-          />
-          <NavGroup
-            label="IC Recon"
-            icon={GitCompare}
-            items={isAdmin ? [...getIcReconItems(isViewer), ...icReconAdminItems] : getIcReconItems(isViewer)}
-            defaultOpen={isReconActive}
-            location={location}
-            testId="group-ic-recon"
-            linkPrefix="recon"
-          />
+          {hasModule("cashflow") && (
+            <NavGroup
+              label="Cashflow"
+              icon={IndianRupee}
+              items={getCashflowItems(isViewer)}
+              defaultOpen={isCashflowActive}
+              location={location}
+              testId="group-cashflow"
+              linkPrefix="cashflow"
+            />
+          )}
+          {hasModule("ic_matrix") && (
+            <NavGroup
+              label="IC Matrix"
+              icon={Grid3X3}
+              items={getIcMatrixItems(isViewer)}
+              defaultOpen={isMatrixActive}
+              location={location}
+              testId="group-ic-matrix"
+              linkPrefix="matrix"
+            />
+          )}
+          {hasModule("ic_recon") && (
+            <NavGroup
+              label="IC Recon"
+              icon={GitCompare}
+              items={isAdmin ? [...getIcReconItems(isViewer), ...icReconAdminItems] : getIcReconItems(isViewer)}
+              defaultOpen={isReconActive}
+              location={location}
+              testId="group-ic-recon"
+              linkPrefix="recon"
+            />
+          )}
 
           {isAdmin && (
             <SidebarGroup>

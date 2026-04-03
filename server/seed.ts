@@ -316,6 +316,7 @@ export async function seedDefaultAdmin() {
       role: "platform_admin",
       mustChangePassword: false,
       passwordChangedAt: new Date().toISOString(),
+      allowedModules: ["ic_recon", "cashflow", "ic_matrix"],
     });
     console.log("Seeded default admin user");
   }
@@ -325,13 +326,19 @@ export async function migratePasswordFields() {
   const { eq, isNull } = await import("drizzle-orm");
   const allUsers = await db.select().from(users);
   for (const u of allUsers) {
+    const updates: any = {};
     if (u.passwordChangedAt === null || u.passwordChangedAt === undefined) {
-      const updates: any = { passwordChangedAt: new Date().toISOString() };
+      updates.passwordChangedAt = new Date().toISOString();
       if (u.mustChangePassword === null || u.mustChangePassword === undefined) {
         updates.mustChangePassword = u.role === "platform_admin" ? false : true;
       }
+    }
+    if (!u.allowedModules || u.allowedModules.length === 0) {
+      updates.allowedModules = ["ic_recon", "cashflow", "ic_matrix"];
+    }
+    if (Object.keys(updates).length > 0) {
       await db.update(users).set(updates).where(eq(users.id, u.id));
     }
   }
-  console.log("Migrated password fields for existing users");
+  console.log("Migrated password fields and module access for existing users");
 }

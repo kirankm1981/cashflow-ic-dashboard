@@ -12,6 +12,7 @@ export const users = pgTable("users", {
   active: boolean("active").default(true),
   mustChangePassword: boolean("must_change_password").default(true),
   passwordChangedAt: text("password_changed_at"),
+  allowedModules: text("allowed_modules").array(),
   createdAt: text("created_at").$defaultFn(() => new Date().toISOString()),
 });
 

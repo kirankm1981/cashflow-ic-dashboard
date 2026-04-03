@@ -7,6 +7,7 @@ interface AuthUser {
   displayName: string | null;
   role: string;
   mustChangePassword?: boolean;
+  allowedModules?: string[];
 }
 
 export function useAuth() {
@@ -42,6 +43,11 @@ export function useAuth() {
     },
   });
 
+  const allModules = ["ic_recon", "cashflow", "ic_matrix"];
+  const allowedModules = user?.role === "platform_admin"
+    ? allModules
+    : (user?.allowedModules || allModules);
+
   return {
     user: user ?? null,
     isLoading,
@@ -49,6 +55,8 @@ export function useAuth() {
     isAdmin: user?.role === "platform_admin",
     isViewer: user?.role === "viewer",
     mustChangePassword: !!user?.mustChangePassword,
+    allowedModules,
+    hasModule: (mod: string) => user?.role === "platform_admin" || allowedModules.includes(mod),
     login: loginMutation,
     logout: logoutMutation,
   };

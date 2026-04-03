@@ -174,12 +174,16 @@ export async function registerRoutes(
 
       const mustChangePassword = needsPasswordChange(user);
 
+      const loginModules = user.role === "platform_admin"
+        ? ["ic_recon", "cashflow", "ic_matrix"]
+        : (user.allowedModules || ["ic_recon", "cashflow", "ic_matrix"]);
       const userData = {
         id: user.id,
         username: user.username,
         displayName: user.displayName,
         role: user.role,
         mustChangePassword,
+        allowedModules: loginModules,
       };
       req.session.regenerate((err) => {
         if (err) {
@@ -211,12 +215,16 @@ export async function registerRoutes(
       req.session.destroy(() => {});
       return res.status(401).json({ message: "Not authenticated" });
     }
+    const modules = user.role === "platform_admin"
+      ? ["ic_recon", "cashflow", "ic_matrix"]
+      : (user.allowedModules || ["ic_recon", "cashflow", "ic_matrix"]);
     res.json({
       id: user.id,
       username: user.username,
       displayName: user.displayName,
       role: user.role,
       mustChangePassword: needsPasswordChange(user),
+      allowedModules: modules,
     });
   });
 
@@ -229,6 +237,7 @@ export async function registerRoutes(
         displayName: u.displayName,
         role: u.role,
         active: u.active,
+        allowedModules: u.allowedModules || ["ic_recon", "cashflow", "ic_matrix"],
         createdAt: u.createdAt,
       })));
     } catch (error: any) {
@@ -238,7 +247,7 @@ export async function registerRoutes(
 
   app.post("/api/users", requireAdmin, async (req, res) => {
     try {
-      const { username, password, displayName, role } = req.body;
+      const { username, password, displayName, role, allowedModules } = req.body;
       if (!username || !password) {
         return res.status(400).json({ message: "Username and password are required" });
       }
@@ -249,6 +258,10 @@ export async function registerRoutes(
       if (pwErrors.length > 0) {
         return res.status(400).json({ message: "Password does not meet complexity requirements", errors: pwErrors });
       }
+      const validModules = ["ic_recon", "cashflow", "ic_matrix"];
+      const userModules = Array.isArray(allowedModules)
+        ? allowedModules.filter((m: string) => validModules.includes(m))
+        : validModules;
       const existing = await storage.getUserByUsername(username);
       if (existing) {
         return res.status(409).json({ message: "Username already exists" });
@@ -263,6 +276,7 @@ export async function registerRoutes(
       await storage.updateUser(user.id, {
         mustChangePassword: true,
         passwordChangedAt: new Date().toISOString(),
+        allowedModules: userModules,
       } as any);
       res.json({
         id: user.id,
@@ -289,6 +303,12 @@ export async function registerRoutes(
         updates.role = req.body.role;
       }
       if (req.body.active !== undefined) updates.active = req.body.active;
+      if (req.body.allowedModules !== undefined) {
+        const validModules = ["ic_recon", "cashflow", "ic_matrix"];
+        updates.allowedModules = Array.isArray(req.body.allowedModules)
+          ? req.body.allowedModules.filter((m: string) => validModules.includes(m))
+          : validModules;
+      }
       if (req.body.password) {
         const pwErrors = validatePasswordComplexity(req.body.password);
         if (pwErrors.length > 0) {
@@ -306,6 +326,7 @@ export async function registerRoutes(
         displayName: user.displayName,
         role: user.role,
         active: user.active,
+        allowedModules: user.allowedModules || ["ic_recon", "cashflow", "ic_matrix"],
         createdAt: user.createdAt,
       });
     } catch (error: any) {
