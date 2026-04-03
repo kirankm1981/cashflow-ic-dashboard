@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { ConfirmDestructiveDialog } from "@/components/confirm-destructive-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -350,10 +351,19 @@ export default function RuleConfig({ embedded = false }: { embedded?: boolean } 
           </div>
         )}
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => resetMutation.mutate()} disabled={resetMutation.isPending} data-testid="button-reset-rules">
-            {resetMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RotateCcw className="w-4 h-4 mr-2" />}
-            Reset to Defaults
-          </Button>
+          <ConfirmDestructiveDialog
+            trigger={
+              <Button variant="outline" data-testid="button-reset-rules">
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Reset to Defaults
+              </Button>
+            }
+            title="Reset Rules"
+            description="This will delete all custom rules and restore the default 10 rules (IC-R1 to IC-R10). This action cannot be undone."
+            confirmWord="RESET"
+            onConfirm={() => resetMutation.mutate()}
+            isPending={resetMutation.isPending}
+          />
           <Dialog open={showCreate} onOpenChange={setShowCreate}>
             <DialogTrigger asChild>
               <Button data-testid="button-add-rule">

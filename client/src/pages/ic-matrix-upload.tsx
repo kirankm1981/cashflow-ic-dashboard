@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ConfirmDestructiveDialog } from "@/components/confirm-destructive-dialog";
 import {
   Upload,
   FileSpreadsheet,
@@ -21,15 +22,6 @@ import {
   AlertCircle,
   CheckCircle,
 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-
 function formatNum(val: number | null | undefined): string {
   if (val === null || val === undefined) return "0";
   return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 }).format(val);
@@ -47,8 +39,6 @@ export default function IcMatrixUpload() {
   const { toast } = useToast();
   const { uploadTbFile, uploadMappingFile, notifications } = useUploadManager();
   const matrixNotifications = notifications.filter(n => n.module === "ic-matrix");
-  const [clearTbDialogOpen, setClearTbDialogOpen] = useState(false);
-  const [clearMappingDialogOpen, setClearMappingDialogOpen] = useState(false);
   const [uploadingSlots, setUploadingSlots] = useState<Set<string>>(new Set());
   const [mappingUploading, setMappingUploading] = useState(false);
   const mappingInputRef = useRef<HTMLInputElement>(null);
@@ -127,7 +117,6 @@ export default function IcMatrixUpload() {
     },
     onSuccess: () => {
       toast({ title: "TB Data Cleared" });
-      setClearTbDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: ["/api/ic-matrix"] });
       queryClient.invalidateQueries({ queryKey: ["/api/ic-matrix/summary"] });
       queryClient.invalidateQueries({ queryKey: ["/api/ic-matrix/tb-files"] });
@@ -147,7 +136,6 @@ export default function IcMatrixUpload() {
     },
     onSuccess: () => {
       toast({ title: "Mapping Data Cleared" });
-      setClearMappingDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: ["/api/ic-matrix"] });
       queryClient.invalidateQueries({ queryKey: ["/api/ic-matrix/summary"] });
       queryClient.invalidateQueries({ queryKey: ["/api/ic-matrix/mapping-summary"] });
@@ -252,9 +240,18 @@ export default function IcMatrixUpload() {
                   <Plus className="w-3 h-3 mr-1" /> Add
                 </Button>
                 {hasTbData && (
-                  <Button variant="outline" size="sm" onClick={() => setClearTbDialogOpen(true)} data-testid="button-clear-tb">
-                    <Trash2 className="w-3 h-3 mr-1" /> Clear All
-                  </Button>
+                  <ConfirmDestructiveDialog
+                    trigger={
+                      <Button variant="outline" size="sm" data-testid="button-clear-tb">
+                        <Trash2 className="w-3 h-3 mr-1" /> Clear All
+                      </Button>
+                    }
+                    title="Clear All TB Data"
+                    description="This will permanently delete all uploaded Trial Balance files and their compiled data. Mapping data will be preserved. This action cannot be undone."
+                    confirmWord="DELETE"
+                    onConfirm={() => clearTbMutation.mutate()}
+                    isPending={clearTbMutation.isPending}
+                  />
                 )}
               </div>
             </div>
@@ -365,9 +362,18 @@ export default function IcMatrixUpload() {
                       Reprocess
                     </Button>
                   )}
-                  <Button variant="outline" size="sm" onClick={() => setClearMappingDialogOpen(true)} data-testid="button-clear-mapping">
-                    <Trash2 className="w-3 h-3 mr-1" /> Clear
-                  </Button>
+                  <ConfirmDestructiveDialog
+                    trigger={
+                      <Button variant="outline" size="sm" data-testid="button-clear-mapping">
+                        <Trash2 className="w-3 h-3 mr-1" /> Clear
+                      </Button>
+                    }
+                    title="Clear Mapping Data"
+                    description="This will permanently delete all GL mappings and company code mappings. TB data will be preserved but will need remapping. This action cannot be undone."
+                    confirmWord="DELETE"
+                    onConfirm={() => clearMappingMutation.mutate()}
+                    isPending={clearMappingMutation.isPending}
+                  />
                 </div>
               )}
             </div>
@@ -458,55 +464,6 @@ export default function IcMatrixUpload() {
         </Card>
       )}
 
-      <Dialog open={clearTbDialogOpen} onOpenChange={setClearTbDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Clear All TB Data</DialogTitle>
-            <DialogDescription>
-              This will permanently delete all uploaded Trial Balance files and their compiled data. Mapping data will be preserved. This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setClearTbDialogOpen(false)} data-testid="button-clear-tb-cancel">
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => clearTbMutation.mutate()}
-              disabled={clearTbMutation.isPending}
-              data-testid="button-clear-tb-confirm"
-            >
-              {clearTbMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
-              Clear All
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={clearMappingDialogOpen} onOpenChange={setClearMappingDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Clear Mapping Data</DialogTitle>
-            <DialogDescription>
-              This will permanently delete all GL mappings and company code mappings. TB data will be preserved but will need remapping. This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setClearMappingDialogOpen(false)} data-testid="button-clear-mapping-cancel">
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => clearMappingMutation.mutate()}
-              disabled={clearMappingMutation.isPending}
-              data-testid="button-clear-mapping-confirm"
-            >
-              {clearMappingMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
-              Clear All
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

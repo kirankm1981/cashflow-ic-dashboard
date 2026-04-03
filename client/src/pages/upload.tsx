@@ -21,14 +21,7 @@ import {
   CheckCircle,
   LinkIcon,
 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { ConfirmDestructiveDialog } from "@/components/confirm-destructive-dialog";
 import type { UploadBatch } from "@shared/schema";
 
 function formatNum(val: number | null | undefined): string {
@@ -46,8 +39,6 @@ export default function UploadPage() {
   const { toast } = useToast();
   const { uploadGlFile, uploadMappingFile, notifications } = useUploadManager();
   const reconNotifications = notifications.filter(n => n.module === "recon");
-  const [clearGlDialogOpen, setClearGlDialogOpen] = useState(false);
-  const [clearMappingDialogOpen, setClearMappingDialogOpen] = useState(false);
   const [uploadingSlots, setUploadingSlots] = useState<Set<string>>(new Set());
   const [mappingUploading, setMappingUploading] = useState(false);
   const mappingInputRef = useRef<HTMLInputElement>(null);
@@ -115,7 +106,6 @@ export default function UploadPage() {
     },
     onSuccess: () => {
       toast({ title: "GL Data Cleared" });
-      setClearGlDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: ["/api/recon/gl-files"] });
       queryClient.invalidateQueries({ queryKey: ["/api/upload-batches"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
@@ -137,7 +127,6 @@ export default function UploadPage() {
     },
     onSuccess: () => {
       toast({ title: "Mapping Data Cleared" });
-      setClearMappingDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: ["/api/recon/mapping-status"] });
       queryClient.invalidateQueries({ queryKey: ["/api/ic-matrix/mapping-summary"] });
       queryClient.invalidateQueries({ queryKey: ["/api/ic-matrix/summary"] });
@@ -234,9 +223,18 @@ export default function UploadPage() {
                   <Plus className="w-3 h-3 mr-1" /> Add
                 </Button>
                 {hasGlFiles && (
-                  <Button variant="outline" size="sm" onClick={() => setClearGlDialogOpen(true)} data-testid="button-clear-gl">
-                    <Trash2 className="w-3 h-3 mr-1" /> Clear All
-                  </Button>
+                  <ConfirmDestructiveDialog
+                    trigger={
+                      <Button variant="outline" size="sm" data-testid="button-clear-gl">
+                        <Trash2 className="w-3 h-3 mr-1" /> Clear All
+                      </Button>
+                    }
+                    title="Clear All GL Data"
+                    description="This will permanently delete all uploaded GL dump data, transactions, and reconciliation results. This action cannot be undone."
+                    confirmWord="DELETE"
+                    onConfirm={() => clearAllGlMutation.mutate()}
+                    isPending={clearAllGlMutation.isPending}
+                  />
                 )}
               </div>
             </div>
@@ -323,9 +321,18 @@ export default function UploadPage() {
               </CardTitle>
               {hasMappings && (
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setClearMappingDialogOpen(true)} data-testid="button-clear-mapping">
-                    <Trash2 className="w-3 h-3 mr-1" /> Clear
-                  </Button>
+                  <ConfirmDestructiveDialog
+                    trigger={
+                      <Button variant="outline" size="sm" data-testid="button-clear-mapping">
+                        <Trash2 className="w-3 h-3 mr-1" /> Clear
+                      </Button>
+                    }
+                    title="Clear Mapping Data"
+                    description="This will permanently delete all GL mapping and Company Code mapping data. This mapping is shared with the IC Matrix module. This action cannot be undone."
+                    confirmWord="DELETE"
+                    onConfirm={() => clearMappingMutation.mutate()}
+                    isPending={clearMappingMutation.isPending}
+                  />
                 </div>
               )}
             </div>
@@ -420,55 +427,6 @@ export default function UploadPage() {
         </Card>
       )}
 
-      <Dialog open={clearGlDialogOpen} onOpenChange={setClearGlDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Clear All GL Data</DialogTitle>
-            <DialogDescription>
-              This will permanently delete all uploaded GL dump data, transactions, and reconciliation results. This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setClearGlDialogOpen(false)} data-testid="button-clear-cancel">
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => clearAllGlMutation.mutate()}
-              disabled={clearAllGlMutation.isPending}
-              data-testid="button-clear-confirm"
-            >
-              {clearAllGlMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
-              Clear All
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={clearMappingDialogOpen} onOpenChange={setClearMappingDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Clear Mapping Data</DialogTitle>
-            <DialogDescription>
-              This will permanently delete all GL mapping and Company Code mapping data. This mapping is shared with the IC Matrix module. This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setClearMappingDialogOpen(false)} data-testid="button-clear-mapping-cancel">
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => clearMappingMutation.mutate()}
-              disabled={clearMappingMutation.isPending}
-              data-testid="button-clear-mapping-confirm"
-            >
-              {clearMappingMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
-              Clear All
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

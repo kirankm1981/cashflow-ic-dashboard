@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ConfirmDestructiveDialog } from "@/components/confirm-destructive-dialog";
 import {
   Upload,
   FileSpreadsheet,
@@ -21,15 +22,6 @@ import {
   CheckCircle,
   Download,
 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-
 function formatNum(val: number | null | undefined): string {
   if (val === null || val === undefined) return "0";
   return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 }).format(val);
@@ -45,8 +37,6 @@ export default function CashflowUpload() {
   const { toast } = useToast();
   const { uploadCashflowTb, uploadCashflowMapping, notifications } = useUploadManager();
   const cashflowNotifications = notifications.filter(n => n.module === "cashflow");
-  const [clearTbDialogOpen, setClearTbDialogOpen] = useState(false);
-  const [clearMappingDialogOpen, setClearMappingDialogOpen] = useState(false);
   const [uploadingSlots, setUploadingSlots] = useState<Set<string>>(new Set());
   const [mappingUploading, setMappingUploading] = useState(false);
   const mappingInputRef = useRef<HTMLInputElement>(null);
@@ -142,7 +132,6 @@ export default function CashflowUpload() {
       queryClient.invalidateQueries({ queryKey: ["/api/cashflow/unified-data"] });
       queryClient.invalidateQueries({ queryKey: ["/api/cashflow/unmapped-items"] });
       queryClient.invalidateQueries({ queryKey: ["/api/cashflow/past-losses"] });
-      setClearTbDialogOpen(false);
     },
   });
 
@@ -160,7 +149,6 @@ export default function CashflowUpload() {
       queryClient.invalidateQueries({ queryKey: ["/api/cashflow/compiled-data"] });
       queryClient.invalidateQueries({ queryKey: ["/api/cashflow/unified-data"] });
       queryClient.invalidateQueries({ queryKey: ["/api/cashflow/unmapped-items"] });
-      setClearMappingDialogOpen(false);
     },
   });
 
@@ -241,9 +229,18 @@ export default function CashflowUpload() {
                   <Plus className="w-3 h-3 mr-1" /> Add
                 </Button>
                 {(tbFiles?.length ?? 0) > 0 && (
-                  <Button variant="outline" size="sm" onClick={() => setClearTbDialogOpen(true)} data-testid="button-clear-tb">
-                    <Trash2 className="w-3 h-3 mr-1" /> Clear All
-                  </Button>
+                  <ConfirmDestructiveDialog
+                    trigger={
+                      <Button variant="outline" size="sm" data-testid="button-clear-tb">
+                        <Trash2 className="w-3 h-3 mr-1" /> Clear All
+                      </Button>
+                    }
+                    title="Clear All TB Data"
+                    description="This will remove all uploaded Trial Balance files and compiled data. This action cannot be undone."
+                    confirmWord="DELETE"
+                    onConfirm={() => clearTbMutation.mutate()}
+                    isPending={clearTbMutation.isPending}
+                  />
                 )}
               </div>
             </div>
@@ -336,9 +333,18 @@ export default function CashflowUpload() {
                     {reprocessMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <RefreshCw className="w-3 h-3 mr-1" />}
                     Reprocess
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => setClearMappingDialogOpen(true)} data-testid="button-clear-mapping">
-                    <Trash2 className="w-3 h-3 mr-1" /> Clear
-                  </Button>
+                  <ConfirmDestructiveDialog
+                    trigger={
+                      <Button variant="outline" size="sm" data-testid="button-clear-mapping">
+                        <Trash2 className="w-3 h-3 mr-1" /> Clear
+                      </Button>
+                    }
+                    title="Clear Mapping Data"
+                    description="This will remove all cashflow groupings, entity mappings, and past losses data. This action cannot be undone."
+                    confirmWord="DELETE"
+                    onConfirm={() => clearMappingMutation.mutate()}
+                    isPending={clearMappingMutation.isPending}
+                  />
                 </div>
               )}
             </div>
@@ -442,41 +448,6 @@ export default function CashflowUpload() {
         </Card>
       )}
 
-      <Dialog open={clearTbDialogOpen} onOpenChange={setClearTbDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Clear All TB Data</DialogTitle>
-            <DialogDescription>
-              This will remove all uploaded Trial Balance files and compiled data. This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setClearTbDialogOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={() => clearTbMutation.mutate()} disabled={clearTbMutation.isPending}>
-              {clearTbMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
-              Clear All
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={clearMappingDialogOpen} onOpenChange={setClearMappingDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Clear Mapping Data</DialogTitle>
-            <DialogDescription>
-              This will remove all cashflow groupings, entity mappings, and past losses data. This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setClearMappingDialogOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={() => clearMappingMutation.mutate()} disabled={clearMappingMutation.isPending}>
-              {clearMappingMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
-              Clear All
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
