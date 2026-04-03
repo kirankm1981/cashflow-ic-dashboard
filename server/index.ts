@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import compression from "compression";
+import helmet from "helmet";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import rateLimit from "express-rate-limit";
@@ -32,6 +33,22 @@ app.use(compression({
     if (req.headers['x-no-compression']) return false;
     return compression.filter(req, res);
   }
+}));
+
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
 }));
 
 app.use((req, res, next) => {
@@ -78,6 +95,7 @@ const apiLimiter = rateLimit({
                  req.path.startsWith("/api/recon/upload") ||
                  req.path.startsWith("/api/cashflow/upload"),
   message: { message: "Too many requests. Please slow down." },
+  validate: { xForwardedForHeader: false, ip: false },
 });
 app.use("/api", apiLimiter);
 
