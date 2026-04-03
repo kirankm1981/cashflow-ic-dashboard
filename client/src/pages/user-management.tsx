@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { UserPlus, Pencil, Trash2, Shield, User, ShieldCheck, ShieldX, KeyRound } from "lucide-react";
+import { UserPlus, Pencil, Trash2, Shield, User, ShieldCheck, ShieldX, KeyRound, Ban, CheckCircle2 } from "lucide-react";
 
 interface ManagedUser {
   id: string;
@@ -27,6 +27,7 @@ export default function UserManagement() {
   const [editUser, setEditUser] = useState<ManagedUser | null>(null);
   const [resetPwUser, setResetPwUser] = useState<ManagedUser | null>(null);
   const [resetPwValue, setResetPwValue] = useState("");
+  const [deleteConfirmUser, setDeleteConfirmUser] = useState<ManagedUser | null>(null);
   const [newUser, setNewUser] = useState({ username: "", password: "", displayName: "", role: "recon_user" });
   const [editFields, setEditFields] = useState({ displayName: "", role: "", password: "", active: true });
 
@@ -142,10 +143,22 @@ export default function UserManagement() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                {u.id !== currentUser?.id && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={u.active ? "text-orange-600 hover:text-orange-700" : "text-emerald-600 hover:text-emerald-700"}
+                    onClick={() => updateMutation.mutate({ id: u.id, updates: { active: !u.active } })}
+                    title={u.active ? "Deactivate user" : "Activate user"}
+                    data-testid={`button-toggle-active-${u.id}`}
+                  >
+                    {u.active ? <><Ban className="w-4 h-4 mr-1" /> Deactivate</> : <><CheckCircle2 className="w-4 h-4 mr-1" /> Activate</>}
+                  </Button>
+                )}
                 <Button variant="ghost" size="icon" onClick={() => { setResetPwUser(u); setResetPwValue(""); }} title="Reset password" data-testid={`button-reset-pw-${u.id}`}>
                   <KeyRound className="w-4 h-4" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={() => openEdit(u)} data-testid={`button-edit-user-${u.id}`}>
+                <Button variant="ghost" size="icon" onClick={() => openEdit(u)} title="Edit user" data-testid={`button-edit-user-${u.id}`}>
                   <Pencil className="w-4 h-4" />
                 </Button>
                 {u.id !== currentUser?.id && (
@@ -153,11 +166,8 @@ export default function UserManagement() {
                     variant="ghost"
                     size="icon"
                     className="text-destructive hover:text-destructive"
-                    onClick={() => {
-                      if (confirm(`Delete user "${u.username}"?`)) {
-                        deleteMutation.mutate(u.id);
-                      }
-                    }}
+                    onClick={() => setDeleteConfirmUser(u)}
+                    title="Delete user"
                     data-testid={`button-delete-user-${u.id}`}
                   >
                     <Trash2 className="w-4 h-4" />
@@ -266,6 +276,39 @@ export default function UserManagement() {
               data-testid="button-submit-reset-password"
             >
               {updateMutation.isPending ? "Resetting..." : "Reset Password"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!deleteConfirmUser} onOpenChange={(open) => !open && setDeleteConfirmUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete User</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm">
+              Are you sure you want to permanently delete <strong>{deleteConfirmUser?.displayName || deleteConfirmUser?.username}</strong> (@{deleteConfirmUser?.username})?
+            </p>
+            <p className="text-sm text-muted-foreground mt-2">
+              This action cannot be undone. Consider deactivating the user instead if you may need to restore access later.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmUser(null)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (deleteConfirmUser) {
+                  deleteMutation.mutate(deleteConfirmUser.id);
+                  setDeleteConfirmUser(null);
+                }
+              }}
+              disabled={deleteMutation.isPending}
+              data-testid="button-confirm-delete-user"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              {deleteMutation.isPending ? "Deleting..." : "Delete User"}
             </Button>
           </DialogFooter>
         </DialogContent>
