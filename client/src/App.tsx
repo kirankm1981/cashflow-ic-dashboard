@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -112,9 +113,28 @@ const sidebarStyle = {
   "--sidebar-width-icon": "3rem",
 };
 
+function useServerHealth() {
+  const [online, setOnline] = useState(true);
+  useEffect(() => {
+    const check = () =>
+      fetch("/api/health", { credentials: "include" })
+        .then(r => setOnline(r.ok))
+        .catch(() => setOnline(false));
+    const id = setInterval(check, 30_000);
+    return () => clearInterval(id);
+  }, []);
+  return online;
+}
+
 function AuthenticatedApp() {
+  const online = useServerHealth();
   return (
     <UploadManagerProvider>
+      {!online && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-destructive text-destructive-foreground text-sm text-center py-2 px-4" data-testid="banner-server-offline">
+          Server connection lost. Your changes may not be saved. Reconnecting...
+        </div>
+      )}
       <SidebarProvider style={sidebarStyle as React.CSSProperties}>
         <div className="flex h-screen w-full">
           <AppSidebar />
