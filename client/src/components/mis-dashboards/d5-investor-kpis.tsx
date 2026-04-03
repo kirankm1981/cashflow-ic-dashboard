@@ -5,11 +5,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Copy, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { DashboardRow, createFmt, fmtSuffix, fmtPct, colorForValue, flowColor, FLOW_BG_COLOR } from "./types";
 import type { FormatConfig, FlowColor } from "./types";
-import { useToast } from "@/hooks/use-toast";
 
 const KPI_DEFS: { tag: string; useClosing: boolean; abs: boolean; color: string; flow: FlowColor }[] = [
   { tag: "Revenue Billed", useClosing: true, abs: false, color: "#22c55e", flow: "inflow" },
@@ -34,7 +32,7 @@ interface Props {
 export function D5InvestorKpis({ rows, allRows, onProjectFilter, formatConfig }: Props) {
   const fmt = createFmt(formatConfig);
   const suffix = fmtSuffix(formatConfig);
-  const { toast } = useToast();
+
   const [selectedKpis, setSelectedKpis] = useState<Set<string>>(new Set(["Revenue Billed", "Collections", "WIP Balance"]));
 
   const kpiValues = useMemo(() => {
@@ -141,16 +139,6 @@ export function D5InvestorKpis({ rows, allRows, onProjectFilter, formatConfig }:
     }).sort((a, b) => Math.abs(b.revenue) - Math.abs(a.revenue));
   }, [rows]);
 
-  const commentary = useMemo(() => {
-    const notes: string[] = [];
-    const period = [...new Set(rows.map(r => r.periodTag).filter(Boolean))][0] || "current period";
-    if (collectionEfficiency < 80) notes.push(`⚠ Collections at ${fmtPct(collectionEfficiency)} — below 80% target.`);
-    if (debtToWip > 70) notes.push(`⚠ Leverage at ${fmtPct(debtToWip)} of WIP.`);
-    if (finCostToRevenue > 15) notes.push(`⚠ Finance cost at ${fmtPct(finCostToRevenue)} — above threshold.`);
-    if (Math.abs(kpiValues["Cash Position"] || 0) < 2500000) notes.push(`⚠ Low cash — ${fmt(Math.abs(kpiValues["Cash Position"] || 0))}.`);
-    if (notes.length === 0) notes.push(`✓ All metrics within range as of ${period}.`);
-    return notes;
-  }, [collectionEfficiency, debtToWip, finCostToRevenue, kpiValues, rows, fmt]);
 
   return (
     <div className="space-y-4" data-testid="d5-investor-kpis">
@@ -276,41 +264,6 @@ export function D5InvestorKpis({ rows, allRows, onProjectFilter, formatConfig }:
         </Card>
       )}
 
-      <Card className={commentary.some(n => n.startsWith("⚠")) ? "border-amber-200 dark:border-amber-800" : "border-green-200 dark:border-green-800"}>
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {commentary.some(n => n.startsWith("⚠"))
-                ? <AlertTriangle className="w-4 h-4 text-amber-500" />
-                : <CheckCircle2 className="w-4 h-4 text-green-500" />
-              }
-              <CardTitle className="text-sm">Management Commentary</CardTitle>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 text-xs"
-              onClick={() => {
-                navigator.clipboard.writeText(commentary.join("\n"));
-                toast({ title: "Copied to clipboard" });
-              }}
-              data-testid="btn-copy-commentary"
-            >
-              <Copy className="w-3 h-3 mr-1" />
-              Copy
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-1">
-            {commentary.map((note, i) => (
-              <p key={i} className={`text-sm ${note.startsWith("⚠") ? "text-amber-600 dark:text-amber-400" : "text-green-600 dark:text-green-400"}`}>
-                {note}
-              </p>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
