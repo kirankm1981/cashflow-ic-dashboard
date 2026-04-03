@@ -33,16 +33,14 @@ app.use(compression({
   }
 }));
 
-app.use(
-  express.json({
-    limit: "150mb",
-    verify: (req, _res, buf) => {
-      req.rawBody = buf;
-    },
-  }),
-);
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api/upload") || req.path.startsWith("/api/recon/upload") || req.path.startsWith("/api/cashflow/upload")) {
+    return next();
+  }
+  express.json({ limit: "1mb" })(req, res, next);
+});
 
-app.use(express.urlencoded({ extended: false, limit: "150mb" }));
+app.use(express.urlencoded({ extended: false, limit: "1mb" }));
 
 const PgStore = connectPgSimple(session);
 app.use(
