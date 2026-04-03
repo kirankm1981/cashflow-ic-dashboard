@@ -11,39 +11,61 @@ function getWorkerPath(): string {
   }
 }
 
+const POOL_SIZE = 4;
+const workerPool: Worker[] = [];
+const taskQueue: Array<{ workerData: any; resolve: Function; reject: Function; timer: ReturnType<typeof setTimeout> }> = [];
+const workerBusy = new Map<Worker, boolean>();
+
+function createWorker(): Worker {
+  const worker = new Worker(getWorkerPath(), { execArgv: ["--loader", "tsx/esm"] });
+  worker.on("message", (msg) => {
+    const task = (worker as any)._currentTask;
+    if (task) {
+      clearTimeout(task.timer);
+      workerBusy.set(worker, false);
+      (worker as any)._currentTask = null;
+      if (msg.success) task.resolve(msg.data);
+      else task.reject(new Error(msg.error));
+      processQueue();
+    }
+  });
+  worker.on("error", (err) => {
+    const task = (worker as any)._currentTask;
+    if (task) clearTimeout(task.timer);
+    workerBusy.set(worker, false);
+    (worker as any)._currentTask = null;
+    if (task) task.reject(err);
+    const idx = workerPool.indexOf(worker);
+    if (idx !== -1) {
+      workerPool.splice(idx, 1);
+      const replacement = createWorker();
+      workerPool.push(replacement);
+    }
+    processQueue();
+  });
+  workerBusy.set(worker, false);
+  return worker;
+}
+
+function processQueue() {
+  if (taskQueue.length === 0) return;
+  const freeWorker = workerPool.find(w => !workerBusy.get(w));
+  if (!freeWorker) return;
+  const task = taskQueue.shift()!;
+  workerBusy.set(freeWorker, true);
+  (freeWorker as any)._currentTask = task;
+  freeWorker.postMessage(task.workerData);
+}
+
+for (let i = 0; i < POOL_SIZE; i++) workerPool.push(createWorker());
+
 function runWorker(workerData: any): Promise<any> {
   return new Promise((resolve, reject) => {
-    const workerPath = getWorkerPath();
-    const worker = new Worker(workerPath, {
-      workerData,
-      execArgv: ["--loader", "tsx/esm"],
-    });
-
-    const timeout = setTimeout(() => {
-      worker.terminate();
+    const timer = setTimeout(() => {
       reject(new Error("File processing timed out (10 min)"));
     }, 600000);
-
-    worker.on("message", (msg) => {
-      clearTimeout(timeout);
-      if (msg.success) {
-        resolve(msg.data);
-      } else {
-        reject(new Error(msg.error));
-      }
-    });
-
-    worker.on("error", (err) => {
-      clearTimeout(timeout);
-      reject(err);
-    });
-
-    worker.on("exit", (code) => {
-      clearTimeout(timeout);
-      if (code !== 0) {
-        reject(new Error(`Worker exited with code ${code}`));
-      }
-    });
+    taskQueue.push({ workerData, resolve, reject, timer });
+    processQueue();
   });
 }
 

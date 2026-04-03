@@ -1,4 +1,4 @@
-import { parentPort, workerData } from "worker_threads";
+import { parentPort } from "worker_threads";
 import * as XLSX from "xlsx";
 import { parse } from "csv-parse/sync";
 
@@ -64,26 +64,28 @@ function previewHeaders(buffer: Buffer, filename: string, selectedSheet?: string
   return { headers, sampleRows: records.slice(0, 3) };
 }
 
-try {
-  const { action, buffer, filename, selectedSheet } = workerData;
-  const buf = Buffer.from(buffer);
+parentPort?.on("message", (msg) => {
+  try {
+    const { action, buffer, filename, selectedSheet } = msg;
+    const buf = Buffer.from(buffer);
 
-  let result: any;
-  switch (action) {
-    case "parse":
-      result = parseFileToRecords(buf, filename, selectedSheet);
-      break;
-    case "sheetNames":
-      result = getSheetNames(buf);
-      break;
-    case "preview":
-      result = previewHeaders(buf, filename, selectedSheet);
-      break;
-    default:
-      throw new Error(`Unknown action: ${action}`);
+    let result: any;
+    switch (action) {
+      case "parse":
+        result = parseFileToRecords(buf, filename, selectedSheet);
+        break;
+      case "sheetNames":
+        result = getSheetNames(buf);
+        break;
+      case "preview":
+        result = previewHeaders(buf, filename, selectedSheet);
+        break;
+      default:
+        throw new Error(`Unknown action: ${action}`);
+    }
+
+    parentPort?.postMessage({ success: true, data: result });
+  } catch (error: any) {
+    parentPort?.postMessage({ success: false, error: error.message });
   }
-
-  parentPort?.postMessage({ success: true, data: result });
-} catch (error: any) {
-  parentPort?.postMessage({ success: false, error: error.message });
-}
+});
