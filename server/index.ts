@@ -8,7 +8,32 @@ import rateLimit from "express-rate-limit";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import fs from "fs";
+import path from "path";
+import os from "os";
 import { pool } from "./db";
+
+function cleanupStaleTempFiles() {
+  const tmpDir = path.join(os.tmpdir(), "ic-uploads");
+  if (!fs.existsSync(tmpDir)) return;
+  const now = Date.now();
+  const TWO_HOURS = 2 * 60 * 60 * 1000;
+  try {
+    for (const file of fs.readdirSync(tmpDir)) {
+      const filePath = path.join(tmpDir, file);
+      const stat = fs.statSync(filePath);
+      if (now - stat.mtimeMs > TWO_HOURS) {
+        fs.unlinkSync(filePath);
+        console.log(`[Cleanup] Removed stale temp file: ${file}`);
+      }
+    }
+  } catch (e) {
+    console.warn("[Cleanup] Temp file cleanup error:", e);
+  }
+}
+
+cleanupStaleTempFiles();
+setInterval(cleanupStaleTempFiles, 4 * 60 * 60 * 1000);
 
 const app = express();
 const httpServer = createServer(app);
