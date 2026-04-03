@@ -4,8 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis } from "recharts";
-import { DashboardRow, createFmt, fmtSuffix, fmtPct, colorForValue } from "./types";
-import type { FormatConfig } from "./types";
+import { DashboardRow, createFmt, fmtSuffix, fmtPct, colorForValue, flowColor, FLOW_BG_COLOR } from "./types";
+import type { FormatConfig, FlowColor } from "./types";
 
 const DEBT_COLORS: Record<string, string> = {
   "Secured LT Borrowings": "#1e40af",
@@ -109,12 +109,12 @@ export function D4DebtFinancing({ rows, allRows, formatConfig }: Props) {
     { name: "Capitalised (WIP)", value: financeCostCapitalised, fill: "#f97316" },
   ].filter(d => d.value > 0);
 
-  const kpis = [
-    { label: "Gross Debt", value: grossDebt },
-    { label: "Secured", value: secured },
-    { label: "Unsecured", value: unsecured },
-    { label: "Debentures", value: debentures },
-    { label: "Net Debt", value: netDebt },
+  const kpis: { label: string; value: number; flow: FlowColor }[] = [
+    { label: "Gross Debt", value: grossDebt, flow: "outflow" },
+    { label: "Secured", value: secured, flow: "outflow" },
+    { label: "Unsecured", value: unsecured, flow: "outflow" },
+    { label: "Debentures", value: debentures, flow: "outflow" },
+    { label: "Net Debt", value: netDebt, flow: "outflow" },
   ];
 
   if (debtRows.length === 0) {
@@ -130,16 +130,22 @@ export function D4DebtFinancing({ rows, allRows, formatConfig }: Props) {
   return (
     <div className="space-y-4" data-testid="d4-debt-financing">
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        {kpis.map(k => (
-          <Card key={k.label}>
-            <CardContent className="p-3">
-              <span className="text-[10px] text-muted-foreground">{k.label}</span>
-              <p className={`text-sm font-bold ${k.label === "Net Debt" ? colorForValue(-k.value) : ""}`} data-testid={`kpi-${k.label.toLowerCase().replace(/\s+/g, "-")}`}>
-                {fmt(k.value)}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
+        {kpis.map(k => {
+          const bgClass = FLOW_BG_COLOR[k.flow === "sign" ? (k.value >= 0 ? "inflow" : "outflow") : k.flow];
+          return (
+            <Card key={k.label}>
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="text-[10px] text-muted-foreground">{k.label}</span>
+                  <div className={`w-2 h-2 rounded-full ${bgClass}`} />
+                </div>
+                <p className={`text-sm font-bold ${flowColor(k.value, k.flow)}`} data-testid={`kpi-${k.label.toLowerCase().replace(/\s+/g, "-")}`}>
+                  {fmt(k.value)}
+                </p>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
@@ -236,16 +242,19 @@ export function D4DebtFinancing({ rows, allRows, formatConfig }: Props) {
 
         <TabsContent value="finance" className="space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {[
-              { label: "Finance Cost (P&L)", value: financeCostPL },
-              { label: "Interest Capitalised–WIP", value: financeCostCapitalised },
-              { label: "Total Interest Outflow", value: totalInterest },
-              { label: "Effective Interest Rate", value: effectiveRate, isPct: true },
-            ].map(k => (
+            {([
+              { label: "Finance Cost (P&L)", value: financeCostPL, flow: "outflow" as FlowColor, isPct: false },
+              { label: "Interest Capitalised–WIP", value: financeCostCapitalised, flow: "outflow" as FlowColor, isPct: false },
+              { label: "Total Interest Outflow", value: totalInterest, flow: "outflow" as FlowColor, isPct: false },
+              { label: "Effective Interest Rate", value: effectiveRate, flow: "neutral" as FlowColor, isPct: true },
+            ]).map(k => (
               <Card key={k.label}>
                 <CardContent className="p-3">
-                  <span className="text-[10px] text-muted-foreground">{k.label}</span>
-                  <p className="text-sm font-bold" data-testid={`kpi-${k.label.toLowerCase().replace(/\s+/g, "-")}`}>
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="text-[10px] text-muted-foreground">{k.label}</span>
+                    <div className={`w-2 h-2 rounded-full ${FLOW_BG_COLOR[k.flow === "sign" ? "neutral" : k.flow]}`} />
+                  </div>
+                  <p className={`text-sm font-bold ${k.isPct ? "" : flowColor(k.value, k.flow)}`} data-testid={`kpi-${k.label.toLowerCase().replace(/\s+/g, "-")}`}>
                     {k.isPct ? fmtPct(k.value) : fmt(k.value)}
                   </p>
                 </CardContent>

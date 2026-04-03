@@ -4,8 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChevronDown, ChevronRight, TrendingUp, TrendingDown, ArrowRightLeft } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, ReferenceLine, ComposedChart, Line } from "recharts";
-import { DashboardRow, createFmt, fmtSuffix, colorForValue } from "./types";
-import type { FormatConfig } from "./types";
+import { DashboardRow, createFmt, fmtSuffix, colorForValue, flowColor, FLOW_TEXT_COLOR, FLOW_BG_COLOR } from "./types";
+import type { FormatConfig, FlowColor } from "./types";
 
 const COLORS = { Operating: "#22c55e", Investing: "#f97316", Financing: "#3b82f6", "Cash & Cash Equivalents": "#8b5cf6" };
 
@@ -114,29 +114,36 @@ export function D1CashflowStatement({ rows, formatConfig }: Props) {
     setExpandedLines(next);
   };
 
-  const kpis = [
-    { label: "Operating CF", value: operatingCF, icon: TrendingUp },
-    { label: "Investing CF", value: investingCF, icon: TrendingDown },
-    { label: "Financing CF", value: financingCF, icon: ArrowRightLeft },
-    { label: "Net Change in Cash", value: netChange, icon: TrendingUp },
+  const kpis: { label: string; value: number; icon: typeof TrendingUp; flow: FlowColor }[] = [
+    { label: "Operating CF", value: operatingCF, icon: TrendingUp, flow: "inflow" },
+    { label: "Investing CF", value: investingCF, icon: TrendingDown, flow: "outflow" },
+    { label: "Financing CF", value: financingCF, icon: ArrowRightLeft, flow: "sign" },
+    { label: "Net Change in Cash", value: netChange, icon: TrendingUp, flow: "cash" },
   ];
 
   return (
     <div className="space-y-4" data-testid="d1-cashflow-statement">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {kpis.map(k => (
-          <Card key={k.label}>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <k.icon className="w-4 h-4 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">{k.label}</span>
-              </div>
-              <p className={`text-lg font-bold ${colorForValue(k.value)}`} data-testid={`kpi-${k.label.toLowerCase().replace(/\s+/g, "-")}`}>
-                {fmt(k.value)}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
+        {kpis.map(k => {
+          const bgClass = k.flow === "sign"
+            ? (k.value >= 0 ? FLOW_BG_COLOR.inflow : FLOW_BG_COLOR.outflow)
+            : (k.flow !== "sign" ? FLOW_BG_COLOR[k.flow] : "");
+          return (
+            <Card key={k.label}>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs text-muted-foreground">{k.label}</span>
+                  <div className={`p-1.5 rounded-md ${bgClass}`}>
+                    <k.icon className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                </div>
+                <p className={`text-lg font-bold ${flowColor(k.value, k.flow)}`} data-testid={`kpi-${k.label.toLowerCase().replace(/\s+/g, "-")}`}>
+                  {fmt(k.value)}
+                </p>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

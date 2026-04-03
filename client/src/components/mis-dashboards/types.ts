@@ -95,3 +95,24 @@ export function colorForValue(value: number): string {
   if (value < 0) return "text-red-600 dark:text-red-400";
   return "text-muted-foreground";
 }
+
+export type FlowColor = "inflow" | "outflow" | "cash" | "neutral" | "sign";
+
+export const FLOW_TEXT_COLOR: Record<Exclude<FlowColor, "sign">, string> = {
+  inflow: "text-green-600 dark:text-green-400",
+  outflow: "text-red-600 dark:text-red-400",
+  cash: "text-blue-600 dark:text-blue-400",
+  neutral: "",
+};
+
+export const FLOW_BG_COLOR: Record<Exclude<FlowColor, "sign">, string> = {
+  inflow: "bg-green-500/10",
+  outflow: "bg-red-500/10",
+  cash: "bg-blue-500/10",
+  neutral: "bg-muted/10",
+};
+
+export function flowColor(value: number, semantic?: FlowColor): string {
+  if (!semantic || semantic === "sign") return colorForValue(value);
+  return FLOW_TEXT_COLOR[semantic];
+}

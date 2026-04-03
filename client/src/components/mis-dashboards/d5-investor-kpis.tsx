@@ -7,21 +7,21 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Copy, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { DashboardRow, createFmt, fmtSuffix, fmtPct, colorForValue } from "./types";
-import type { FormatConfig } from "./types";
+import { DashboardRow, createFmt, fmtSuffix, fmtPct, colorForValue, flowColor, FLOW_BG_COLOR } from "./types";
+import type { FormatConfig, FlowColor } from "./types";
 import { useToast } from "@/hooks/use-toast";
 
-const KPI_DEFS = [
-  { tag: "Revenue Billed", useClosing: true, abs: false, color: "#22c55e" },
-  { tag: "Collections", useClosing: true, abs: false, color: "#3b82f6" },
-  { tag: "WIP Balance", useClosing: true, abs: false, color: "#f97316" },
-  { tag: "Cash Position", useClosing: true, abs: false, color: "#06b6d4" },
-  { tag: "Gross Debt", useClosing: true, abs: true, color: "#ef4444" },
-  { tag: "Finance Cost", useClosing: false, abs: true, color: "#f87171" },
-  { tag: "Land & JDA Cost", useClosing: true, abs: true, color: "#84cc16" },
-  { tag: "Construction Cost", useClosing: false, abs: true, color: "#a855f7" },
-  { tag: "Employee Cost", useClosing: false, abs: true, color: "#ec4899" },
-  { tag: "Tax Paid", useClosing: false, abs: true, color: "#64748b" },
+const KPI_DEFS: { tag: string; useClosing: boolean; abs: boolean; color: string; flow: FlowColor }[] = [
+  { tag: "Revenue Billed", useClosing: true, abs: false, color: "#22c55e", flow: "inflow" },
+  { tag: "Collections", useClosing: true, abs: false, color: "#3b82f6", flow: "inflow" },
+  { tag: "WIP Balance", useClosing: true, abs: false, color: "#f97316", flow: "neutral" },
+  { tag: "Cash Position", useClosing: true, abs: false, color: "#06b6d4", flow: "cash" },
+  { tag: "Gross Debt", useClosing: true, abs: true, color: "#ef4444", flow: "outflow" },
+  { tag: "Finance Cost", useClosing: false, abs: true, color: "#f87171", flow: "outflow" },
+  { tag: "Land & JDA Cost", useClosing: true, abs: true, color: "#84cc16", flow: "outflow" },
+  { tag: "Construction Cost", useClosing: false, abs: true, color: "#a855f7", flow: "outflow" },
+  { tag: "Employee Cost", useClosing: false, abs: true, color: "#ec4899", flow: "outflow" },
+  { tag: "Tax Paid", useClosing: false, abs: true, color: "#64748b", flow: "outflow" },
 ];
 
 interface Props {
@@ -155,16 +155,25 @@ export function D5InvestorKpis({ rows, allRows, onProjectFilter, formatConfig }:
   return (
     <div className="space-y-4" data-testid="d5-investor-kpis">
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        {KPI_DEFS.map(def => (
-          <Card key={def.tag}>
-            <CardContent className="p-3">
-              <span className="text-[10px] text-muted-foreground">{def.tag}</span>
-              <p className="text-sm font-bold" data-testid={`kpi-${def.tag.toLowerCase().replace(/\s+/g, "-")}`}>
-                {fmt(kpiValues[def.tag] || 0)}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
+        {KPI_DEFS.map(def => {
+          const val = kpiValues[def.tag] || 0;
+          const bgClass = def.flow === "sign"
+            ? (val >= 0 ? FLOW_BG_COLOR.inflow : FLOW_BG_COLOR.outflow)
+            : (def.flow !== "sign" ? FLOW_BG_COLOR[def.flow] : "");
+          return (
+            <Card key={def.tag}>
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="text-[10px] text-muted-foreground">{def.tag}</span>
+                  <div className={`w-2 h-2 rounded-full ${bgClass}`} />
+                </div>
+                <p className={`text-sm font-bold ${flowColor(val, def.flow)}`} data-testid={`kpi-${def.tag.toLowerCase().replace(/\s+/g, "-")}`}>
+                  {fmt(val)}
+                </p>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-5 gap-3">

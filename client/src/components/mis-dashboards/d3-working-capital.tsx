@@ -4,8 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChevronDown, ChevronRight, AlertTriangle } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ComposedChart, Line, ReferenceLine, Cell } from "recharts";
-import { DashboardRow, createFmt, fmtSuffix, colorForValue } from "./types";
-import type { FormatConfig } from "./types";
+import { DashboardRow, createFmt, fmtSuffix, colorForValue, flowColor, FLOW_BG_COLOR } from "./types";
+import type { FormatConfig, FlowColor } from "./types";
 
 interface Props {
   rows: DashboardRow[];
@@ -99,11 +99,11 @@ export function D3WorkingCapital({ rows, formatConfig }: Props) {
     return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
   }, [wcRows]);
 
-  const kpis = [
-    { label: "Current Assets", value: currentAssets },
-    { label: "Current Liabilities", value: currentLiabilities },
-    { label: "Net Working Capital", value: nwc },
-    { label: "WC Change (Period)", value: wcChange },
+  const kpis: { label: string; value: number; flow: FlowColor }[] = [
+    { label: "Current Assets", value: currentAssets, flow: "inflow" },
+    { label: "Current Liabilities", value: currentLiabilities, flow: "outflow" },
+    { label: "Net Working Capital", value: nwc, flow: "sign" },
+    { label: "WC Change (Period)", value: wcChange, flow: "sign" },
   ];
 
   const toggleBucket = (b: string) => {
@@ -125,16 +125,24 @@ export function D3WorkingCapital({ rows, formatConfig }: Props) {
   return (
     <div className="space-y-4" data-testid="d3-working-capital">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {kpis.map(k => (
-          <Card key={k.label}>
-            <CardContent className="p-4">
-              <span className="text-[10px] text-muted-foreground">{k.label}</span>
-              <p className={`text-lg font-bold ${colorForValue(k.value)}`} data-testid={`kpi-${k.label.toLowerCase().replace(/\s+/g, "-")}`}>
-                {fmt(k.value)}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
+        {kpis.map(k => {
+          const bgClass = k.flow === "sign"
+            ? (k.value >= 0 ? FLOW_BG_COLOR.inflow : FLOW_BG_COLOR.outflow)
+            : FLOW_BG_COLOR[k.flow];
+          return (
+            <Card key={k.label}>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="text-[10px] text-muted-foreground">{k.label}</span>
+                  <div className={`w-2 h-2 rounded-full ${bgClass}`} />
+                </div>
+                <p className={`text-lg font-bold ${flowColor(k.value, k.flow)}`} data-testid={`kpi-${k.label.toLowerCase().replace(/\s+/g, "-")}`}>
+                  {fmt(k.value)}
+                </p>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

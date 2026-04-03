@@ -5,8 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, ComposedChart, Line, ReferenceLine } from "recharts";
-import { DashboardRow, createFmt, fmtSuffix, colorForValue } from "./types";
-import type { FormatConfig } from "./types";
+import { DashboardRow, createFmt, fmtSuffix, colorForValue, flowColor, FLOW_BG_COLOR } from "./types";
+import type { FormatConfig, FlowColor } from "./types";
 
 const PL_ORDER = [
   "Revenue from Operations",
@@ -150,27 +150,35 @@ export function D2PlWip({ rows, formatConfig }: Props) {
 
   const wipComponents = useMemo(() => [...new Set(wipRows.map(r => r.wipComponent!))], [wipRows]);
 
-  const kpis = [
-    { label: "Revenue from Ops", value: revenue },
-    { label: "Other Income", value: otherIncome },
-    { label: "Cost of Construction", value: Math.abs(costOfConstruction) },
-    { label: "Gross Profit", value: grossProfit },
-    { label: "EBITDA", value: ebitda },
+  const kpis: { label: string; value: number; flow: FlowColor }[] = [
+    { label: "Revenue from Ops", value: revenue, flow: "inflow" },
+    { label: "Other Income", value: otherIncome, flow: "inflow" },
+    { label: "Cost of Construction", value: Math.abs(costOfConstruction), flow: "outflow" },
+    { label: "Gross Profit", value: grossProfit, flow: "sign" },
+    { label: "EBITDA", value: ebitda, flow: "sign" },
   ];
 
   return (
     <div className="space-y-4" data-testid="d2-pl-wip">
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        {kpis.map(k => (
-          <Card key={k.label}>
-            <CardContent className="p-3">
-              <span className="text-[10px] text-muted-foreground">{k.label}</span>
-              <p className={`text-sm font-bold ${colorForValue(k.value)}`} data-testid={`kpi-${k.label.toLowerCase().replace(/\s+/g, "-")}`}>
-                {fmt(k.value)}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
+        {kpis.map(k => {
+          const bgClass = k.flow === "sign"
+            ? (k.value >= 0 ? FLOW_BG_COLOR.inflow : FLOW_BG_COLOR.outflow)
+            : FLOW_BG_COLOR[k.flow];
+          return (
+            <Card key={k.label}>
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="text-[10px] text-muted-foreground">{k.label}</span>
+                  <div className={`w-2 h-2 rounded-full ${bgClass}`} />
+                </div>
+                <p className={`text-sm font-bold ${flowColor(k.value, k.flow)}`} data-testid={`kpi-${k.label.toLowerCase().replace(/\s+/g, "-")}`}>
+                  {fmt(k.value)}
+                </p>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       <Tabs value={plTab} onValueChange={setPlTab}>
