@@ -5,8 +5,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, ComposedChart, Line, ReferenceLine } from "recharts";
-import { DashboardRow, createFmt, fmtSuffix, colorForValue, flowColor, FLOW_BG_COLOR } from "./types";
+import { DashboardRow, createFmt, fmtSuffix, flowColor, FLOW_BG_COLOR } from "./types";
 import type { FormatConfig, FlowColor } from "./types";
+
+function plColor(value: number): string {
+  if (value > 0) return "text-emerald-700 dark:text-emerald-400";
+  if (value < 0) return "text-amber-700 dark:text-amber-400";
+  return "text-muted-foreground";
+}
 
 const PL_ORDER = [
   "Revenue from Operations",
@@ -231,7 +237,7 @@ export function D2PlWip({ rows, formatConfig }: Props) {
                             <TableCell className="font-bold text-xs text-blue-700 dark:text-blue-400">
                               {calculatedLabels[item]}
                             </TableCell>
-                            <TableCell className={`text-right text-xs font-bold ${colorForValue(val)}`}>
+                            <TableCell className={`text-right text-xs font-bold ${plColor(val)}`}>
                               {fmt(val)}
                             </TableCell>
                           </TableRow>
@@ -258,14 +264,14 @@ export function D2PlWip({ rows, formatConfig }: Props) {
                                 {item}
                               </div>
                             </TableCell>
-                            <TableCell className={`text-right text-xs font-medium ${colorForValue(data.periodNet)}`}>
+                            <TableCell className={`text-right text-xs font-medium ${plColor(data.periodNet)}`}>
                               {fmt(data.periodNet)}
                             </TableCell>
                           </TableRow>
                           {isExpanded && data.items.map(ah => (
                             <TableRow key={`${item}:${ah.head}`} className="bg-muted/10">
                               <TableCell className="text-[11px] pl-10 text-muted-foreground">{ah.head}</TableCell>
-                              <TableCell className={`text-right text-[11px] ${colorForValue(ah.net)}`}>{fmt(ah.net)}</TableCell>
+                              <TableCell className={`text-right text-[11px] ${plColor(ah.net)}`}>{fmt(ah.net)}</TableCell>
                             </TableRow>
                           ))}
                         </>
