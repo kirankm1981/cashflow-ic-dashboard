@@ -434,7 +434,9 @@ export const cashflowMappingGroupings = pgTable("cashflow_mapping_groupings", {
   wcSign: doublePrecision("wc_sign").default(0),
   debtBucket: text("debt_bucket"),
   kpiTag: text("kpi_tag"),
-});
+}, (t) => [
+  index("cf_mapping_account_head_idx").on(t.accountHead),
+]);
 
 export type CashflowMappingGrouping = typeof cashflowMappingGroupings.$inferSelect;
 
@@ -447,7 +449,9 @@ export const cashflowMappingEntities = pgTable("cashflow_mapping_entities", {
   projectName: text("project_name"),
   entityStatus: text("entity_status"),
   remarks: text("remarks"),
-});
+}, (t) => [
+  index("cf_entity_company_erp_idx").on(t.companyNameErp),
+]);
 
 export type CashflowMappingEntity = typeof cashflowMappingEntities.$inferSelect;
 
