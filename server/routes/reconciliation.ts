@@ -297,7 +297,9 @@ export function registerReconciliationRoutes(app: Express) {
 
   app.get("/api/dashboard-settings", requireAuth, async (req, res) => {
     try {
-      const settings = await storage.getDashboardSettings(req.session.userId!);
+      const userId = req.session.userId;
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
+      const settings = await storage.getDashboardSettings(userId);
       res.json(settings);
     } catch (error: any) {
       const isOperational = error.status && error.status < 500;
@@ -308,6 +310,8 @@ export function registerReconciliationRoutes(app: Express) {
 
   app.put("/api/dashboard-settings/:chartId", requireAuth, async (req, res) => {
     try {
+      const userId = req.session.userId;
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
       const { chartId } = req.params;
       const { numberScale, decimalPlaces } = req.body;
       if (!["absolute", "thousands", "lakhs", "crores"].includes(numberScale)) {
@@ -316,7 +320,7 @@ export function registerReconciliationRoutes(app: Express) {
       if (![0, 1, 2].includes(decimalPlaces)) {
         return res.status(400).json({ message: "Invalid decimalPlaces" });
       }
-      await storage.upsertDashboardSetting(req.session.userId!, chartId, numberScale, decimalPlaces);
+      await storage.upsertDashboardSetting(userId, chartId, numberScale, decimalPlaces);
       res.json({ success: true });
     } catch (error: any) {
       const isOperational = error.status && error.status < 500;

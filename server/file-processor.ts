@@ -61,6 +61,7 @@ function processQueue() {
   const freeWorker = workerPool.find(w => !workerBusy.get(w));
   if (!freeWorker) return;
   const task = taskQueue.shift()!;
+  clearTimeout(task.timer);
   workerBusy.set(freeWorker, true);
   (freeWorker as any)._currentTask = task;
   freeWorker.postMessage(task.workerData);
