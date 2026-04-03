@@ -49,5 +49,27 @@ End If
 WshShell.Run "cmd /c cd /d """ & strPath & _
     """ && set NODE_ENV=production && if not exist dist\index.cjs " & _
     "(npx tsx script/build.ts) && node dist/index.cjs", 0, False
-WScript.Sleep 10000
+WScript.Sleep 3000   ' initial wait for node to start
+
+Dim attempts, serverUp
+attempts = 0
+serverUp = False
+Do While attempts < 30 And Not serverUp
+    Dim http
+    Set http = CreateObject("MSXML2.XMLHTTP")
+    On Error Resume Next
+    http.Open "GET", "http://localhost:3000/api/health", False
+    http.Send
+    If Err.Number = 0 And http.Status = 200 Then
+        serverUp = True
+    End If
+    On Error GoTo 0
+    Set http = Nothing
+    If Not serverUp Then
+        attempts = attempts + 1
+        WScript.Sleep 2000   ' poll every 2 seconds
+    End If
+Loop
+
+' Opens browser only when server confirms ready (or after 60s timeout)
 WshShell.Run "http://localhost:3000", 1, False
