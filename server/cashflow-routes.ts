@@ -494,14 +494,18 @@ export function registerCashflowRoutes(app: Express) {
       const totalRecords = files.reduce((sum, f) => sum + (f.totalRecords || 0), 0);
       const dataCount = await db.select({ count: sql<number>`count(*)` }).from(cashflowTbData);
       const entityCached = await getEntityCache();
-      const uniqueEntities = new Set(entityCached.mappings.map(e => (e.companyNameErp || e.companyName || "").trim()).filter(Boolean));
+      const mappedEntityCount = new Set(
+        entityCached.mappings
+          .map(e => (e.companyNameErp || e.companyName || "").trim())
+          .filter(Boolean)
+      ).size;
       res.json({
         tbFiles: files.length,
         totalRecords,
         compiledRecords: dataCount[0]?.count || 0,
         enterprises: [...new Set(files.map(f => f.enterprise).filter(Boolean))],
         periods: [...new Set(files.map(f => f.period).filter(Boolean))],
-        entityCount: uniqueEntities.size,
+        entityCount: mappedEntityCount,
       });
     } catch (error: any) {
       const isOperational = error.status && error.status < 500;
