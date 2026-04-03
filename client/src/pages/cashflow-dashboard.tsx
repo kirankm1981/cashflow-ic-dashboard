@@ -12,8 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { IndianRupee, TrendingUp, TrendingDown, ChevronRight, ChevronDown, Download, FileDown } from "lucide-react";
-import { useState, useMemo } from "react";
+import { IndianRupee, TrendingUp, TrendingDown, ChevronRight, ChevronDown, Download, FileDown, ArrowRightLeft } from "lucide-react";
+import { useState, useMemo, Fragment } from "react";
 import { useLocation } from "wouter";
 import {
   BarChart,
@@ -26,6 +26,9 @@ import {
   ResponsiveContainer,
   Cell,
   LabelList,
+  ReferenceLine,
+  PieChart,
+  Pie,
 } from "recharts";
 import { useDashboardSettings } from "@/hooks/use-dashboard-settings";
 import { formatAmount, SCALE_SUFFIXES } from "@/lib/number-format";
@@ -36,7 +39,7 @@ import { D2PlWip } from "@/components/mis-dashboards/d2-pl-wip";
 import { D3WorkingCapital } from "@/components/mis-dashboards/d3-working-capital";
 import { D4DebtFinancing } from "@/components/mis-dashboards/d4-debt-financing";
 import { D5InvestorKpis } from "@/components/mis-dashboards/d5-investor-kpis";
-import { filterRows, type FilterState, type DashboardDataResponse } from "@/components/mis-dashboards/types";
+import { filterRows, colorForValue, flowColor, FLOW_BG_COLOR, type FilterState, type DashboardDataResponse, type FlowColor } from "@/components/mis-dashboards/types";
 
 
 interface UnifiedRow {
@@ -107,7 +110,6 @@ export default function CashflowDashboard() {
   const allDashRows = dashboardData?.rows || [];
 
   const isAnalyticTab = ["d1", "d2", "d3", "d4", "d5"].includes(activeTab);
-  const showDashFilters = isAnalyticTab || activeTab === "detailed";
 
   const unified = unifiedResult?.data || [];
 
@@ -327,12 +329,15 @@ export default function CashflowDashboard() {
           <h1 className="text-2xl font-bold tracking-tight" data-testid="text-cashflow-title">MIS</h1>
           <p className="text-muted-foreground text-sm mt-1">Monitor and analyze cashflows across entities</p>
         </div>
-        {(periodDisplay || enterpriseDisplay) && (
-          <div className="text-right shrink-0" data-testid="text-cf-period">
-            {periodDisplay && <p className="text-sm font-semibold">{periodDisplay}</p>}
-            {enterpriseDisplay && <p className="text-xs text-muted-foreground mt-0.5">{enterpriseDisplay}</p>}
-          </div>
-        )}
+        <div className="flex items-center gap-3 shrink-0">
+          {(periodDisplay || enterpriseDisplay) && (
+            <div className="text-right" data-testid="text-cf-period">
+              {periodDisplay && <p className="text-sm font-semibold">{periodDisplay}</p>}
+              {enterpriseDisplay && <p className="text-xs text-muted-foreground mt-0.5">{enterpriseDisplay}</p>}
+            </div>
+          )}
+          <ChartFormatSettings chartId="cf-amounts" />
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -352,20 +357,15 @@ export default function CashflowDashboard() {
           </TabsTrigger>
         </TabsList>
 
-        {showDashFilters && (
-          <div className="mt-3 flex items-start gap-2">
-            {isAnalyticTab && (
-              <div className="flex-1">
-                <DashboardFilters
-                  companies={dashboardData?.companies || []}
-                  projects={dashboardData?.projects || []}
-                  periods={dashboardData?.periods || []}
-                  filters={dashFilters}
-                  onChange={setDashFilters}
-                />
-              </div>
-            )}
-            <ChartFormatSettings chartId="cf-amounts" />
+        {isAnalyticTab && (
+          <div className="mt-3">
+            <DashboardFilters
+              companies={dashboardData?.companies || []}
+              projects={dashboardData?.projects || []}
+              periods={dashboardData?.periods || []}
+              filters={dashFilters}
+              onChange={setDashFilters}
+            />
           </div>
         )}
 
@@ -384,160 +384,120 @@ export default function CashflowDashboard() {
             ))}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card data-testid="card-total-inflows">
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Total Inflow</p>
-                    <p className="text-2xl font-bold text-green-600">₹{formatAmount(totalInflow, cfFmt)}</p>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <ChartFormatSettings chartId="cf-amounts" />
-                    <div className="p-2 rounded-md bg-green-500/10"><TrendingUp className="w-5 h-5 text-green-500" /></div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card data-testid="card-total-outflows">
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Total Outflow</p>
-                    <p className="text-2xl font-bold text-red-600">₹{formatAmount(totalOutflow, cfFmt)}</p>
-                  </div>
-                  <div className="p-2 rounded-md bg-red-500/10"><TrendingDown className="w-5 h-5 text-red-500" /></div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card data-testid="card-cash-bank">
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Cash & Bank</p>
-                    <p className="text-2xl font-bold">₹{formatAmount(totalCashBank, cfFmt)}</p>
-                  </div>
-                  <div className="p-2 rounded-md bg-blue-500/10"><IndianRupee className="w-5 h-5 text-blue-500" /></div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Card className="overflow-hidden border-0 shadow-sm bg-white dark:bg-zinc-900">
-              <CardHeader className="pb-0 pt-5 px-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-sm font-semibold text-gray-900 dark:text-zinc-100">Cashflow by Type</CardTitle>
-                    <p className="text-[11px] text-gray-400 dark:text-zinc-500 mt-0.5">Amount in ₹{SCALE_SUFFIXES[cfFmt.scale] ? ` ${SCALE_SUFFIXES[cfFmt.scale]}` : ""}</p>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    {cashflowByType.map((entry) => (
-                      <div key={entry.name} className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: CASHFLOW_COLORS[entry.name] || "#94a3b8" }} />
-                        <span className="text-[10px] font-medium text-gray-400 dark:text-zinc-500">{entry.name}</span>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {([
+              { label: "Total Inflow", value: totalInflow, icon: TrendingUp, flow: "inflow" as FlowColor, testId: "card-total-inflows" },
+              { label: "Total Outflow", value: totalOutflow, icon: TrendingDown, flow: "outflow" as FlowColor, testId: "card-total-outflows" },
+              { label: "Cash & Bank", value: totalCashBank, icon: IndianRupee, flow: "cash" as FlowColor, testId: "card-cash-bank" },
+              { label: "Net Cashflow", value: totalInflow + totalOutflow + totalCashBank, icon: ArrowRightLeft, flow: "sign" as FlowColor, testId: "card-net-cashflow" },
+            ]).map(k => {
+              const bgClass = k.flow === "sign"
+                ? (k.value >= 0 ? FLOW_BG_COLOR.inflow : FLOW_BG_COLOR.outflow)
+                : FLOW_BG_COLOR[k.flow];
+              return (
+                <Card key={k.label} data-testid={k.testId}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-muted-foreground">{k.label}</span>
+                      <div className={`p-1.5 rounded-md ${bgClass}`}>
+                        <k.icon className="w-4 h-4 text-muted-foreground" />
                       </div>
-                    ))}
-                  </div>
-                </div>
+                    </div>
+                    <p className={`text-lg font-bold ${flowColor(k.value, k.flow)}`} data-testid={`kpi-${k.label.toLowerCase().replace(/\s+/g, "-")}`}>
+                      ₹{formatAmount(k.value, cfFmt)}
+                    </p>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Cashflow Breakdown</CardTitle>
               </CardHeader>
-              <CardContent className="px-4 pb-4 pt-2">
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={cashflowByType} margin={{ top: 24, right: 16, left: 8, bottom: 8 }} barCategoryGap="30%">
-                      <defs>
-                        <linearGradient id="gradInflow" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#0ea5e9" stopOpacity={0.9} />
-                          <stop offset="100%" stopColor="#0ea5e9" stopOpacity={0.55} />
-                        </linearGradient>
-                        <linearGradient id="gradOutflow" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#f97316" stopOpacity={0.9} />
-                          <stop offset="100%" stopColor="#f97316" stopOpacity={0.55} />
-                        </linearGradient>
-                        <linearGradient id="gradCashBank" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#10b981" stopOpacity={0.9} />
-                          <stop offset="100%" stopColor="#10b981" stopOpacity={0.55} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid stroke={CHART_COLORS.grid} strokeDasharray="none" vertical={false} />
-                      <XAxis
-                        dataKey="name"
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 11, fill: CHART_COLORS.axisLabel, fontWeight: 500 }}
-                        dy={8}
-                      />
-                      <YAxis
-                        tickFormatter={(v: number) => formatAmount(v, cfFmt)}
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 10, fill: CHART_COLORS.axis }}
-                        width={56}
-                        domain={[0, 'auto']}
-                      />
-                      <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(0,0,0,0.03)" }} />
-                      <Bar dataKey="absValue" name="Amount" radius={[6, 6, 0, 0]} maxBarSize={72}>
-                        {cashflowByType.map((entry, idx) => {
-                          const gradId = entry.name === "Inflow" ? "url(#gradInflow)" : entry.name === "Outflow" ? "url(#gradOutflow)" : "url(#gradCashBank)";
-                          return <Cell key={idx} fill={gradId} />;
-                        })}
-                        <LabelList dataKey="value" position="top" formatter={(v: number) => v ? `₹${formatAmount(v, cfFmt)}` : ""} style={{ fontSize: 10, fontWeight: 600, fill: CHART_COLORS.axisLabel }} />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart
+                    data={cashflowByType.map(d => ({
+                      ...d,
+                      fill: CASHFLOW_COLORS[d.name] || "#94a3b8",
+                    }))}
+                    layout="vertical"
+                  >
+                    <XAxis type="number" tickFormatter={v => formatAmount(v, { ...cfFmt, decimals: 0 })} tick={{ fontSize: 10 }} />
+                    <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 11 }} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <ReferenceLine x={0} stroke="#888" />
+                    <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                      {cashflowByType.map((d, i) => (
+                        <Cell key={i} fill={CASHFLOW_COLORS[d.name] || "#94a3b8"} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
 
-            <Card className="overflow-hidden border-0 shadow-sm bg-white dark:bg-zinc-900">
-              <CardHeader className="pb-0 pt-5 px-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-sm font-semibold text-gray-900 dark:text-zinc-100">Cashflow by Project Status</CardTitle>
-                    <p className="text-[11px] text-gray-400 dark:text-zinc-500 mt-0.5">Inflow, Outflow & Cash/Bank breakdown</p>
-                  </div>
-                </div>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Cashflow Proportions</CardTitle>
               </CardHeader>
-              <CardContent className="px-4 pb-4 pt-2">
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={cashflowByProject} margin={{ top: 16, right: 16, left: 8, bottom: 8 }} barCategoryGap="20%" barGap={2}>
-                      <CartesianGrid stroke={CHART_COLORS.grid} strokeDasharray="none" vertical={false} />
-                      <XAxis
-                        dataKey="name"
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 10, fill: CHART_COLORS.axisLabel, fontWeight: 500 }}
-                        interval={0}
-                        dy={8}
-                      />
-                      <YAxis
-                        tickFormatter={(v: number) => formatAmount(v, cfFmt)}
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 10, fill: CHART_COLORS.axis }}
-                        width={56}
-                        domain={[0, 'auto']}
-                      />
-                      <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(0,0,0,0.03)" }} />
-                      <Legend content={renderLegend} />
-                      <Bar dataKey="inflow" name="Inflow" fill="#0ea5e9" radius={[6, 6, 0, 0]} maxBarSize={36} />
-                      <Bar dataKey="outflow" name="Outflow" fill="#f97316" radius={[6, 6, 0, 0]} maxBarSize={36} />
-                      <Bar dataKey="cashBank" name="Cash & Bank" fill="#10b981" radius={[6, 6, 0, 0]} maxBarSize={36} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={220}>
+                  <PieChart>
+                    <Pie
+                      data={cashflowByType.filter(d => Math.abs(d.value) > 0).map(d => ({ name: d.name, value: Math.abs(d.value), fill: CASHFLOW_COLORS[d.name] || "#94a3b8" }))}
+                      cx="50%" cy="50%" innerRadius={45} outerRadius={75} dataKey="value"
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}
+                    >
+                      {cashflowByType.filter(d => Math.abs(d.value) > 0).map((d, i) => (
+                        <Cell key={i} fill={CASHFLOW_COLORS[d.name] || "#94a3b8"} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend content={renderLegend} />
+                  </PieChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
           </div>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm">Cashflow by Project Status</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={Math.max(200, cashflowByProject.length * 50 + 40)}>
+                <BarChart
+                  data={cashflowByProject}
+                  layout="vertical"
+                  margin={{ top: 8, right: 16, left: 8, bottom: 8 }}
+                  barGap={2}
+                >
+                  <XAxis type="number" tickFormatter={v => formatAmount(v, { ...cfFmt, decimals: 0 })} tick={{ fontSize: 10 }} />
+                  <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 10 }} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend content={renderLegend} />
+                  <Bar dataKey="inflow" name="Inflow" fill={CHART_COLORS.inflow} radius={[0, 4, 4, 0]} maxBarSize={20} />
+                  <Bar dataKey="outflow" name="Outflow" fill={CHART_COLORS.outflow} radius={[0, 4, 4, 0]} maxBarSize={20} />
+                  <Bar dataKey="cashBank" name="Cash & Bank" fill={CHART_COLORS.cashBank} radius={[0, 4, 4, 0]} maxBarSize={20} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="detailed" className="space-y-4">
           <Card>
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Detailed MIS — Type / CF Head / Projects</CardTitle>
+                <CardTitle className="text-sm">Cashflow by Project</CardTitle>
                 <div className="flex items-center gap-2">
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge variant="secondary" className="text-[10px]">
                     {pivotData.projectList.length} projects
                   </Badge>
                   <Button variant="outline" size="sm" onClick={() => window.open("/api/cashflow/download-detailed", "_blank")} data-testid="button-download-detailed">
@@ -547,58 +507,107 @@ export default function CashflowDashboard() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               <div className="overflow-auto max-h-[600px]">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="sticky left-0 bg-background z-10 min-w-[220px]">Cashflow / CF Head</TableHead>
+                      <TableHead className="sticky left-0 bg-background z-10 min-w-[280px]">Cashflow / CF Head</TableHead>
                       {pivotData.projectList.map(proj => (
-                        <TableHead key={proj} className="text-right text-xs min-w-[120px] whitespace-nowrap">{proj}</TableHead>
+                        <TableHead key={proj} className="text-right text-xs min-w-[120px] whitespace-nowrap">{proj} ({SCALE_SUFFIXES[cfFmt.scale] || "₹"})</TableHead>
                       ))}
-                      <TableHead className="text-right min-w-[120px] font-bold">Total</TableHead>
+                      <TableHead className="text-right min-w-[130px] font-bold">Total ({SCALE_SUFFIXES[cfFmt.scale] || "₹"})</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {pivotData.rows.map((row, idx) => {
-                      if (row.isParent) {
-                        const isExpanded = expandedRows.has(row.cfType);
-                        return (
-                          <TableRow
-                            key={`parent-${row.cfType}`}
-                            className="bg-muted/50 cursor-pointer hover:bg-muted/80"
-                            onClick={() => toggleExpand(row.cfType)}
-                            data-testid={`pivot-parent-${row.cfType}`}
-                          >
-                            <TableCell className="sticky left-0 bg-muted/50 z-10 font-semibold text-sm">
-                              <div className="flex items-center gap-1">
-                                {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                                {row.cfType}
-                              </div>
-                            </TableCell>
+                    {(() => {
+                      const SECTION_COLORS: Record<string, string> = {
+                        "Inflow": "#22c55e",
+                        "Outflow": "#f97316",
+                        "Cash/Bank Balance": "#3b82f6",
+                      };
+                      const cfTypes = Array.from(new Set(pivotData.rows.map(r => r.cfType)));
+                      let grandTotal = 0;
+                      const grandProjects: Record<string, number> = {};
+                      return (
+                        <>
+                          {cfTypes.map(cfType => {
+                            const parent = pivotData.rows.find(r => r.isParent && r.cfType === cfType);
+                            const children = pivotData.rows.filter(r => !r.isParent && r.cfType === cfType);
+                            const isExpanded = expandedRows.has(cfType);
+                            const sectionTotal = parent?.total || 0;
+                            grandTotal += sectionTotal;
+                            for (const proj of pivotData.projectList) {
+                              grandProjects[proj] = (grandProjects[proj] || 0) + (parent?.projects[proj] || 0);
+                            }
+                            const dotColor = SECTION_COLORS[cfType] || "#888";
+
+                            return (
+                              <Fragment key={cfType}>
+                                <TableRow
+                                  className="bg-muted/50 cursor-pointer hover:bg-muted"
+                                  onClick={() => toggleExpand(cfType)}
+                                  data-testid={`pivot-parent-${cfType}`}
+                                >
+                                  <TableCell className="sticky left-0 bg-muted/50 z-10 font-semibold text-xs">
+                                    <div className="flex items-center gap-1">
+                                      {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                                      <span className="w-2.5 h-2.5 rounded-full mr-1" style={{ background: dotColor }} />
+                                      {cfType}
+                                    </div>
+                                  </TableCell>
+                                  {pivotData.projectList.map(proj => (
+                                    <TableCell key={proj} className="text-right text-xs font-medium">
+                                      {parent?.projects[proj] ? `₹${formatAmount(parent.projects[proj], cfFmt)}` : "—"}
+                                    </TableCell>
+                                  ))}
+                                  <TableCell className={`text-right text-xs font-bold ${colorForValue(sectionTotal)}`}>
+                                    ₹{formatAmount(sectionTotal, cfFmt)}
+                                  </TableCell>
+                                </TableRow>
+                                {isExpanded && children.map((row) => (
+                                  <TableRow key={`${cfType}-${row.cfHead}`} data-testid={`pivot-child-${cfType}-${row.cfHead}`} className="hover:bg-muted/30">
+                                    <TableCell className="sticky left-0 bg-background z-10 text-xs pl-8">{row.cfHead}</TableCell>
+                                    {pivotData.projectList.map(proj => (
+                                      <TableCell key={proj} className="text-right text-xs">
+                                        {row.projects[proj] ? `₹${formatAmount(row.projects[proj], cfFmt)}` : "—"}
+                                      </TableCell>
+                                    ))}
+                                    <TableCell className={`text-right text-xs font-medium ${colorForValue(row.total)}`}>
+                                      ₹{formatAmount(row.total, cfFmt)}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                                <TableRow className="border-t-2">
+                                  <TableCell className="sticky left-0 bg-background z-10 text-xs font-bold pl-4">
+                                    Subtotal — {cfType}
+                                  </TableCell>
+                                  {pivotData.projectList.map(proj => (
+                                    <TableCell key={proj} className="text-right text-xs font-bold">
+                                      {parent?.projects[proj] ? `₹${formatAmount(parent.projects[proj], cfFmt)}` : "—"}
+                                    </TableCell>
+                                  ))}
+                                  <TableCell className={`text-right text-xs font-bold ${colorForValue(sectionTotal)}`}>
+                                    ₹{formatAmount(sectionTotal, cfFmt)}
+                                  </TableCell>
+                                </TableRow>
+                              </Fragment>
+                            );
+                          })}
+                          <TableRow className="bg-muted font-bold border-t-4">
+                            <TableCell className="sticky left-0 bg-muted z-10 text-xs font-bold">Grand Total — Net Cashflow</TableCell>
                             {pivotData.projectList.map(proj => (
-                              <TableCell key={proj} className="text-right text-xs font-medium">
-                                {row.projects[proj] ? `₹${formatAmount(row.projects[proj], cfFmt)}` : "—"}
+                              <TableCell key={proj} className="text-right text-xs font-bold">
+                                {grandProjects[proj] ? `₹${formatAmount(grandProjects[proj], cfFmt)}` : "—"}
                               </TableCell>
                             ))}
-                            <TableCell className="text-right text-sm font-bold">₹{formatAmount(row.total, cfFmt)}</TableCell>
-                          </TableRow>
-                        );
-                      }
-                      const isExpanded = expandedRows.has(row.cfType);
-                      if (!isExpanded) return null;
-                      return (
-                        <TableRow key={`child-${row.cfType}-${row.cfHead}`} data-testid={`pivot-child-${idx}`}>
-                          <TableCell className="sticky left-0 bg-background z-10 text-xs pl-8">{row.cfHead}</TableCell>
-                          {pivotData.projectList.map(proj => (
-                            <TableCell key={proj} className="text-right text-xs">
-                              {row.projects[proj] ? `₹${formatAmount(row.projects[proj], cfFmt)}` : "—"}
+                            <TableCell className={`text-right text-xs font-bold ${colorForValue(grandTotal)}`}>
+                              ₹{formatAmount(grandTotal, cfFmt)}
                             </TableCell>
-                          ))}
-                          <TableCell className="text-right text-xs font-medium">₹{formatAmount(row.total, cfFmt)}</TableCell>
-                        </TableRow>
+                          </TableRow>
+                        </>
                       );
-                    })}
+                    })()}
                   </TableBody>
                 </Table>
               </div>
