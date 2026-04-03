@@ -19,6 +19,18 @@ import path from "path";
 
 import { normalizeText } from "./utils/normalize";
 import { existsSync } from "fs";
+
+function extractChequeNo(t: any): string | null {
+  try {
+    const rawData = t.rawRowData ? JSON.parse(t.rawRowData) : {};
+    for (const [k, v] of Object.entries(rawData)) {
+      if (/cheque|chq|check/i.test(k) && /no|num|number/i.test(k) && v) {
+        return String(v).trim();
+      }
+    }
+  } catch {}
+  return null;
+}
 import bcrypt from "bcryptjs";
 import { LRUCache } from "lru-cache";
 
@@ -560,18 +572,6 @@ export async function registerRoutes(
         netAmount: number;
         transactionCount: number;
       }>();
-
-      function extractChequeNo(t: any): string | null {
-        try {
-          const rawData = t.rawRowData ? JSON.parse(t.rawRowData) : {};
-          for (const [k, v] of Object.entries(rawData)) {
-            if (/cheque|chq|check/i.test(k) && /no|num|number/i.test(k) && v) {
-              return String(v).trim();
-            }
-          }
-        } catch {}
-        return null;
-      }
 
       for (const t of inserted) {
         const key = `${(t.company || "").trim().toUpperCase()}||${(t.documentNo || "").trim().toUpperCase()}||${(t.counterParty || "").trim().toUpperCase()}`;
@@ -1753,18 +1753,6 @@ export async function registerRoutes(
         netAmount: number;
         transactionCount: number;
       }>();
-
-      function extractChequeNo(t: any): string | null {
-        try {
-          const rawData = t.rawRowData ? JSON.parse(t.rawRowData) : {};
-          for (const [k, v] of Object.entries(rawData)) {
-            if (/cheque|chq|check/i.test(k) && /no|num|number/i.test(k) && v) {
-              return String(v).trim();
-            }
-          }
-        } catch {}
-        return null;
-      }
 
       for (const t of inserted) {
         const key = `${(t.company || "").trim().toUpperCase()}||${(t.documentNo || "").trim().toUpperCase()}||${(t.counterParty || "").trim().toUpperCase()}`;
