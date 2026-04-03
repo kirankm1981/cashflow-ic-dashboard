@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, integer, serial, doublePrecision, boolean, index, varchar, json, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, serial, doublePrecision, boolean, index, varchar, json, jsonb, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -319,7 +319,7 @@ export type IcMatrixMappingCompany = typeof icMatrixMappingCompany.$inferSelect;
 export const icReconGlRawRows = pgTable("ic_recon_gl_raw_rows", {
   id: serial("id").primaryKey(),
   batchId: text("batch_id").notNull(),
-  rowData: text("row_data").notNull(),
+  rowData: jsonb("row_data").notNull(),
   company: text("company"),
   companyCode: text("company_code"),
   netAmount: doublePrecision("net_amount"),

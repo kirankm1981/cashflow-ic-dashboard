@@ -1655,7 +1655,7 @@ export async function registerRoutes(
         return raw;
       }
 
-      const rawRowInserts: { batchId: string; rowData: string }[] = [];
+      const rawRowInserts: { batchId: string; rowData: Record<string, any> }[] = [];
       for (const r of transactionRows) {
         const raw = buildRawRow(r);
         const company = String(r[companyIdx] || "").trim();
@@ -1679,7 +1679,7 @@ export async function registerRoutes(
         raw["IC Counter Party Code"] = icCounterPartyCode || "";
         raw["IC Txn Type"] = icTxnType || "";
 
-        rawRowInserts.push({ batchId, rowData: JSON.stringify(raw) });
+        rawRowInserts.push({ batchId, rowData: raw });
       }
 
       const BATCH_SIZE = 200;
@@ -1888,7 +1888,8 @@ export async function registerRoutes(
       }
 
       const [firstRow] = await db.select({ rowData: icReconGlRawRows.rowData }).from(icReconGlRawRows).limit(1);
-      const headers = Object.keys(JSON.parse(firstRow.rowData));
+      const parsed0 = typeof firstRow.rowData === "string" ? JSON.parse(firstRow.rowData) : firstRow.rowData;
+      const headers = Object.keys(parsed0);
 
       const sheetData: any[][] = [headers];
 
@@ -1898,7 +1899,7 @@ export async function registerRoutes(
         const batch = await db.select({ rowData: icReconGlRawRows.rowData }).from(icReconGlRawRows).limit(batchSize).offset(offset);
         if (batch.length === 0) break;
         for (const row of batch) {
-          const parsed = JSON.parse(row.rowData);
+          const parsed = typeof row.rowData === "string" ? JSON.parse(row.rowData) : row.rowData as Record<string, any>;
           sheetData.push(headers.map(h => parsed[h] !== undefined ? parsed[h] : ""));
         }
         offset += batchSize;
@@ -1935,6 +1936,7 @@ export async function registerRoutes(
     try {
       const { db } = await import("./db");
       const { icReconGlRawRows } = await import("@shared/schema");
+      const { sql: sqlTag } = await import("drizzle-orm");
 
       const page = Math.max(1, parseInt(req.query.page as string) || 1);
       const limit = Math.min(500, Math.max(1, parseInt(req.query.limit as string) || 100));
@@ -1942,41 +1944,55 @@ export async function registerRoutes(
       const icTxnTypeFilter = (req.query.icTxnType as string) || "";
       const rptTypeFilter = (req.query.rptType as string) || "";
 
-      const allRows = await db.select({ rowData: icReconGlRawRows.rowData }).from(icReconGlRawRows);
+      const rptBaseWhere = sqlTag`(row_data->>'IC-RPT GL Name' LIKE 'IC_%' OR row_data->>'IC-RPT GL Name' LIKE 'RPT_%')`;
 
-      const icTxnTypesSet = new Set<string>();
-      let filteredRows: { rowData: string; parsed: any }[] = [];
+      const conditions = [rptBaseWhere];
 
-      for (const row of allRows) {
-        const parsed = JSON.parse(row.rowData);
-        const glName = parsed["IC-RPT GL Name"] || "";
-        if (!isRptGlName(glName)) continue;
-
-        const icTxnType = parsed["IC Txn Type"] || "";
-        if (icTxnType && icTxnType.trim()) icTxnTypesSet.add(icTxnType.trim());
-
-        if (search) {
-          const s = search.toLowerCase();
-          const docNo = (parsed["Document No"] || "").toLowerCase();
-          const glN = (parsed["IC-RPT GL Name"] || "").toLowerCase();
-          const company = (parsed["Company"] || "").toLowerCase();
-          const accHead = (parsed["Account Head"] || "").toLowerCase();
-          if (!docNo.includes(s) && !glN.includes(s) && !company.includes(s) && !accHead.includes(s)) continue;
-        }
-
-        if (icTxnTypeFilter && icTxnType !== icTxnTypeFilter) continue;
-
-        if (rptTypeFilter === "IC" && !glName.startsWith("IC_")) continue;
-        if (rptTypeFilter === "RPT" && !glName.startsWith("RPT_")) continue;
-
-        filteredRows.push({ rowData: row.rowData, parsed });
+      if (search) {
+        const s = `%${search.toLowerCase()}%`;
+        conditions.push(sqlTag`(
+          lower(row_data->>'Document No') LIKE ${s} OR
+          lower(row_data->>'IC-RPT GL Name') LIKE ${s} OR
+          lower(row_data->>'Company') LIKE ${s} OR
+          lower(row_data->>'Account Head') LIKE ${s}
+        )`);
       }
 
-      const total = filteredRows.length;
-      const offset = (page - 1) * limit;
-      const pageRows = filteredRows.slice(offset, offset + limit);
+      if (icTxnTypeFilter) {
+        conditions.push(sqlTag`row_data->>'IC Txn Type' = ${icTxnTypeFilter}`);
+      }
 
-      const data = pageRows.map(({ parsed }) => {
+      if (rptTypeFilter === "IC") {
+        conditions.push(sqlTag`row_data->>'IC-RPT GL Name' LIKE 'IC_%'`);
+      } else if (rptTypeFilter === "RPT") {
+        conditions.push(sqlTag`row_data->>'IC-RPT GL Name' LIKE 'RPT_%'`);
+      }
+
+      const whereClause = conditions.reduce((a, b) => sqlTag`${a} AND ${b}`);
+
+      const [icTxnTypesResult, countResult, pageRows] = await Promise.all([
+        db.select({
+          txnType: sqlTag<string>`DISTINCT TRIM(row_data->>'IC Txn Type')`,
+        }).from(icReconGlRawRows)
+          .where(sqlTag`${rptBaseWhere} AND TRIM(COALESCE(row_data->>'IC Txn Type','')) != ''`),
+
+        db.select({
+          cnt: sqlTag<number>`count(*)::int`,
+        }).from(icReconGlRawRows).where(whereClause),
+
+        db.select({
+          rowData: icReconGlRawRows.rowData,
+        }).from(icReconGlRawRows)
+          .where(whereClause)
+          .limit(limit)
+          .offset((page - 1) * limit),
+      ]);
+
+      const total = Number(countResult[0]?.cnt || 0);
+      const icTxnTypes = icTxnTypesResult.map(r => r.txnType).filter(Boolean);
+
+      const data = pageRows.map(row => {
+        const parsed = typeof row.rowData === "string" ? JSON.parse(row.rowData) : row.rowData as Record<string, any>;
         const glName = parsed["IC-RPT GL Name"] || "";
         const rptType = glName.startsWith("IC_") ? "IC" : glName.startsWith("RPT_") ? "RPT" : "";
         return {
@@ -1999,7 +2015,6 @@ export async function registerRoutes(
         };
       });
 
-      const icTxnTypes = Array.from(icTxnTypesSet);
       res.json({ data, total, page, limit, totalPages: Math.ceil(total / limit), icTxnTypes });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -2010,32 +2025,36 @@ export async function registerRoutes(
     try {
       const { db } = await import("./db");
       const { icReconGlRawRows } = await import("@shared/schema");
+      const { sql: sqlTag } = await import("drizzle-orm");
 
-      const allRows = await db.select({ rowData: icReconGlRawRows.rowData }).from(icReconGlRawRows);
+      const summaryRows = await db.select({
+        company: sqlTag<string>`row_data->>'Company'`,
+        counterParty: sqlTag<string>`row_data->>'IC Counter Party'`,
+        glName: sqlTag<string>`row_data->>'IC-RPT GL Name'`,
+        rptType: sqlTag<string>`CASE WHEN row_data->>'IC-RPT GL Name' LIKE 'IC_%' THEN 'IC' ELSE 'RPT' END`,
+        transactionType: sqlTag<string>`CASE
+          WHEN row_data->>'IC-RPT GL Name' LIKE 'IC_%' THEN SUBSTRING(row_data->>'IC-RPT GL Name' FROM 4)
+          WHEN row_data->>'IC-RPT GL Name' LIKE 'RPT_%' THEN SUBSTRING(row_data->>'IC-RPT GL Name' FROM 5)
+          ELSE row_data->>'IC-RPT GL Name'
+        END`,
+        amount: sqlTag<number>`SUM((row_data->>'Net Amount')::numeric)`,
+      }).from(icReconGlRawRows)
+        .where(sqlTag`row_data->>'IC-RPT GL Name' LIKE 'IC_%' OR row_data->>'IC-RPT GL Name' LIKE 'RPT_%'`)
+        .groupBy(
+          sqlTag`row_data->>'Company'`,
+          sqlTag`row_data->>'IC Counter Party'`,
+          sqlTag`row_data->>'IC-RPT GL Name'`,
+        )
+        .orderBy(sqlTag`ABS(SUM((row_data->>'Net Amount')::numeric)) DESC`);
 
-      const summaryMap = new Map<string, { company: string; counterParty: string; transactionType: string; rptType: string; amount: number }>();
+      const data = summaryRows.map(r => ({
+        company: r.company || "",
+        counterParty: r.counterParty || "",
+        transactionType: r.transactionType || "",
+        rptType: r.rptType || "",
+        amount: Number(r.amount) || 0,
+      }));
 
-      for (const row of allRows) {
-        const parsed = JSON.parse(row.rowData);
-        const glName = parsed["IC-RPT GL Name"] || "";
-        if (!isRptGlName(glName)) continue;
-
-        const company = parsed["Company"] || "";
-        const counterParty = parsed["IC Counter Party"] || "";
-        const rptType = glName.startsWith("IC_") ? "IC" : glName.startsWith("RPT_") ? "RPT" : "";
-        const prefix = rptType === "IC" ? "IC_" : "RPT_";
-        const transactionType = glName.startsWith(prefix) ? glName.substring(prefix.length) : glName;
-        const amount = Number(parsed["Net Amount"]) || 0;
-
-        const key = `${company}||${counterParty}||${transactionType}||${rptType}`;
-        if (summaryMap.has(key)) {
-          summaryMap.get(key)!.amount += amount;
-        } else {
-          summaryMap.set(key, { company, counterParty, transactionType, rptType, amount });
-        }
-      }
-
-      const data = Array.from(summaryMap.values()).sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
       res.json({ data, total: data.length });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -2046,32 +2065,34 @@ export async function registerRoutes(
     try {
       const { db } = await import("./db");
       const { icReconGlRawRows } = await import("@shared/schema");
+      const { sql: sqlTag } = await import("drizzle-orm");
 
-      const allRows = await db.select({ rowData: icReconGlRawRows.rowData }).from(icReconGlRawRows);
+      const summaryRows = await db.select({
+        company: sqlTag<string>`row_data->>'Company'`,
+        counterParty: sqlTag<string>`row_data->>'IC Counter Party'`,
+        rptType: sqlTag<string>`CASE WHEN row_data->>'IC-RPT GL Name' LIKE 'IC_%' THEN 'IC' ELSE 'RPT' END`,
+        transactionType: sqlTag<string>`CASE
+          WHEN row_data->>'IC-RPT GL Name' LIKE 'IC_%' THEN SUBSTRING(row_data->>'IC-RPT GL Name' FROM 4)
+          WHEN row_data->>'IC-RPT GL Name' LIKE 'RPT_%' THEN SUBSTRING(row_data->>'IC-RPT GL Name' FROM 5)
+          ELSE row_data->>'IC-RPT GL Name'
+        END`,
+        amount: sqlTag<number>`SUM((row_data->>'Net Amount')::numeric)`,
+      }).from(icReconGlRawRows)
+        .where(sqlTag`row_data->>'IC-RPT GL Name' LIKE 'IC_%' OR row_data->>'IC-RPT GL Name' LIKE 'RPT_%'`)
+        .groupBy(
+          sqlTag`row_data->>'Company'`,
+          sqlTag`row_data->>'IC Counter Party'`,
+          sqlTag`row_data->>'IC-RPT GL Name'`,
+        )
+        .orderBy(sqlTag`ABS(SUM((row_data->>'Net Amount')::numeric)) DESC`);
 
-      const summaryMap = new Map<string, { company: string; counterParty: string; transactionType: string; rptType: string; amount: number }>();
-
-      for (const row of allRows) {
-        const parsed = JSON.parse(row.rowData);
-        const glName = parsed["IC-RPT GL Name"] || "";
-        if (!isRptGlName(glName)) continue;
-
-        const company = parsed["Company"] || "";
-        const counterParty = parsed["IC Counter Party"] || "";
-        const rptType = glName.startsWith("IC_") ? "IC" : glName.startsWith("RPT_") ? "RPT" : "";
-        const prefix = rptType === "IC" ? "IC_" : "RPT_";
-        const transactionType = glName.startsWith(prefix) ? glName.substring(prefix.length) : glName;
-        const amount = Number(parsed["Net Amount"]) || 0;
-
-        const key = `${company}||${counterParty}||${transactionType}||${rptType}`;
-        if (summaryMap.has(key)) {
-          summaryMap.get(key)!.amount += amount;
-        } else {
-          summaryMap.set(key, { company, counterParty, transactionType, rptType, amount });
-        }
-      }
-
-      const data = Array.from(summaryMap.values()).sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
+      const data = summaryRows.map(r => ({
+        company: r.company || "",
+        counterParty: r.counterParty || "",
+        transactionType: r.transactionType || "",
+        rptType: r.rptType || "",
+        amount: Number(r.amount) || 0,
+      }));
 
       if (data.length === 0) {
         return res.status(404).json({ message: "No RPT summary data available." });
@@ -2107,14 +2128,15 @@ export async function registerRoutes(
     try {
       const { db } = await import("./db");
       const { icReconGlRawRows } = await import("@shared/schema");
+      const { sql: sqlTag } = await import("drizzle-orm");
 
-      const allRows = await db.select({ rowData: icReconGlRawRows.rowData }).from(icReconGlRawRows);
+      const filteredRows = await db.select({ rowData: icReconGlRawRows.rowData }).from(icReconGlRawRows)
+        .where(sqlTag`row_data->>'IC-RPT GL Name' LIKE 'IC_%' OR row_data->>'IC-RPT GL Name' LIKE 'RPT_%'`);
 
       const rptRows: any[] = [];
-      for (const row of allRows) {
-        const parsed = JSON.parse(row.rowData);
+      for (const row of filteredRows) {
+        const parsed = typeof row.rowData === "string" ? JSON.parse(row.rowData) : row.rowData as Record<string, any>;
         const glName = parsed["IC-RPT GL Name"] || "";
-        if (!isRptGlName(glName)) continue;
         parsed["RPT Type"] = glName.startsWith("IC_") ? "IC" : glName.startsWith("RPT_") ? "RPT" : "";
         rptRows.push(parsed);
       }
