@@ -82,9 +82,7 @@ export default function ForceChangePassword() {
               Password Change Required
             </CardTitle>
             <CardDescription className="text-slate-400">
-              {user?.role !== "platform_admin"
-                ? "You must change your password before continuing. Passwords expire every 90 days."
-                : "Please update your password to continue."}
+              You must change your password before continuing. Passwords expire every 90 days.
             </CardDescription>
           </div>
         </CardHeader>

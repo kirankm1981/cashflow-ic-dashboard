@@ -136,7 +136,6 @@ function isPasswordExpired(passwordChangedAt: string | null | undefined): boolea
 }
 
 function needsPasswordChange(user: any): boolean {
-  if (user.role === "platform_admin") return false;
   if (user.mustChangePassword) return true;
   return isPasswordExpired(user.passwordChangedAt);
 }
@@ -262,7 +261,7 @@ export async function registerRoutes(
         role: role || "recon_user",
       });
       await storage.updateUser(user.id, {
-        mustChangePassword: role === "platform_admin" ? false : true,
+        mustChangePassword: true,
         passwordChangedAt: new Date().toISOString(),
       } as any);
       res.json({
