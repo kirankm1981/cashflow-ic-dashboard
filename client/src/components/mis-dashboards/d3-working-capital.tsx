@@ -102,8 +102,8 @@ export function D3WorkingCapital({ rows, formatConfig }: Props) {
   const kpis: { label: string; value: number; flow: FlowColor }[] = [
     { label: "Current Assets", value: currentAssets, flow: "inflow" },
     { label: "Current Liabilities", value: currentLiabilities, flow: "outflow" },
-    { label: "Net Working Capital", value: nwc, flow: "sign" },
-    { label: "WC Change (Period)", value: wcChange, flow: "sign" },
+    { label: "Net Working Capital", value: nwc, flow: "cash" },
+    { label: "WC Change (Period)", value: wcChange, flow: "cash" },
   ];
 
   const toggleBucket = (b: string) => {

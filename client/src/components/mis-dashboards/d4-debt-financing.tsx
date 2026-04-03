@@ -110,11 +110,11 @@ export function D4DebtFinancing({ rows, allRows, formatConfig }: Props) {
   ].filter(d => d.value > 0);
 
   const kpis: { label: string; value: number; flow: FlowColor }[] = [
-    { label: "Gross Debt", value: grossDebt, flow: "outflow" },
-    { label: "Secured", value: secured, flow: "outflow" },
-    { label: "Unsecured", value: unsecured, flow: "outflow" },
-    { label: "Debentures", value: debentures, flow: "outflow" },
-    { label: "Net Debt", value: netDebt, flow: "outflow" },
+    { label: "Gross Debt", value: grossDebt, flow: "cash" },
+    { label: "Secured", value: secured, flow: "cash" },
+    { label: "Unsecured", value: unsecured, flow: "cash" },
+    { label: "Debentures", value: debentures, flow: "cash" },
+    { label: "Net Debt", value: netDebt, flow: "cash" },
   ];
 
   if (debtRows.length === 0) {
@@ -243,9 +243,9 @@ export function D4DebtFinancing({ rows, allRows, formatConfig }: Props) {
         <TabsContent value="finance" className="space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {([
-              { label: "Finance Cost (P&L)", value: financeCostPL, flow: "outflow" as FlowColor, isPct: false },
-              { label: "Interest Capitalised–WIP", value: financeCostCapitalised, flow: "outflow" as FlowColor, isPct: false },
-              { label: "Total Interest Outflow", value: totalInterest, flow: "outflow" as FlowColor, isPct: false },
+              { label: "Finance Cost (P&L)", value: financeCostPL, flow: "cash" as FlowColor, isPct: false },
+              { label: "Interest Capitalised–WIP", value: financeCostCapitalised, flow: "cash" as FlowColor, isPct: false },
+              { label: "Total Interest Outflow", value: totalInterest, flow: "cash" as FlowColor, isPct: false },
               { label: "Effective Interest Rate", value: effectiveRate, flow: "neutral" as FlowColor, isPct: true },
             ]).map(k => (
               <Card key={k.label}>

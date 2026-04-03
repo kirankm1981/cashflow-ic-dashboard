@@ -154,8 +154,8 @@ export function D2PlWip({ rows, formatConfig }: Props) {
     { label: "Revenue from Ops", value: revenue, flow: "inflow" },
     { label: "Other Income", value: otherIncome, flow: "inflow" },
     { label: "Cost of Construction", value: Math.abs(costOfConstruction), flow: "outflow" },
-    { label: "Gross Profit", value: grossProfit, flow: "sign" },
-    { label: "EBITDA", value: ebitda, flow: "sign" },
+    { label: "Gross Profit", value: grossProfit, flow: "cash" },
+    { label: "EBITDA", value: ebitda, flow: "cash" },
   ];
 
   return (
@@ -252,7 +252,7 @@ export function D2PlWip({ rows, formatConfig }: Props) {
                               setExpandedPl(next);
                             }}
                           >
-                            <TableCell className={`text-xs ${sign < 0 ? "text-red-700 dark:text-red-400" : ""}`}>
+                            <TableCell className={`text-xs ${sign < 0 ? "text-amber-700 dark:text-amber-400" : ""}`}>
                               <div className="flex items-center gap-1">
                                 {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                                 {item}

@@ -98,8 +98,12 @@ export default function CashflowDashboard() {
     queryKey: ["/api/cashflow/past-losses"],
   });
 
+  const isAnalyticTab = ["d1", "d2", "d3", "d4", "d5"].includes(activeTab);
+
   const { data: dashboardData, isLoading: loadingDashData } = useQuery<DashboardDataResponse>({
     queryKey: ["/api/cashflow/dashboard-data"],
+    enabled: isAnalyticTab,
+    staleTime: 5 * 60 * 1000,
   });
 
   const filteredDashRows = useMemo(() => {
@@ -108,8 +112,6 @@ export default function CashflowDashboard() {
   }, [dashboardData, dashFilters]);
 
   const allDashRows = dashboardData?.rows || [];
-
-  const isAnalyticTab = ["d1", "d2", "d3", "d4", "d5"].includes(activeTab);
 
   const unified = unifiedResult?.data || [];
 
