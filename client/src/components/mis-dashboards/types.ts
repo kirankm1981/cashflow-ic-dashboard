@@ -41,7 +41,7 @@ export interface FilterState {
   companies: string[];
   projects: string[];
   period: string | null;
-  status: string | null;
+  statuses: string[];
 }
 
 export function filterRows(rows: DashboardRow[], filters: FilterState): DashboardRow[] {
@@ -49,7 +49,7 @@ export function filterRows(rows: DashboardRow[], filters: FilterState): Dashboar
     if (filters.companies.length > 0 && !filters.companies.includes(r.company)) return false;
     if (filters.projects.length > 0 && !filters.projects.includes(r.projectName || "")) return false;
     if (filters.period && r.periodTag !== filters.period) return false;
-    if (filters.status && filters.status !== "All" && r.entityStatus !== filters.status) return false;
+    if (filters.statuses.length > 0 && !filters.statuses.includes(r.entityStatus || "")) return false;
     return true;
   });
 }

@@ -79,7 +79,7 @@ export default function CashflowDashboard() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [dashFilters, setDashFilters] = useState<FilterState>({ companies: [], projects: [], period: null, status: null });
+  const [dashFilters, setDashFilters] = useState<FilterState>({ companies: [], projects: [], period: null, statuses: [] });
   const { getFormat } = useDashboardSettings();
   const cfFmt = getFormat("cf-amounts");
 
@@ -722,7 +722,7 @@ export default function CashflowDashboard() {
               allRows={allDashRows}
               formatConfig={cfFmt}
               onProjectFilter={(project) => {
-                setDashFilters(prev => ({ ...prev, projects: [project], status: prev.status }));
+                setDashFilters(prev => ({ ...prev, projects: [project] }));
               }}
             />
           )}

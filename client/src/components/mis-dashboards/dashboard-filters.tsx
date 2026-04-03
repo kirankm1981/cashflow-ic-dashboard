@@ -2,11 +2,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Filter, X } from "lucide-react";
 import { FilterState } from "./types";
 
-const STATUS_OPTIONS = ["All", "Ongoing Project", "Corporate", "Completed Project", "New Project"] as const;
+const STATUS_OPTIONS = ["Ongoing Project", "Corporate", "Completed Project", "New Project"] as const;
 
 interface DashboardFiltersProps {
   companies: string[];
@@ -16,7 +15,7 @@ interface DashboardFiltersProps {
 }
 
 export function DashboardFilters({ companies, projects, filters, onChange }: DashboardFiltersProps) {
-  const hasFilters = filters.companies.length > 0 || filters.projects.length > 0 || (filters.status !== null && filters.status !== "All");
+  const hasFilters = filters.companies.length > 0 || filters.projects.length > 0 || filters.statuses.length > 0;
 
   return (
     <div className="flex items-center gap-2 flex-wrap" data-testid="dashboard-filters">
@@ -76,26 +75,40 @@ export function DashboardFilters({ companies, projects, filters, onChange }: Das
         </PopoverContent>
       </Popover>
 
-      <Select
-        value={filters.status || "All"}
-        onValueChange={(v) => onChange({ ...filters, status: v === "All" ? null : v })}
-      >
-        <SelectTrigger className="h-8 w-48 text-xs" data-testid="filter-status">
-          <SelectValue placeholder="All Project Types" />
-        </SelectTrigger>
-        <SelectContent>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="outline" size="sm" className="h-8 text-xs" data-testid="filter-status">
+            <Filter className="w-3 h-3 mr-1" />
+            Project Type
+            {filters.statuses.length > 0 && (
+              <Badge variant="secondary" className="ml-1 text-[10px] px-1 h-4">{filters.statuses.length}</Badge>
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-64 max-h-60 overflow-y-auto p-2">
           {STATUS_OPTIONS.map(s => (
-            <SelectItem key={s} value={s}>{s}</SelectItem>
+            <label key={s} className="flex items-center gap-2 py-1 px-2 hover:bg-muted rounded text-xs cursor-pointer">
+              <Checkbox
+                checked={filters.statuses.includes(s)}
+                onCheckedChange={(checked) => {
+                  const next = checked
+                    ? [...filters.statuses, s]
+                    : filters.statuses.filter(x => x !== s);
+                  onChange({ ...filters, statuses: next });
+                }}
+              />
+              <span className="truncate">{s}</span>
+            </label>
           ))}
-        </SelectContent>
-      </Select>
+        </PopoverContent>
+      </Popover>
 
       {hasFilters && (
         <Button
           variant="ghost"
           size="sm"
           className="h-8 text-xs"
-          onClick={() => onChange({ companies: [], projects: [], period: null, status: null })}
+          onClick={() => onChange({ companies: [], projects: [], period: null, statuses: [] })}
           data-testid="filter-clear"
         >
           <X className="w-3 h-3 mr-1" />
