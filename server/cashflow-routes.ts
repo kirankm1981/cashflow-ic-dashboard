@@ -921,62 +921,267 @@ export function registerCashflowRoutes(app: Express) {
 
   app.get("/api/cashflow/unmapped-items", async (_req, res) => {
     try {
-      const unmappedCfAgg = await db.select({
-        company: cashflowTbData.company,
+      const unmappedGLs = await db.select({
         accountHead: cashflowTbData.accountHead,
+        group1: sql<string>`MAX(${cashflowTbData.group1})`,
+        group2: sql<string>`MAX(${cashflowTbData.group2})`,
+        group3: sql<string>`MAX(${cashflowTbData.group3})`,
+        group4: sql<string>`MAX(${cashflowTbData.group4})`,
+        group5: sql<string>`MAX(${cashflowTbData.group5})`,
         netClosingBalance: sql<number>`sum(${cashflowTbData.netClosingBalance})`,
         count: sql<number>`count(*)`,
       }).from(cashflowTbData)
         .where(sql`(${cashflowTbData.cashflow} IS NULL OR ${cashflowTbData.cashflow} = '' OR ${cashflowTbData.cfHead} IS NULL OR ${cashflowTbData.cfHead} = '')`)
-        .groupBy(cashflowTbData.company, cashflowTbData.accountHead);
+        .groupBy(cashflowTbData.accountHead);
 
-      const unmappedEntityAgg = await db.select({
+      const unmappedEntities = await db.select({
         company: cashflowTbData.company,
         businessUnit: cashflowTbData.businessUnit,
-        accountHead: cashflowTbData.accountHead,
         netClosingBalance: sql<number>`sum(${cashflowTbData.netClosingBalance})`,
         count: sql<number>`count(*)`,
       }).from(cashflowTbData)
         .where(sql`(${cashflowTbData.projectName} IS NULL OR ${cashflowTbData.projectName} = '' OR ${cashflowTbData.entityStatus} IS NULL OR ${cashflowTbData.entityStatus} = '')`)
-        .groupBy(cashflowTbData.company, cashflowTbData.businessUnit, cashflowTbData.accountHead);
+        .groupBy(cashflowTbData.company, cashflowTbData.businessUnit);
 
-      const unmappedAccountHeads = [...new Set(unmappedCfAgg.map(r => r.accountHead).filter(Boolean))];
-      const unmappedCompanies = [...new Set(unmappedEntityAgg.map(r => r.company).filter(Boolean))];
+      const existingGroupings = await db.select().from(cashflowMappingGroupings);
+      const groupingsMap = new Map(existingGroupings.map(g => [g.accountHead, g]));
 
-      const cfTotalCount = unmappedCfAgg.reduce((s, r) => s + Number(r.count || 0), 0);
-      const entityTotalCount = unmappedEntityAgg.reduce((s, r) => s + Number(r.count || 0), 0);
+      const existingEntities = await db.select().from(cashflowMappingEntities);
+      const entityMap = new Map<string, typeof existingEntities[0]>();
+      for (const e of existingEntities) {
+        const key = (e.companyNameErp || e.companyName || "").toLowerCase().trim();
+        if (key) entityMap.set(key, e);
+      }
 
-      let idCounter = 0;
+      const cfTotalCount = unmappedGLs.reduce((s, r) => s + Number(r.count || 0), 0);
+      const entityTotalCount = unmappedEntities.reduce((s, r) => s + Number(r.count || 0), 0);
+
       res.json({
-        unmappedCashflow: {
+        unmappedGLs: {
           count: cfTotalCount,
-          items: unmappedCfAgg.slice(0, 500).map((r) => ({
-            id: ++idCounter,
-            company: r.company,
-            accountHead: r.accountHead,
-            cashflow: null,
-            cfHead: null,
-            projectName: null,
-            entityStatus: null,
-            netClosingBalance: Number(r.netClosingBalance) || 0,
-          })),
-          uniqueAccountHeads: unmappedAccountHeads,
+          items: unmappedGLs.map((r, i) => {
+            const existing = groupingsMap.get(r.accountHead || "");
+            return {
+              id: i + 1,
+              accountHead: r.accountHead,
+              group1: r.group1 || "",
+              group2: r.group2 || "",
+              group3: r.group3 || "",
+              group4: r.group4 || "",
+              group5: r.group5 || "",
+              cashflow: existing?.cashflow || "",
+              cfHead: existing?.cfHead || "",
+              activityType: existing?.activityType || "",
+              cfStatementLine: existing?.cfStatementLine || "",
+              plCategory: existing?.plCategory || "",
+              plSign: existing?.plSign ?? 0,
+              wipComponent: existing?.wipComponent || "",
+              wcBucket: existing?.wcBucket || "",
+              wcSign: existing?.wcSign ?? 0,
+              debtBucket: existing?.debtBucket || "",
+              kpiTag: existing?.kpiTag || "",
+              netClosingBalance: Number(r.netClosingBalance) || 0,
+              rowCount: Number(r.count) || 0,
+            };
+          }),
         },
-        unmappedEntity: {
+        unmappedEntities: {
           count: entityTotalCount,
-          items: unmappedEntityAgg.slice(0, 500).map((r) => ({
-            id: ++idCounter,
-            company: r.company,
-            accountHead: r.accountHead,
-            cashflow: null,
-            cfHead: null,
-            projectName: null,
-            entityStatus: null,
-            netClosingBalance: Number(r.netClosingBalance) || 0,
-          })),
-          uniqueCompanies: unmappedCompanies,
+          items: unmappedEntities.map((r, i) => {
+            const key = (r.company || "").toLowerCase().trim();
+            const existing = entityMap.get(key);
+            return {
+              id: i + 1,
+              company: r.company,
+              businessUnit: r.businessUnit || "",
+              structure: existing?.structure || "",
+              projectName: existing?.projectName || "",
+              entityStatus: existing?.entityStatus || "",
+              remarks: existing?.remarks || "",
+              netClosingBalance: Number(r.netClosingBalance) || 0,
+              rowCount: Number(r.count) || 0,
+            };
+          }),
         },
       });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/cashflow/update-gl-mapping", async (req, res) => {
+    try {
+      const updates: Array<{
+        accountHead: string;
+        cashflow?: string;
+        cfHead?: string;
+        activityType?: string;
+        cfStatementLine?: string;
+        plCategory?: string;
+        plSign?: number;
+        wipComponent?: string;
+        wcBucket?: string;
+        wcSign?: number;
+        debtBucket?: string;
+        kpiTag?: string;
+      }> = req.body.updates;
+      if (!Array.isArray(updates) || updates.length === 0) {
+        return res.status(400).json({ message: "No updates provided" });
+      }
+      let updated = 0;
+      let inserted = 0;
+      for (const u of updates) {
+        if (!u.accountHead) continue;
+        const existing = await db.select().from(cashflowMappingGroupings)
+          .where(eq(cashflowMappingGroupings.accountHead, u.accountHead))
+          .limit(1);
+        if (existing.length > 0) {
+          await db.update(cashflowMappingGroupings)
+            .set({
+              cashflow: u.cashflow || null,
+              cfHead: u.cfHead || null,
+              activityType: u.activityType || null,
+              cfStatementLine: u.cfStatementLine || null,
+              plCategory: u.plCategory || null,
+              plSign: u.plSign ?? 0,
+              wipComponent: u.wipComponent || null,
+              wcBucket: u.wcBucket || null,
+              wcSign: u.wcSign ?? 0,
+              debtBucket: u.debtBucket || null,
+              kpiTag: u.kpiTag || null,
+            })
+            .where(eq(cashflowMappingGroupings.accountHead, u.accountHead));
+          updated++;
+        } else {
+          await db.insert(cashflowMappingGroupings).values({
+            accountHead: u.accountHead,
+            cashflow: u.cashflow || null,
+            cfHead: u.cfHead || null,
+            activityType: u.activityType || null,
+            cfStatementLine: u.cfStatementLine || null,
+            plCategory: u.plCategory || null,
+            plSign: u.plSign ?? 0,
+            wipComponent: u.wipComponent || null,
+            wcBucket: u.wcBucket || null,
+            wcSign: u.wcSign ?? 0,
+            debtBucket: u.debtBucket || null,
+            kpiTag: u.kpiTag || null,
+          });
+          inserted++;
+        }
+      }
+      res.json({ message: `GL mapping updated: ${updated} updated, ${inserted} inserted`, updated, inserted });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/cashflow/update-entity-mapping", async (req, res) => {
+    try {
+      const updates: Array<{
+        company: string;
+        businessUnit?: string;
+        structure?: string;
+        projectName?: string;
+        entityStatus?: string;
+        remarks?: string;
+      }> = req.body.updates;
+      if (!Array.isArray(updates) || updates.length === 0) {
+        return res.status(400).json({ message: "No updates provided" });
+      }
+      let updated = 0;
+      let inserted = 0;
+      for (const u of updates) {
+        if (!u.company) continue;
+        const existing = await db.select().from(cashflowMappingEntities)
+          .where(eq(cashflowMappingEntities.companyNameErp, u.company))
+          .limit(1);
+        if (existing.length > 0) {
+          await db.update(cashflowMappingEntities)
+            .set({
+              structure: u.structure || null,
+              projectName: u.projectName || null,
+              entityStatus: u.entityStatus || null,
+              remarks: u.remarks || null,
+            })
+            .where(eq(cashflowMappingEntities.companyNameErp, u.company));
+          updated++;
+        } else {
+          await db.insert(cashflowMappingEntities).values({
+            companyName: u.company,
+            companyNameErp: u.company,
+            structure: u.structure || null,
+            businessUnit: u.businessUnit || null,
+            projectName: u.projectName || null,
+            entityStatus: u.entityStatus || null,
+            remarks: u.remarks || null,
+          });
+          inserted++;
+        }
+      }
+      res.json({ message: `Entity mapping updated: ${updated} updated, ${inserted} inserted`, updated, inserted });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/cashflow/download-mapping", async (_req, res) => {
+    try {
+      const groupings = await db.select().from(cashflowMappingGroupings).orderBy(asc(cashflowMappingGroupings.accountHead));
+      const entities = await db.select().from(cashflowMappingEntities).orderBy(asc(cashflowMappingEntities.companyNameErp));
+      const pastLosses = await db.select().from(cashflowPastLosses);
+
+      const wb = XLSX.utils.book_new();
+
+      const gSheet = XLSX.utils.json_to_sheet(groupings.map(g => ({
+        "Account Head": g.accountHead || "",
+        "Cashflow": g.cashflow || "",
+        "CF Head": g.cfHead || "",
+        "Activity Type": g.activityType || "",
+        "CF Statement Line": g.cfStatementLine || "",
+        "P&L Category": g.plCategory || "",
+        "P&L Sign": g.plSign ?? 0,
+        "WIP Component": g.wipComponent || "",
+        "WC Bucket": g.wcBucket || "",
+        "WC Sign": g.wcSign ?? 0,
+        "Debt Bucket": g.debtBucket || "",
+        "KPI Tag": g.kpiTag || "",
+      })));
+      gSheet["!cols"] = [
+        { wch: 40 }, { wch: 20 }, { wch: 30 }, { wch: 20 }, { wch: 25 },
+        { wch: 20 }, { wch: 10 }, { wch: 20 }, { wch: 20 }, { wch: 10 },
+        { wch: 20 }, { wch: 20 },
+      ];
+      XLSX.utils.book_append_sheet(wb, gSheet, "Groupings List");
+
+      const eSheet = XLSX.utils.json_to_sheet(entities.map(e => ({
+        "Company Name": e.companyName || "",
+        "Company Name (ERP)": e.companyNameErp || "",
+        "Structure": e.structure || "",
+        "Business Unit": e.businessUnit || "",
+        "Project Name": e.projectName || "",
+        "Entity Status": e.entityStatus || "",
+        "Remarks": e.remarks || "",
+      })));
+      eSheet["!cols"] = [{ wch: 40 }, { wch: 40 }, { wch: 20 }, { wch: 25 }, { wch: 30 }, { wch: 15 }, { wch: 30 }];
+      XLSX.utils.book_append_sheet(wb, eSheet, "Entity List");
+
+      const plSheet = XLSX.utils.json_to_sheet(pastLosses.map(r => ({
+        "Company": r.company || "",
+        "Project": r.project || "",
+        "Cashflow": r.cashflow || "",
+        "CF Head": r.cfHead || "",
+        "Amount": r.amount || 0,
+        "As Per FS": r.asPerFs || "",
+        "Losses Upto": r.lossesUpto || "",
+      })));
+      plSheet["!cols"] = [{ wch: 40 }, { wch: 30 }, { wch: 15 }, { wch: 30 }, { wch: 18 }, { wch: 15 }, { wch: 15 }];
+      XLSX.utils.book_append_sheet(wb, plSheet, "Past Losses");
+
+      const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", "attachment; filename=MIS_Mapping_File.xlsx");
+      res.send(buf);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

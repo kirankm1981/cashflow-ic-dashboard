@@ -320,6 +320,15 @@ export default function CashflowUpload() {
                   <Button
                     variant="outline"
                     size="sm"
+                    onClick={() => window.open("/api/cashflow/download-mapping", "_blank")}
+                    data-testid="button-download-mapping-file"
+                  >
+                    <Download className="w-3 h-3 mr-1" />
+                    Download
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => reprocessMutation.mutate()}
                     disabled={reprocessMutation.isPending}
                     data-testid="button-reprocess-cf"
