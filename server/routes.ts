@@ -2000,6 +2000,103 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/recon/rpt-summary", async (_req, res) => {
+    try {
+      const { db } = await import("./db");
+      const { icReconGlRawRows } = await import("@shared/schema");
+
+      const allRows = await db.select({ rowData: icReconGlRawRows.rowData }).from(icReconGlRawRows);
+
+      const summaryMap = new Map<string, { company: string; counterParty: string; transactionType: string; rptType: string; amount: number }>();
+
+      for (const row of allRows) {
+        const parsed = JSON.parse(row.rowData);
+        const glName = parsed["IC-RPT GL Name"] || "";
+        if (!isRptGlName(glName)) continue;
+
+        const company = parsed["Company"] || "";
+        const counterParty = parsed["IC Counter Party"] || "";
+        const rptType = glName.startsWith("IC_") ? "IC" : glName.startsWith("RPT_") ? "RPT" : "";
+        const prefix = rptType === "IC" ? "IC_" : "RPT_";
+        const transactionType = glName.startsWith(prefix) ? glName.substring(prefix.length) : glName;
+        const amount = Number(parsed["Net Amount"]) || 0;
+
+        const key = `${company}||${counterParty}||${transactionType}||${rptType}`;
+        if (summaryMap.has(key)) {
+          summaryMap.get(key)!.amount += amount;
+        } else {
+          summaryMap.set(key, { company, counterParty, transactionType, rptType, amount });
+        }
+      }
+
+      const data = Array.from(summaryMap.values()).sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
+      res.json({ data, total: data.length });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/recon/download-rpt-summary", async (_req, res) => {
+    try {
+      const { db } = await import("./db");
+      const { icReconGlRawRows } = await import("@shared/schema");
+
+      const allRows = await db.select({ rowData: icReconGlRawRows.rowData }).from(icReconGlRawRows);
+
+      const summaryMap = new Map<string, { company: string; counterParty: string; transactionType: string; rptType: string; amount: number }>();
+
+      for (const row of allRows) {
+        const parsed = JSON.parse(row.rowData);
+        const glName = parsed["IC-RPT GL Name"] || "";
+        if (!isRptGlName(glName)) continue;
+
+        const company = parsed["Company"] || "";
+        const counterParty = parsed["IC Counter Party"] || "";
+        const rptType = glName.startsWith("IC_") ? "IC" : glName.startsWith("RPT_") ? "RPT" : "";
+        const prefix = rptType === "IC" ? "IC_" : "RPT_";
+        const transactionType = glName.startsWith(prefix) ? glName.substring(prefix.length) : glName;
+        const amount = Number(parsed["Net Amount"]) || 0;
+
+        const key = `${company}||${counterParty}||${transactionType}||${rptType}`;
+        if (summaryMap.has(key)) {
+          summaryMap.get(key)!.amount += amount;
+        } else {
+          summaryMap.set(key, { company, counterParty, transactionType, rptType, amount });
+        }
+      }
+
+      const data = Array.from(summaryMap.values()).sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
+
+      if (data.length === 0) {
+        return res.status(404).json({ message: "No RPT summary data available." });
+      }
+
+      const headers = ["Company Name", "Counter Party Name", "Transaction Type", "RPT Type", "Amount"];
+      const sheetData: any[][] = [headers];
+      for (const row of data) {
+        sheetData.push([row.company, row.counterParty, row.transactionType, row.rptType, row.amount]);
+      }
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(sheetData);
+      ws["!cols"] = headers.map((h, i) => {
+        let max = h.length;
+        for (const r of sheetData.slice(1, 101)) {
+          const val = String(r[i] || "");
+          if (val.length > max) max = val.length;
+        }
+        return { wch: Math.min(max + 2, 40) };
+      });
+      XLSX.utils.book_append_sheet(wb, ws, "RPT Summary");
+      const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", "attachment; filename=IC_Recon_RPT_Summary.xlsx");
+      res.send(buf);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/recon/download-rpt-data", async (_req, res) => {
     try {
       const { db } = await import("./db");

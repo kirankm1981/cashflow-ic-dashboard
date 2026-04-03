@@ -420,22 +420,25 @@ export default function CashflowDashboard() {
                 <CardTitle className="text-sm">Cashflow Breakdown</CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={220}>
+                <ResponsiveContainer width="100%" height={280}>
                   <BarChart
                     data={cashflowByType.map(d => ({
                       ...d,
+                      absValue: Math.abs(d.value),
                       fill: CASHFLOW_COLORS[d.name] || "#94a3b8",
                     }))}
-                    layout="vertical"
+                    margin={{ top: 20, right: 16, left: 8, bottom: 8 }}
+                    barCategoryGap="30%"
                   >
-                    <XAxis type="number" tickFormatter={v => formatAmount(v, { ...cfFmt, decimals: 0 })} tick={{ fontSize: 10 }} />
-                    <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 11 }} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <ReferenceLine x={0} stroke="#888" />
-                    <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                    <CartesianGrid stroke={CHART_COLORS.grid} strokeDasharray="none" vertical={false} />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: CHART_COLORS.axisLabel, fontWeight: 500 }} dy={8} />
+                    <YAxis tickFormatter={v => formatAmount(v, { ...cfFmt, decimals: 0 })} axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: CHART_COLORS.axis }} width={56} />
+                    <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(0,0,0,0.03)" }} />
+                    <Bar dataKey="absValue" name="Amount" radius={[6, 6, 0, 0]} maxBarSize={72}>
                       {cashflowByType.map((d, i) => (
                         <Cell key={i} fill={CASHFLOW_COLORS[d.name] || "#94a3b8"} />
                       ))}
+                      <LabelList dataKey="value" position="top" formatter={(v: number) => v ? `₹${formatAmount(v, cfFmt)}` : ""} style={{ fontSize: 10, fontWeight: 600, fill: CHART_COLORS.axisLabel }} />
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
@@ -447,12 +450,12 @@ export default function CashflowDashboard() {
                 <CardTitle className="text-sm">Cashflow Proportions</CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={220}>
+                <ResponsiveContainer width="100%" height={280}>
                   <PieChart>
                     <Pie
                       data={cashflowByType.filter(d => Math.abs(d.value) > 0).map(d => ({ name: d.name, value: Math.abs(d.value), fill: CASHFLOW_COLORS[d.name] || "#94a3b8" }))}
-                      cx="50%" cy="50%" innerRadius={45} outerRadius={75} dataKey="value"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}
+                      cx="50%" cy="50%" innerRadius={50} outerRadius={90} dataKey="value"
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={true}
                     >
                       {cashflowByType.filter(d => Math.abs(d.value) > 0).map((d, i) => (
                         <Cell key={i} fill={CASHFLOW_COLORS[d.name] || "#94a3b8"} />
@@ -473,20 +476,21 @@ export default function CashflowDashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={Math.max(200, cashflowByProject.length * 50 + 40)}>
+              <ResponsiveContainer width="100%" height={300}>
                 <BarChart
                   data={cashflowByProject}
-                  layout="vertical"
-                  margin={{ top: 8, right: 16, left: 8, bottom: 8 }}
+                  margin={{ top: 16, right: 16, left: 8, bottom: 8 }}
+                  barCategoryGap="20%"
                   barGap={2}
                 >
-                  <XAxis type="number" tickFormatter={v => formatAmount(v, { ...cfFmt, decimals: 0 })} tick={{ fontSize: 10 }} />
-                  <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 10 }} />
-                  <Tooltip content={<CustomTooltip />} />
+                  <CartesianGrid stroke={CHART_COLORS.grid} strokeDasharray="none" vertical={false} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: CHART_COLORS.axisLabel, fontWeight: 500 }} interval={0} dy={8} />
+                  <YAxis tickFormatter={v => formatAmount(v, { ...cfFmt, decimals: 0 })} axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: CHART_COLORS.axis }} width={56} />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(0,0,0,0.03)" }} />
                   <Legend content={renderLegend} />
-                  <Bar dataKey="inflow" name="Inflow" fill={CHART_COLORS.inflow} radius={[0, 4, 4, 0]} maxBarSize={20} />
-                  <Bar dataKey="outflow" name="Outflow" fill={CHART_COLORS.outflow} radius={[0, 4, 4, 0]} maxBarSize={20} />
-                  <Bar dataKey="cashBank" name="Cash & Bank" fill={CHART_COLORS.cashBank} radius={[0, 4, 4, 0]} maxBarSize={20} />
+                  <Bar dataKey="inflow" name="Inflow" fill={CHART_COLORS.inflow} radius={[6, 6, 0, 0]} maxBarSize={36} />
+                  <Bar dataKey="outflow" name="Outflow" fill={CHART_COLORS.outflow} radius={[6, 6, 0, 0]} maxBarSize={36} />
+                  <Bar dataKey="cashBank" name="Cash & Bank" fill={CHART_COLORS.cashBank} radius={[6, 6, 0, 0]} maxBarSize={36} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
