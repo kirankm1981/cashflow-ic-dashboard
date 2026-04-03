@@ -33,7 +33,16 @@ function normalizeText(val: string): string {
        .replace(/[\u2013\u2014]/g, "-");
   s = s.replace(/\./g, " ");
   s = s.replace(/\s+/g, " ").trim();
-  return s.toUpperCase();
+  s = s.toUpperCase();
+  s = s.replace(/\bLIMITED LIABILITY PARTNERSHIP\b/g, "LLP")
+       .replace(/\bPRIVATE\b/g, "PVT")
+       .replace(/\bLIMITED\b/g, "LTD")
+       .replace(/\bCORPORATION\b/g, "CORP")
+       .replace(/\bCOMPANY\b/g, "CO")
+       .replace(/\bINFRASTRUCTURE\b/g, "INFRA")
+       .replace(/\bAND\b/g, "&");
+  s = s.replace(/\s+/g, " ").trim();
+  return s;
 }
 import { existsSync } from "fs";
 import bcrypt from "bcryptjs";
