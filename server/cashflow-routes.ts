@@ -234,15 +234,15 @@ export function registerCashflowRoutes(app: Express) {
     try {
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
-      const fileBuffer = fsModule.readFileSync(req.file.path);
-      cleanupFile(req.file.path);
-      const wb = XLSX.read(fileBuffer, { type: "buffer" });
+      const parsed = await parseFileInWorker(req.file.path, "mapping.xlsx", undefined, "parseMultiSheet");
+      const sheetData = parsed.sheets as Record<string, any[][]>;
+      const sheetNames = parsed.sheetNames as string[];
 
       const findSheet = (target: string) => {
-        const exact = wb.SheetNames.find(s => s === target);
+        const exact = sheetNames.find(s => s === target);
         if (exact) return exact;
         const lower = target.toLowerCase().replace(/\s+/g, "");
-        return wb.SheetNames.find(s => s.toLowerCase().replace(/\s+/g, "") === lower) || null;
+        return sheetNames.find(s => s.toLowerCase().replace(/\s+/g, "") === lower) || null;
       };
 
       let groupingsInserted = 0;
@@ -252,8 +252,7 @@ export function registerCashflowRoutes(app: Express) {
       const groupingsSheet = findSheet("Groupings List");
       if (groupingsSheet) {
         await db.delete(cashflowMappingGroupings);
-        const ws = wb.Sheets[groupingsSheet];
-        const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+        const rows: any[][] = sheetData[groupingsSheet];
         const rawHeaders = (rows[0] || []).map((h: any) => String(h || "").trim());
         const headers = rawHeaders.map(h => h.toLowerCase().replace(/[^a-z0-9]/g, ""));
         const colIdx = (...aliases: string[]) => {
@@ -312,8 +311,7 @@ export function registerCashflowRoutes(app: Express) {
       const entitySheet = findSheet("Entity List");
       if (entitySheet) {
         await db.delete(cashflowMappingEntities);
-        const ws = wb.Sheets[entitySheet];
-        const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+        const rows: any[][] = sheetData[entitySheet];
         const rawHeaders = (rows[0] || []).map((h: any) => String(h || "").trim());
         const headers = rawHeaders.map(h => h.toLowerCase().replace(/[^a-z0-9]/g, ""));
         const colIdx = (...aliases: string[]) => {
@@ -359,8 +357,7 @@ export function registerCashflowRoutes(app: Express) {
       const pastLossesSheet = findSheet("Past Losses");
       if (pastLossesSheet) {
         await db.delete(cashflowPastLosses);
-        const ws = wb.Sheets[pastLossesSheet];
-        const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+        const rows: any[][] = sheetData[pastLossesSheet];
         const rawHeaders = (rows[0] || []).map((h: any) => String(h || "").trim());
         const hdrs = rawHeaders.map(h => h.toLowerCase().replace(/[^a-z0-9]/g, ""));
         const colIdx = (...aliases: string[]) => {
@@ -419,7 +416,7 @@ export function registerCashflowRoutes(app: Express) {
 
       invalidateMappingCache();
 
-      console.log(`Mapping upload: sheets found = [${wb.SheetNames.join(", ")}]`);
+      console.log(`Mapping upload: sheets found = [${sheetNames.join(", ")}]`);
       console.log(`Matched: groupings=${groupingsSheet || "NOT FOUND"}, entity=${entitySheet || "NOT FOUND"}, pastLosses=${pastLossesSheet || "NOT FOUND"}`);
       console.log(`Inserted: ${groupingsInserted} groupings, ${entitiesInserted} entities, ${pastLossesInserted} past losses`);
 
@@ -428,7 +425,7 @@ export function registerCashflowRoutes(app: Express) {
         groupingsInserted,
         entitiesInserted,
         pastLossesInserted,
-        sheetsFound: wb.SheetNames,
+        sheetsFound: sheetNames,
       });
     } catch (error: any) {
       console.error("Cashflow mapping upload error:", error);

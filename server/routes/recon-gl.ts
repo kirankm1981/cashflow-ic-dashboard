@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { normalizeText } from "../utils/normalize";
 
 import { upload, cleanupFile } from "./upload";
+import { parseFileInWorker } from "../file-processor";
 import { randomUUID } from "crypto";
 import fs from "fs";
 import * as XLSX from "xlsx";
@@ -82,11 +83,7 @@ export function registerReconGlRoutes(app: Express) {
       const label = (req.body.label || "GL Dump").trim();
       const batchId = randomUUID();
 
-      const glFileBuffer = fs.readFileSync(req.file.path);
-      cleanupFile(req.file.path);
-      const wb = XLSX.read(glFileBuffer, { type: "buffer" });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const allRows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, range: 0, defval: "" });
+      const allRows: any[][] = await parseFileInWorker(req.file.path, "gl.xlsx", undefined, "parseTbSheet");
 
       let headerRowIdx = -1;
       for (let i = 0; i < Math.min(10, allRows.length); i++) {

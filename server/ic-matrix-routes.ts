@@ -8,6 +8,7 @@ import os from "os";
 import fs from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
+import { parseFileInWorker } from "./file-processor";
 
 const diskStorage = multer.diskStorage({
   destination: (_req, _file, cb) => {
@@ -65,11 +66,7 @@ export function registerIcMatrixRoutes(app: Express) {
       const userPeriodStart = (req.body.periodStart || "").trim();
       const userPeriodEnd = (req.body.periodEnd || "").trim();
 
-      const fileBuffer = fs.readFileSync(req.file.path);
-      cleanupFile(req.file.path);
-      const wb = XLSX.read(fileBuffer, { type: "buffer" });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const allRows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, range: 0, defval: "" });
+      const allRows: any[][] = await parseFileInWorker(req.file.path, "tb.xlsx", undefined, "parseTbSheet");
 
       const enterpriseRaw = String(allRows[1]?.[1] || allRows[1]?.[0] || "").trim();
       const enterpriseCleaned = enterpriseRaw.replace(/^(Enterprise|Company)\s*:\s*/i, "").trim();
@@ -193,17 +190,15 @@ export function registerIcMatrixRoutes(app: Express) {
     try {
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
-      const fileBuffer = fs.readFileSync(req.file.path);
-      cleanupFile(req.file.path);
-      const wb = XLSX.read(fileBuffer, { type: "buffer" });
+      const parsed = await parseFileInWorker(req.file.path, "mapping.xlsx", undefined, "parseMultiSheet");
+      const sheetData = parsed.sheets as Record<string, any[][]>;
 
       let glCount = 0;
       let companyCount = 0;
 
-      const glSheet = wb.Sheets["IC-GL-Mapping"];
-      if (glSheet) {
+      if (sheetData["IC-GL-Mapping"]) {
         await db.delete(icMatrixMappingGl);
-        const glRows: any[][] = XLSX.utils.sheet_to_json(glSheet, { header: 1, range: 0, defval: "" });
+        const glRows: any[][] = sheetData["IC-GL-Mapping"];
         const glDataRows = glRows.slice(1).filter(r => r[0] && String(r[0]).trim() !== "");
 
         const batchSize = 500;
@@ -221,10 +216,9 @@ export function registerIcMatrixRoutes(app: Express) {
         }
       }
 
-      const ccSheet = wb.Sheets["Company_Code"];
-      if (ccSheet) {
+      if (sheetData["Company_Code"]) {
         await db.delete(icMatrixMappingCompany);
-        const ccRows: any[][] = XLSX.utils.sheet_to_json(ccSheet, { header: 1, range: 0, defval: "" });
+        const ccRows: any[][] = sheetData["Company_Code"];
         const ccDataRows = ccRows.slice(1).filter(r => r[1] && String(r[1]).trim() !== "");
 
         const batchSize = 500;
@@ -244,7 +238,7 @@ export function registerIcMatrixRoutes(app: Express) {
         fileName: req.file.originalname,
         glMappings: glCount,
         companyMappings: companyCount,
-        sheets: wb.SheetNames,
+        sheets: parsed.sheetNames,
       });
     } catch (error: any) {
       console.error("Mapping upload error:", error);

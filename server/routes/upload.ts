@@ -302,11 +302,7 @@ export function registerUploadRoutes(app: Express) {
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      const reconFileBuffer = fs.readFileSync(req.file.path);
-      cleanupFile(req.file.path);
-      const wb = XLSX.read(reconFileBuffer, { type: "buffer" });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows: any[] = XLSX.utils.sheet_to_json(ws);
+      const rows = await parseFileInWorker(req.file.path, req.file.originalname);
 
       const groupedByRecId = new Map<string, number[]>();
       for (const row of rows) {

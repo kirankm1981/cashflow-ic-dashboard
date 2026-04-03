@@ -87,6 +87,15 @@ parentPort?.on("message", (msg) => {
         result = XLSX.utils.sheet_to_json(ws, { header: 1, range: 0, defval: "" });
         break;
       }
+      case "parseMultiSheet": {
+        const wb = XLSX.read(buf, { type: "buffer" });
+        const sheets: Record<string, any[][]> = {};
+        for (const name of wb.SheetNames) {
+          sheets[name] = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, range: 0, defval: "" });
+        }
+        result = { sheetNames: wb.SheetNames, sheets };
+        break;
+      }
       default:
         throw new Error(`Unknown action: ${action}`);
     }
