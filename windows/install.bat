@@ -54,7 +54,10 @@ if "%PG_PASS%"=="" (
 for /f "usebackq delims=" %%E in (`powershell -NoProfile -Command "$p=$Env:PG_PASS; [Uri]::EscapeDataString($p)"`) do set "PG_PASS_ENCODED=%%E"
 
 echo DATABASE_URL=postgresql://%PG_USER%:%PG_PASS_ENCODED%@%PG_HOST%:%PG_PORT%/%PG_DB%> .env
-echo SESSION_SECRET=cashflow-ic-prod-%RANDOM%%RANDOM%%RANDOM%>> .env
+for /f "usebackq delims=" %%S in (`powershell -NoProfile -Command ^
+  "[Convert]::ToBase64String((1..32 | %%{[byte][random]::Next(0,256)}))"`) ^
+  do set "SESSION_SECRET=%%S"
+echo SESSION_SECRET=%SESSION_SECRET%>> .env
 echo PORT=3000>> .env
 echo NODE_ENV=production>> .env
 
