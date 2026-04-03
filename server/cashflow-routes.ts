@@ -9,7 +9,7 @@ import {
   cashflowMappingEntities,
   cashflowPastLosses,
 } from "@shared/schema";
-import { eq, sql, asc } from "drizzle-orm";
+import { eq, sql, asc, inArray, and } from "drizzle-orm";
 import os from "os";
 import fsModule from "fs";
 import pathModule from "path";
@@ -747,13 +747,22 @@ export function registerCashflowRoutes(app: Express) {
 
   app.get("/api/cashflow/dashboard-data", async (_req, res) => {
     try {
-      const entityMappings = await db.select().from(cashflowMappingEntities);
-      const entityCompanyKeys = new Set(entityMappings.map(e => normalizeText(e.companyNameErp || e.companyName || "")).filter(Boolean));
+      const [entityMappings, files] = await Promise.all([
+        db.select().from(cashflowMappingEntities),
+        db.select().from(cashflowTbFiles),
+      ]);
 
-      const files = await db.select().from(cashflowTbFiles);
+      const validCompanies = entityMappings
+        .map(e => (e.companyNameErp || e.companyName || "").trim())
+        .filter(Boolean);
+
+      if (validCompanies.length === 0) {
+        return res.json({ rows: [], companies: [], projects: [], periods: [] });
+      }
+
       const fileMap = new Map(files.map(f => [f.id, f]));
 
-      const allData = await db.select({
+      const aggRows = await db.select({
         tbFileId: cashflowTbData.tbFileId,
         company: cashflowTbData.company,
         projectName: cashflowTbData.projectName,
@@ -764,35 +773,79 @@ export function registerCashflowRoutes(app: Express) {
         activityType: cashflowTbData.activityType,
         cfStatementLine: cashflowTbData.cfStatementLine,
         plCategory: cashflowTbData.plCategory,
-        plSign: cashflowTbData.plSign,
+        plSign: sql<number>`max(pl_sign)`,
         wipComponent: cashflowTbData.wipComponent,
         wcBucket: cashflowTbData.wcBucket,
-        wcSign: cashflowTbData.wcSign,
+        wcSign: sql<number>`max(wc_sign)`,
         debtBucket: cashflowTbData.debtBucket,
         kpiTag: cashflowTbData.kpiTag,
-        openingDebit: cashflowTbData.openingDebit,
-        openingCredit: cashflowTbData.openingCredit,
-        periodDebit: cashflowTbData.periodDebit,
-        periodCredit: cashflowTbData.periodCredit,
-        closingDebit: cashflowTbData.closingDebit,
-        closingCredit: cashflowTbData.closingCredit,
-        netOpeningBalance: cashflowTbData.netOpeningBalance,
-        netClosingBalance: cashflowTbData.netClosingBalance,
-      }).from(cashflowTbData);
+        openingDebit: sql<number>`coalesce(sum(opening_debit), 0)`,
+        openingCredit: sql<number>`coalesce(sum(opening_credit), 0)`,
+        periodDebit: sql<number>`coalesce(sum(period_debit), 0)`,
+        periodCredit: sql<number>`coalesce(sum(period_credit), 0)`,
+        closingDebit: sql<number>`coalesce(sum(closing_debit), 0)`,
+        closingCredit: sql<number>`coalesce(sum(closing_credit), 0)`,
+        netOpeningBalance: sql<number>`coalesce(sum(net_opening_balance), 0)`,
+        netClosingBalance: sql<number>`coalesce(sum(net_closing_balance), 0)`,
+      }).from(cashflowTbData)
+        .where(inArray(cashflowTbData.company, validCompanies))
+        .groupBy(
+          cashflowTbData.tbFileId,
+          cashflowTbData.company,
+          cashflowTbData.projectName,
+          cashflowTbData.entityStatus,
+          cashflowTbData.accountHead,
+          cashflowTbData.cashflow,
+          cashflowTbData.cfHead,
+          cashflowTbData.activityType,
+          cashflowTbData.cfStatementLine,
+          cashflowTbData.plCategory,
+          cashflowTbData.wipComponent,
+          cashflowTbData.wcBucket,
+          cashflowTbData.debtBucket,
+          cashflowTbData.kpiTag,
+        );
 
-      const rows = allData
-        .filter(r => entityCompanyKeys.has(normalizeText(r.company || "")))
-        .map(r => {
-          const f = fileMap.get(r.tbFileId);
-          return {
-            ...r,
-            periodTag: f?.period || null,
-            enterprise: f?.enterprise || null,
-            openingNet: (r.openingDebit || 0) - (r.openingCredit || 0),
-            periodNet: (r.periodDebit || 0) - (r.periodCredit || 0),
-            closingNet: (r.closingDebit || 0) - (r.closingCredit || 0),
-          };
-        });
+      const rows = aggRows.map(r => {
+        const f = fileMap.get(r.tbFileId);
+        const od = Number(r.openingDebit) || 0;
+        const oc = Number(r.openingCredit) || 0;
+        const pd = Number(r.periodDebit) || 0;
+        const pc = Number(r.periodCredit) || 0;
+        const cd = Number(r.closingDebit) || 0;
+        const cc = Number(r.closingCredit) || 0;
+        return {
+          tbFileId: r.tbFileId,
+          company: r.company,
+          projectName: r.projectName,
+          entityStatus: r.entityStatus,
+          accountHead: r.accountHead,
+          cashflow: r.cashflow,
+          cfHead: r.cfHead,
+          activityType: r.activityType,
+          cfStatementLine: r.cfStatementLine,
+          plCategory: r.plCategory,
+          plSign: Number(r.plSign) || 0,
+          wipComponent: r.wipComponent,
+          wcBucket: r.wcBucket,
+          wcSign: Number(r.wcSign) || 0,
+          debtBucket: r.debtBucket,
+          kpiTag: r.kpiTag,
+          openingDebit: od,
+          openingCredit: oc,
+          periodDebit: pd,
+          periodCredit: pc,
+          closingDebit: cd,
+          closingCredit: cc,
+          netOpeningBalance: Number(r.netOpeningBalance) || 0,
+          netClosingBalance: Number(r.netClosingBalance) || 0,
+          periodTag: f?.period || null,
+          enterprise: f?.enterprise || null,
+          openingNet: od - oc,
+          periodNet: pd - pc,
+          closingNet: cd - cc,
+        };
+      });
 
       const companies = [...new Set(rows.map(r => r.company).filter(Boolean))].sort();
       const projects = [...new Set(rows.map(r => r.projectName).filter(Boolean))].sort();
