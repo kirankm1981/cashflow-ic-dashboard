@@ -10,18 +10,7 @@ import { parseFileInWorker } from "../file-processor";
 import { randomUUID } from "crypto";
 import fs from "fs";
 import * as XLSX from "xlsx";
-
-function extractChequeNo(t: any): string | null {
-  try {
-    const rawData = t.rawRowData ? JSON.parse(t.rawRowData) : {};
-    for (const [k, v] of Object.entries(rawData)) {
-      if (/cheque|chq|check/i.test(k) && /no|num|number/i.test(k) && v) {
-        return String(v).trim();
-      }
-    }
-  } catch {}
-  return null;
-}
+import { extractChequeNo } from "../utils/extract-cheque";
 
 export function registerReconGlRoutes(app: Express) {
   app.get("/api/recon/gl-files", async (_req, res) => {
@@ -377,7 +366,7 @@ export function registerReconGlRoutes(app: Express) {
             docDate: t.docDate,
             narration: t.narration,
             icGl: t.icGl || null,
-            chequeNo: extractChequeNo(t),
+            chequeNo: extractChequeNo(t.rawRowData),
             netAmount: 0,
             transactionCount: 0,
           });
@@ -388,7 +377,7 @@ export function registerReconGlRoutes(app: Express) {
         if (!group.docDate && t.docDate) group.docDate = t.docDate;
         if (!group.narration && t.narration) group.narration = t.narration;
         if (!group.icGl && t.icGl) group.icGl = t.icGl;
-        if (!group.chequeNo) group.chequeNo = extractChequeNo(t);
+        if (!group.chequeNo) group.chequeNo = extractChequeNo(t.rawRowData);
       }
 
       const summarizedLineEntries: InsertSummarizedLine[] = Array.from(groupMap.values())
