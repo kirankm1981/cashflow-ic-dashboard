@@ -45,9 +45,6 @@ function normalizeText(val: string): string {
   s = s.replace(/\bLIMITED LIABILITY PARTNERSHIP\b/g, "LLP")
        .replace(/\bPRIVATE\b/g, "PVT")
        .replace(/\bLIMITED\b/g, "LTD")
-       .replace(/\bCORPORATION\b/g, "CORP")
-       .replace(/\bCOMPANY\b/g, "CO")
-       .replace(/\bINFRASTRUCTURE\b/g, "INFRA")
        .replace(/\bAND\b/g, "&");
   s = s.replace(/\s+/g, " ").trim();
   return s;
