@@ -45,11 +45,32 @@ If Not dbOk Then
     WScript.Quit 1
 End If
 
+Dim logFile
+logFile = strPath & "\logs\server.log"
+
+' Create logs directory if it doesn't exist
+If Not fso.FolderExists(strPath & "\logs") Then
+    fso.CreateFolder(strPath & "\logs")
+End If
+
+' Truncate log file if it exceeds 50MB
+If fso.FileExists(logFile) Then
+    Dim logSize
+    logSize = fso.GetFile(logFile).Size
+    If logSize > 52428800 Then
+        Dim truncFile
+        Set truncFile = fso.CreateTextFile(logFile, True)
+        truncFile.WriteLine "[" & Now & "] Log truncated (was " & FormatNumber(logSize / 1048576, 1) & " MB)"
+        truncFile.Close
+    End If
+End If
+
 ' Now start the server via PM2 (auto-restart on crash)
 WshShell.Run "cmd /c cd /d """ & strPath & _
     """ && set NODE_ENV=production && if not exist dist\index.cjs " & _
     "(npx tsx script/build.ts) && pm2 start dist/index.cjs " & _
-    "--name cashflow-ic --restart-delay 3000 --max-restarts 10", 0, True
+    "--name cashflow-ic --restart-delay 3000 --max-restarts 10 " & _
+    "--output """ & logFile & """ --error """ & logFile & """", 0, True
 WScript.Sleep 3000   ' initial wait for node to start
 
 Dim attempts, serverUp
