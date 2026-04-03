@@ -630,19 +630,21 @@ export function registerReconGlRoutes(app: Express) {
           sqlTag`row_data->>'IC Txn Type'`,
         );
 
-      const data = summaryRows.map(r => {
-        const gl = (r.glName || "") as string;
-        return {
-          company: r.companyCode || "",
-          companyName: r.companyName || "",
-          counterParty: r.counterPartyCode || "",
-          counterPartyName: r.counterPartyName || "",
-          transactionType: r.icTxnType || "",
-          rptType: gl.startsWith("IC_") ? "IC" : gl.startsWith("RPT_") ? "RPT" : "",
-          amount: Number(r.totalNet) || 0,
-          rowCount: Number(r.rowCount) || 0,
-        };
-      });
+      const data = summaryRows
+        .map(r => {
+          const gl = (r.glName || "") as string;
+          return {
+            company: r.companyCode || "",
+            companyName: r.companyName || "",
+            counterParty: r.counterPartyCode || "",
+            counterPartyName: r.counterPartyName || "",
+            transactionType: r.icTxnType || "",
+            rptType: gl.startsWith("IC_") ? "IC" : gl.startsWith("RPT_") ? "RPT" : "",
+            amount: Number(r.totalNet) || 0,
+            rowCount: Number(r.rowCount) || 0,
+          };
+        })
+        .filter(r => r.amount !== 0);
 
       res.json({ data, total: data.length });
     } catch (error: any) {
