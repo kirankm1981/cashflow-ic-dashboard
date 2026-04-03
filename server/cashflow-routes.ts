@@ -33,6 +33,58 @@ function cleanupFile(filePath: string) {
 
 import { normalizeText } from "./utils/normalize";
 
+type GroupingInfo = {
+  cashflow: string | null; cfHead: string | null;
+  activityType: string | null; cfStatementLine: string | null;
+  plCategory: string | null; plSign: number;
+  wipComponent: string | null; wcBucket: string | null; wcSign: number;
+  debtBucket: string | null; kpiTag: string | null;
+};
+
+let mappingCache: {
+  groupings: { map: Map<string, GroupingInfo>; raw: any[] } | null;
+  entities: { mappings: any[]; companyKeys: Set<string> } | null;
+  lastLoaded: number;
+} = { groupings: null, entities: null, lastLoaded: 0 };
+
+const MAPPING_CACHE_TTL = 10 * 60 * 1000;
+
+function invalidateMappingCache() {
+  mappingCache.groupings = null;
+  mappingCache.entities = null;
+  mappingCache.lastLoaded = 0;
+}
+
+async function getGroupingCache() {
+  if (mappingCache.groupings && (Date.now() - mappingCache.lastLoaded) < MAPPING_CACHE_TTL) {
+    return mappingCache.groupings;
+  }
+  const groupingMappings = await db.select().from(cashflowMappingGroupings);
+  const map = new Map<string, GroupingInfo>();
+  for (const g of groupingMappings) {
+    map.set(normalizeText(g.accountHead || ""), {
+      cashflow: g.cashflow, cfHead: g.cfHead,
+      activityType: g.activityType || null, cfStatementLine: g.cfStatementLine || null,
+      plCategory: g.plCategory || null, plSign: g.plSign || 0,
+      wipComponent: g.wipComponent || null, wcBucket: g.wcBucket || null, wcSign: g.wcSign || 0,
+      debtBucket: g.debtBucket || null, kpiTag: g.kpiTag || null,
+    });
+  }
+  mappingCache.groupings = { map, raw: groupingMappings };
+  mappingCache.lastLoaded = Date.now();
+  return mappingCache.groupings;
+}
+
+async function getEntityCache() {
+  if (mappingCache.entities && (Date.now() - mappingCache.lastLoaded) < MAPPING_CACHE_TTL) {
+    return mappingCache.entities;
+  }
+  const entityMappings = await db.select().from(cashflowMappingEntities);
+  const companyKeys = new Set(entityMappings.map(e => normalizeText(e.companyNameErp || e.companyName || "")).filter(Boolean));
+  mappingCache.entities = { mappings: entityMappings, companyKeys };
+  return mappingCache.entities;
+}
+
 function parseNum(v: any): number {
   if (v === null || v === undefined || v === "") return 0;
   const n = Number(v);
@@ -76,30 +128,13 @@ export function registerCashflowRoutes(app: Express) {
       const rows = isTotal ? dataRows.slice(0, -1) : dataRows;
       const validRows = rows.filter(r => r[0] && String(r[0]).trim() !== "");
 
-      const groupingMappings = await db.select().from(cashflowMappingGroupings);
-      const entityMappings = await db.select().from(cashflowMappingEntities);
-
-      type GroupingInfo = {
-        cashflow: string | null; cfHead: string | null;
-        activityType: string | null; cfStatementLine: string | null;
-        plCategory: string | null; plSign: number;
-        wipComponent: string | null; wcBucket: string | null; wcSign: number;
-        debtBucket: string | null; kpiTag: string | null;
-      };
-      const groupingMap = new Map<string, GroupingInfo>();
-      for (const g of groupingMappings) {
-        groupingMap.set(normalizeText(g.accountHead || ""), {
-          cashflow: g.cashflow, cfHead: g.cfHead,
-          activityType: g.activityType || null, cfStatementLine: g.cfStatementLine || null,
-          plCategory: g.plCategory || null, plSign: g.plSign || 0,
-          wipComponent: g.wipComponent || null, wcBucket: g.wcBucket || null, wcSign: g.wcSign || 0,
-          debtBucket: g.debtBucket || null, kpiTag: g.kpiTag || null,
-        });
-      }
+      const groupingCached = await getGroupingCache();
+      const groupingMap = groupingCached.map;
+      const entityCached = await getEntityCache();
 
       const companyStructureMap = new Map<string, string | null>();
       const buMap = new Map<string, { projectName: string | null; entityStatus: string | null }>();
-      for (const e of entityMappings) {
+      for (const e of entityCached.mappings) {
         const compKey = normalizeText(e.companyNameErp || e.companyName || "");
         if (compKey && e.structure && !companyStructureMap.has(compKey)) {
           companyStructureMap.set(compKey, e.structure);
@@ -385,6 +420,8 @@ export function registerCashflowRoutes(app: Express) {
         }
       }
 
+      invalidateMappingCache();
+
       console.log(`Mapping upload: sheets found = [${wb.SheetNames.join(", ")}]`);
       console.log(`Matched: groupings=${groupingsSheet || "NOT FOUND"}, entity=${entitySheet || "NOT FOUND"}, pastLosses=${pastLossesSheet || "NOT FOUND"}`);
       console.log(`Inserted: ${groupingsInserted} groupings, ${entitiesInserted} entities, ${pastLossesInserted} past losses`);
@@ -437,6 +474,7 @@ export function registerCashflowRoutes(app: Express) {
       await db.delete(cashflowMappingGroupings);
       await db.delete(cashflowMappingEntities);
       await db.delete(cashflowPastLosses);
+      invalidateMappingCache();
       res.json({ message: "Mapping data cleared" });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -445,13 +483,13 @@ export function registerCashflowRoutes(app: Express) {
 
   app.get("/api/cashflow/mapping-summary", async (_req, res) => {
     try {
-      const groupings = await db.select().from(cashflowMappingGroupings);
-      const entities = await db.select().from(cashflowMappingEntities);
+      const groupingCached = await getGroupingCache();
+      const entityCached = await getEntityCache();
       const pastLosses = await db.select().from(cashflowPastLosses);
       res.json({
-        hasMapping: groupings.length > 0 || entities.length > 0,
-        groupings: groupings.length,
-        entities: entities.length,
+        hasMapping: groupingCached.raw.length > 0 || entityCached.mappings.length > 0,
+        groupings: groupingCached.raw.length,
+        entities: entityCached.mappings.length,
         pastLosses: pastLosses.length,
       });
     } catch (error: any) {
@@ -478,30 +516,13 @@ export function registerCashflowRoutes(app: Express) {
 
   app.post("/api/cashflow/reprocess", async (_req, res) => {
     try {
-      const groupingMappings = await db.select().from(cashflowMappingGroupings);
-      const entityMappings = await db.select().from(cashflowMappingEntities);
-
-      type GroupingInfo2 = {
-        cashflow: string | null; cfHead: string | null;
-        activityType: string | null; cfStatementLine: string | null;
-        plCategory: string | null; plSign: number;
-        wipComponent: string | null; wcBucket: string | null; wcSign: number;
-        debtBucket: string | null; kpiTag: string | null;
-      };
-      const groupingMap = new Map<string, GroupingInfo2>();
-      for (const g of groupingMappings) {
-        groupingMap.set(normalizeText(g.accountHead || ""), {
-          cashflow: g.cashflow, cfHead: g.cfHead,
-          activityType: g.activityType || null, cfStatementLine: g.cfStatementLine || null,
-          plCategory: g.plCategory || null, plSign: g.plSign || 0,
-          wipComponent: g.wipComponent || null, wcBucket: g.wcBucket || null, wcSign: g.wcSign || 0,
-          debtBucket: g.debtBucket || null, kpiTag: g.kpiTag || null,
-        });
-      }
+      const groupingCached = await getGroupingCache();
+      const groupingMap = groupingCached.map;
+      const entityCached = await getEntityCache();
 
       const companyStructureMap = new Map<string, string | null>();
       const buMap = new Map<string, { projectName: string | null; entityStatus: string | null }>();
-      for (const e of entityMappings) {
+      for (const e of entityCached.mappings) {
         const compKey = normalizeText(e.companyNameErp || e.companyName || "");
         if (compKey && e.structure && !companyStructureMap.has(compKey)) {
           companyStructureMap.set(compKey, e.structure);
@@ -593,8 +614,8 @@ export function registerCashflowRoutes(app: Express) {
 
   app.get("/api/cashflow/download-mapped-tb", async (_req, res) => {
     try {
-      const entityMappings = await db.select().from(cashflowMappingEntities);
-      const entityKeys = new Set(entityMappings.map(e => normalizeText(e.companyNameErp || "")));
+      const entityCached = await getEntityCache();
+      const entityKeys = entityCached.companyKeys;
 
       const allRows = await db.select().from(cashflowTbData).orderBy(asc(cashflowTbData.id));
       const mappedRows = allRows.filter(r => entityKeys.has(normalizeText(r.company || "")));
@@ -649,10 +670,10 @@ export function registerCashflowRoutes(app: Express) {
 
   app.get("/api/cashflow/unified-data", async (_req, res) => {
     try {
-      const entityMappings = await db.select().from(cashflowMappingEntities);
-      const entityCompanyKeys = new Set(entityMappings.map(e => normalizeText(e.companyNameErp || e.companyName || "")).filter(Boolean));
+      const entityCached = await getEntityCache();
+      const entityCompanyKeys = entityCached.companyKeys;
       const buEntityMap = new Map<string, { projectName: string | null; entityStatus: string | null }>();
-      for (const e of entityMappings) {
+      for (const e of entityCached.mappings) {
         const buKey = normalizeText(e.businessUnit || "");
         if (buKey) {
           buEntityMap.set(buKey, {
@@ -724,12 +745,12 @@ export function registerCashflowRoutes(app: Express) {
 
   app.get("/api/cashflow/dashboard-data", async (_req, res) => {
     try {
-      const [entityMappings, files] = await Promise.all([
-        db.select().from(cashflowMappingEntities),
+      const [entityCached, files] = await Promise.all([
+        getEntityCache(),
         db.select().from(cashflowTbFiles),
       ]);
 
-      const validCompanies = entityMappings
+      const validCompanies = entityCached.mappings
         .map(e => (e.companyNameErp || e.companyName || "").trim())
         .filter(Boolean);
 
@@ -836,8 +857,8 @@ export function registerCashflowRoutes(app: Express) {
 
   app.get("/api/cashflow/download-detailed", async (_req, res) => {
     try {
-      const entityMappings = await db.select().from(cashflowMappingEntities);
-      const entityCompanyKeys = new Set(entityMappings.map(e => normalizeText(e.companyNameErp || e.companyName || "")).filter(Boolean));
+      const entityCached = await getEntityCache();
+      const entityCompanyKeys = entityCached.companyKeys;
 
       const tbAgg = await db.select({
         company: cashflowTbData.company,
@@ -1026,12 +1047,12 @@ export function registerCashflowRoutes(app: Express) {
         .where(sql`(${cashflowTbData.projectName} IS NULL OR ${cashflowTbData.projectName} = '' OR ${cashflowTbData.entityStatus} IS NULL OR ${cashflowTbData.entityStatus} = '')`)
         .groupBy(cashflowTbData.company, cashflowTbData.businessUnit);
 
-      const existingGroupings = await db.select().from(cashflowMappingGroupings);
-      const groupingsMap = new Map(existingGroupings.map(g => [g.accountHead, g]));
+      const groupingCached = await getGroupingCache();
+      const groupingsMap = new Map(groupingCached.raw.map(g => [g.accountHead, g]));
 
-      const existingEntities = await db.select().from(cashflowMappingEntities);
-      const entityMap = new Map<string, typeof existingEntities[0]>();
-      for (const e of existingEntities) {
+      const entityCached = await getEntityCache();
+      const entityMap = new Map<string, typeof entityCached.mappings[0]>();
+      for (const e of entityCached.mappings) {
         const key = (e.companyNameErp || e.companyName || "").toLowerCase().trim();
         if (key) entityMap.set(key, e);
       }
@@ -1153,6 +1174,7 @@ export function registerCashflowRoutes(app: Express) {
           inserted++;
         }
       }
+      invalidateMappingCache();
       res.json({ message: `GL mapping updated: ${updated} updated, ${inserted} inserted`, updated, inserted });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -1202,6 +1224,7 @@ export function registerCashflowRoutes(app: Express) {
           inserted++;
         }
       }
+      invalidateMappingCache();
       res.json({ message: `Entity mapping updated: ${updated} updated, ${inserted} inserted`, updated, inserted });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
