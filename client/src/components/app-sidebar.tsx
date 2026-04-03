@@ -41,15 +41,11 @@ import { useAuth } from "@/hooks/use-auth";
 function getIcReconItems(isViewer: boolean) {
   const items = [
     { title: "Dashboard", url: "/recon", icon: LayoutDashboard },
-    ...(!isViewer ? [{ title: "Upload", url: "/recon/upload", icon: Upload }] : []),
     { title: "RPT Data", url: "/recon/rpt-data", icon: Database },
+    ...(!isViewer ? [{ title: "Upload", url: "/recon/upload", icon: Upload }] : []),
   ];
   return items;
 }
-
-const icReconAdminItems = [
-  { title: "Rules", url: "/recon/rules", icon: Settings2 },
-];
 
 function getCashflowItems(isViewer: boolean) {
   const items = [
@@ -237,7 +233,7 @@ export function AppSidebar() {
             <NavGroup
               label="IC Recon"
               icon={GitCompare}
-              items={isAdmin ? [...getIcReconItems(isViewer), ...icReconAdminItems] : getIcReconItems(isViewer)}
+              items={getIcReconItems(isViewer)}
               defaultOpen={isReconActive}
               location={location}
               testId="group-ic-recon"
@@ -255,6 +251,14 @@ export function AppSidebar() {
               </SidebarGroupLabel>
               <SidebarGroupContent className="pl-3">
                 <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild data-active={location === "/recon/rules"}>
+                      <Link href="/recon/rules" data-testid="link-recon-rules">
+                        <Settings2 className="w-4 h-4" />
+                        <span>IC Recon Rule Engine</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild data-active={location === "/admin/users"}>
                       <Link href="/admin/users" data-testid="link-admin-users">
