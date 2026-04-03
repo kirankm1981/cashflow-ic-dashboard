@@ -4,7 +4,7 @@ import { icReconGlFiles, icReconGlRawRows, icMatrixMappingGl, icMatrixMappingCom
 import type { InsertTransaction, InsertSummarizedLine } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { normalizeText } from "../utils/normalize";
-import { runReconciliation } from "../reconciliation-engine";
+
 import { upload, cleanupFile } from "./upload";
 import { randomUUID } from "crypto";
 import fs from "fs";
@@ -436,13 +436,6 @@ export function registerReconGlRoutes(app: Express) {
         totalTransactions: totalUniqueTransactions,
         icRecords: inserted.length,
         summarizedLines: insertedLines.length,
-        reconciliation: null,
-      });
-
-      setImmediate(() => {
-        runReconciliation()
-          .then(r => console.log(`[Auto-Recon] Complete: ${r.totalMatched} matched`))
-          .catch(e => console.error(`[Auto-Recon] Error: ${e.message}`));
       });
     } catch (error: any) {
       console.error("GL dump upload error:", error);
