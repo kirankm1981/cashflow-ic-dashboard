@@ -369,8 +369,8 @@ export default function CashflowDashboard() {
           </div>
         )}
 
-        <TabsContent value="dashboard" className="space-y-4">
-          <div className="flex items-center gap-2 flex-wrap" data-testid="status-filter-buttons">
+        {(activeTab === "dashboard" || activeTab === "detailed") && (
+          <div className="flex items-center gap-2 flex-wrap mt-3" data-testid="status-filter-buttons">
             {STATUS_OPTIONS.map(status => (
               <Button
                 key={status}
@@ -383,7 +383,9 @@ export default function CashflowDashboard() {
               </Button>
             ))}
           </div>
+        )}
 
+        <TabsContent value="dashboard" className="space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {([
               { label: "Total Inflow", value: totalInflow, icon: TrendingUp, flow: "inflow" as FlowColor, testId: "card-total-inflows" },
@@ -617,56 +619,56 @@ export default function CashflowDashboard() {
 
         <TabsContent value="pastLosses" className="space-y-4">
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-lg">Past Losses</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    {pastLossesData?.length || 0} records from mapping file
-                  </p>
+                  <CardTitle className="text-sm">Past Losses</CardTitle>
                 </div>
-                {pastLossesData && pastLossesData.length > 0 && (
-                  <Button variant="outline" size="sm" onClick={() => window.open("/api/cashflow/download-past-losses", "_blank")} data-testid="button-download-past-losses">
-                    <Download className="w-4 h-4 mr-1" />
-                    Download
-                  </Button>
-                )}
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="text-[10px]">{pastLossesData?.length || 0} records</Badge>
+                  {pastLossesData && pastLossesData.length > 0 && (
+                    <Button variant="outline" size="sm" onClick={() => window.open("/api/cashflow/download-past-losses", "_blank")} data-testid="button-download-past-losses">
+                      <Download className="w-4 h-4 mr-1" />
+                      Download
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               {loadingPastLosses ? (
                 <div className="flex items-center justify-center py-12 text-muted-foreground">Loading past losses...</div>
               ) : !pastLossesData || pastLossesData.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                  <p>No past losses data uploaded</p>
-                  <p className="text-xs mt-1">Upload a mapping file with a "Past Losses" sheet</p>
+                  <p className="text-xs">No past losses data uploaded</p>
+                  <p className="text-[11px] mt-1">Upload a mapping file with a "Past Losses" sheet</p>
                 </div>
               ) : (
-                <div className="overflow-auto max-h-[600px] rounded-md border">
+                <div className="overflow-auto max-h-[500px]">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-muted/50">
-                        <TableHead className="font-semibold text-xs sticky top-0 bg-muted/90 backdrop-blur-sm">#</TableHead>
-                        <TableHead className="font-semibold text-xs sticky top-0 bg-muted/90 backdrop-blur-sm">Company</TableHead>
-                        <TableHead className="font-semibold text-xs sticky top-0 bg-muted/90 backdrop-blur-sm">Project</TableHead>
-                        <TableHead className="font-semibold text-xs sticky top-0 bg-muted/90 backdrop-blur-sm">Cashflow</TableHead>
-                        <TableHead className="font-semibold text-xs sticky top-0 bg-muted/90 backdrop-blur-sm">CF Head</TableHead>
-                        <TableHead className="font-semibold text-xs sticky top-0 bg-muted/90 backdrop-blur-sm text-right">Amount</TableHead>
-                        <TableHead className="font-semibold text-xs sticky top-0 bg-muted/90 backdrop-blur-sm">As Per FS</TableHead>
-                        <TableHead className="font-semibold text-xs sticky top-0 bg-muted/90 backdrop-blur-sm">Losses Upto</TableHead>
+                      <TableRow>
+                        <TableHead className="sticky left-0 bg-background z-10 min-w-[40px]">#</TableHead>
+                        <TableHead className="min-w-[160px]">Company</TableHead>
+                        <TableHead className="min-w-[160px]">Project</TableHead>
+                        <TableHead className="min-w-[100px]">Cashflow</TableHead>
+                        <TableHead className="min-w-[140px]">CF Head</TableHead>
+                        <TableHead className="text-right min-w-[120px]">Amount ({SCALE_SUFFIXES[cfFmt.scale] || "₹"})</TableHead>
+                        <TableHead className="min-w-[100px]">As Per FS</TableHead>
+                        <TableHead className="min-w-[100px]">Losses Upto</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {pastLossesData.map((row, idx) => (
-                        <TableRow key={row.id} data-testid={`row-past-loss-${row.id}`} className="text-xs">
-                          <TableCell className="text-muted-foreground">{idx + 1}</TableCell>
-                          <TableCell className="max-w-[200px] truncate" title={row.company || ""}>{row.company || "-"}</TableCell>
-                          <TableCell className="max-w-[200px] truncate" title={row.project || ""}>{row.project || "-"}</TableCell>
-                          <TableCell>{row.cashflow || "-"}</TableCell>
-                          <TableCell className="max-w-[180px] truncate" title={row.cfHead || ""}>{row.cfHead || "-"}</TableCell>
-                          <TableCell className="text-right tabular-nums font-medium">{row.amount != null ? `₹${formatAmount(row.amount, cfFmt)}` : "-"}</TableCell>
-                          <TableCell>{row.asPerFs || "-"}</TableCell>
-                          <TableCell>{row.lossesUpto || "-"}</TableCell>
+                        <TableRow key={row.id} data-testid={`row-past-loss-${row.id}`}>
+                          <TableCell className="sticky left-0 bg-background z-10 text-xs text-muted-foreground">{idx + 1}</TableCell>
+                          <TableCell className="text-xs max-w-[200px] truncate" title={row.company || ""}>{row.company || "-"}</TableCell>
+                          <TableCell className="text-xs max-w-[200px] truncate" title={row.project || ""}>{row.project || "-"}</TableCell>
+                          <TableCell className="text-xs">{row.cashflow || "-"}</TableCell>
+                          <TableCell className="text-xs max-w-[180px] truncate" title={row.cfHead || ""}>{row.cfHead || "-"}</TableCell>
+                          <TableCell className={`text-right text-xs tabular-nums font-medium ${colorForValue(row.amount || 0)}`}>{row.amount != null ? `₹${formatAmount(row.amount, cfFmt)}` : "-"}</TableCell>
+                          <TableCell className="text-xs">{row.asPerFs || "-"}</TableCell>
+                          <TableCell className="text-xs">{row.lossesUpto || "-"}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
