@@ -305,16 +305,18 @@ export async function fixReversalStatuses() {
   }
 }
 
-export async function seedDefaultAdmin() {
+export async function seedDefaultAdmin(adminPassword?: string) {
   const existing = await db.select().from(users);
   if (existing.length === 0) {
-    const hashedPassword = await bcrypt.hash("admin", 10);
+    const password = adminPassword || process.env.ADMIN_PASSWORD || "admin";
+    const mustChange = !adminPassword && !process.env.ADMIN_PASSWORD;
+    const hashedPassword = await bcrypt.hash(password, 10);
     await db.insert(users).values({
       username: "admin",
       password: hashedPassword,
       displayName: "Platform Admin",
       role: "platform_admin",
-      mustChangePassword: false,
+      mustChangePassword: mustChange,
       passwordChangedAt: new Date().toISOString(),
       allowedModules: ["ic_recon", "cashflow", "ic_matrix"],
     });

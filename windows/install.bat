@@ -130,7 +130,24 @@ exit /b 1
 
 :INSTALL_SEED
 echo  [STEP 7/7] Seeding default data...
-call npx tsx -e "import 'dotenv/config'; import {seedDefaultRules,seedDefaultAdmin} from './server/seed'; (async()=>{await seedDefaultRules();await seedDefaultAdmin();console.log('Seed complete');process.exit(0)})()"
+echo.
+echo  Set the admin password for the application.
+echo.
+:ASK_ADMIN_PASS
+set /p ADMIN_PASS="  Admin Password (min 6 chars): "
+if "%ADMIN_PASS%"=="" (
+    echo  [ERROR] Password cannot be empty.
+    goto ASK_ADMIN_PASS
+)
+powershell -NoProfile -Command "if('%ADMIN_PASS%'.Length -lt 6){exit 1}" >nul 2>nul
+if %errorlevel% neq 0 (
+    echo  [ERROR] Password must be at least 6 characters.
+    goto ASK_ADMIN_PASS
+)
+set ADMIN_PASSWORD=%ADMIN_PASS%
+call npx tsx -e "import 'dotenv/config'; import {seedDefaultRules,seedDefaultAdmin} from './server/seed'; (async()=>{await seedDefaultRules();await seedDefaultAdmin(process.env.ADMIN_PASSWORD);console.log('Seed complete');process.exit(0)})()"
+set ADMIN_PASSWORD=
+set ADMIN_PASS=
 if %errorlevel% neq 0 (
     echo  [WARNING] Seed may have failed. The server will retry on startup.
 ) else (
@@ -159,8 +176,8 @@ echo    Double-click windows\start.bat
 echo.
 echo  Then open http://localhost:3000 in your browser.
 echo.
-echo  Default login:
+echo  Login with:
 echo    Username: admin
-echo    Password: admin123
+echo    Password: (the password you set during install)
 echo.
 pause
