@@ -73,20 +73,20 @@ exit /b 1
 :DB_OK
 echo.
 
-if exist "dist\public\index.html" goto SKIP_BUILD
-echo  [STEP 3/4] Building frontend for first time...
-call npx vite build >nul 2>nul
-if exist "dist\public\index.html" goto BUILD_DONE
-echo  [WARN] Frontend build issue - server will use Vite dev mode.
-goto START_SERVER
-
-:BUILD_DONE
-echo  [OK] Frontend built.
+if exist "dist\index.cjs" goto SKIP_BUILD
+echo  [STEP 3/4] Building application...
+call npx tsx script/build.ts
+if %errorlevel% neq 0 (
+    echo  [ERROR] Build failed.
+    pause
+    exit /b 1
+)
+echo  [OK] Build complete.
 echo.
 goto START_SERVER
 
 :SKIP_BUILD
-echo  [STEP 3/4] Frontend build found.
+echo  [STEP 3/4] Production build found.
 echo.
 
 :START_SERVER
@@ -101,6 +101,6 @@ echo  Press Ctrl+C to stop the server.
 echo.
 
 set NODE_ENV=production
-call npx tsx server/index.ts
+node dist/index.cjs
 
 pause

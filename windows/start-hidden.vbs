@@ -22,6 +22,6 @@ Do While Not envFile.AtEndOfStream
 Loop
 envFile.Close
 
-WshShell.Run "cmd /c cd /d """ & strPath & """ && node windows\sync-db.cjs 2>nul && set NODE_ENV=production && npx tsx server/index.ts", 0, False
+WshShell.Run "cmd /c cd /d """ & strPath & """ && node windows\sync-db.cjs 2>nul && set NODE_ENV=production && if not exist dist\index.cjs (npx tsx script/build.ts) && node dist/index.cjs", 0, False
 WScript.Sleep 10000
 WshShell.Run "http://localhost:3000", 1, False
