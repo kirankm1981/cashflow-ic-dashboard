@@ -356,7 +356,7 @@ export function D2PlWip({ rows, formatConfig }: Props) {
                             <TableCell className="text-xs">{r.component}</TableCell>
                             <TableCell className="text-right text-xs">{fmt(r.opening)}</TableCell>
                             <TableCell className="text-right text-xs">{fmt(r.period)}</TableCell>
-                            <TableCell className={`text-right text-xs font-medium ${colorForValue(r.closing)}`}>{fmt(r.closing)}</TableCell>
+                            <TableCell className={`text-right text-xs font-medium ${plColor(r.closing)}`}>{fmt(r.closing)}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
