@@ -174,15 +174,19 @@ echo [%date% %time%] VBS target: !VBS_TARGET! >> "%LOGFILE%"
     echo retries = 0
     echo dbOk = False
     echo logFile.WriteLine "[" ^& Now ^& "] Checking database connection..."
+    echo Dim dbExit, dbLogPath, dbSepFile
+    echo dbLogPath = logFolder ^& "\db-check.log"
     echo Do While retries ^< 12 And Not dbOk
-    echo     Dim dbExit
-    echo     dbExit = WshShell.Run^("cmd /c cd /d """ ^& strPath ^& """ ^&^& node windows\sync-db.cjs ^> """ ^& logFolder ^& "\db-check.log"" 2^>^&1", 0, True^)
+    echo     Set dbSepFile = fso.OpenTextFile^(dbLogPath, 8, True^)
+    echo     dbSepFile.WriteLine "--- attempt " ^& ^(retries + 1^) ^& " at " ^& Now ^& " ---"
+    echo     dbSepFile.Close
+    echo     dbExit = WshShell.Run^("cmd /c cd /d """ ^& strPath ^& """ ^&^& node windows\sync-db.cjs ^>^> """ ^& dbLogPath ^& """ 2^>^&1", 0, True^)
     echo     If dbExit = 0 Then
     echo         dbOk = True
     echo         logFile.WriteLine "[" ^& Now ^& "] Database connected on attempt " ^& ^(retries + 1^)
     echo     Else
     echo         retries = retries + 1
-    echo         logFile.WriteLine "[" ^& Now ^& "] DB attempt " ^& retries ^& " failed, waiting 10s..."
+    echo         logFile.WriteLine "[" ^& Now ^& "] DB attempt " ^& retries ^& " failed (exit code " ^& dbExit ^& "), waiting 10s..."
     echo         WScript.Sleep 10000
     echo     End If
     echo Loop
