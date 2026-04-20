@@ -146,6 +146,20 @@ echo [%date% %time%] VBS target: !VBS_TARGET! >> "%LOGFILE%"
     echo envFile.Close
     echo logFile.WriteLine "[" ^& Now ^& "] Environment loaded"
     echo.
+    echo ' Diagnostic - log where node is found from VBS context
+    echo Dim nodePathFile, nodePathLog
+    echo nodePathLog = logFolder ^& "\node-path.log"
+    echo WshShell.Run "cmd /c where node ^> """ ^& nodePathLog ^& """ 2^>^&1", 0, True
+    echo If fso.FileExists^(nodePathLog^) Then
+    echo     Set nodePathFile = fso.OpenTextFile^(nodePathLog, 1^)
+    echo     If Not nodePathFile.AtEndOfStream Then
+    echo         logFile.WriteLine "[" ^& Now ^& "] node found at: " ^& Trim^(nodePathFile.ReadAll^)
+    echo     Else
+    echo         logFile.WriteLine "[" ^& Now ^& "] WARNING - 'where node' returned no output - node not in PATH for VBS context"
+    echo     End If
+    echo     nodePathFile.Close
+    echo End If
+    echo.
     echo Dim portCheck
     echo portCheck = WshShell.Run^("cmd /c netstat -an ^| find ""0.0.0.0:3000""", 0, True^)
     echo If portCheck = 0 Then
@@ -162,7 +176,7 @@ echo [%date% %time%] VBS target: !VBS_TARGET! >> "%LOGFILE%"
     echo logFile.WriteLine "[" ^& Now ^& "] Checking database connection..."
     echo Do While retries ^< 12 And Not dbOk
     echo     Dim dbExit
-    echo     dbExit = WshShell.Run^("cmd /c cd /d """ ^& strPath ^& """ ^&^& node windows\sync-db.cjs", 0, True^)
+    echo     dbExit = WshShell.Run^("cmd /c cd /d """ ^& strPath ^& """ ^&^& node windows\sync-db.cjs ^> """ ^& logFolder ^& "\db-check.log"" 2^>^&1", 0, True^)
     echo     If dbExit = 0 Then
     echo         dbOk = True
     echo         logFile.WriteLine "[" ^& Now ^& "] Database connected on attempt " ^& ^(retries + 1^)
