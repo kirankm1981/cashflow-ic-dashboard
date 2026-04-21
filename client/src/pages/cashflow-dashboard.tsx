@@ -152,12 +152,12 @@ export default function CashflowDashboard() {
         name,
         inflow: Math.abs(v.inflow),
         outflow: Math.abs(v.outflow),
-        cashBank: Math.abs(v.cashBank),
+        cashBank: v.cashBank,
         rawInflow: v.inflow,
         rawOutflow: v.outflow,
         rawCashBank: v.cashBank,
       }))
-      .sort((a, b) => (b.inflow + b.outflow + b.cashBank) - (a.inflow + a.outflow + a.cashBank));
+      .sort((a, b) => (Math.abs(b.inflow) + Math.abs(b.outflow) + Math.abs(b.cashBank)) - (Math.abs(a.inflow) + Math.abs(a.outflow) + Math.abs(a.cashBank)));
   }, [filteredData]);
 
   const pivotData = useMemo(() => {
@@ -407,7 +407,7 @@ export default function CashflowDashboard() {
                       </div>
                     </div>
                     <p className={`text-lg font-bold ${flowColor(k.value, k.flow)}`} data-testid={`kpi-${k.label.toLowerCase().replace(/\s+/g, "-")}`}>
-                      ₹{formatAmount(Math.abs(k.value), cfFmt)}
+                      ₹{formatAmount(k.flow === "cash" ? k.value : Math.abs(k.value), cfFmt)}
                     </p>
                   </CardContent>
                 </Card>
