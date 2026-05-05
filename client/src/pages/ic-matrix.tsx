@@ -226,8 +226,10 @@ export default function IcMatrix() {
     const qs = params.toString() ? `?${params.toString()}` : "";
     if (activeMatrixTab === "matrix") {
       window.open(`/api/ic-matrix/download-balance-matrix${qs}`, "_blank");
-    } else if (activeMatrixTab === "netoffmatrix" || activeMatrixTab === "netoff") {
+    } else if (activeMatrixTab === "netoffmatrix") {
       window.open(`/api/ic-matrix/download-netoff-matrix${qs}`, "_blank");
+    } else if (activeMatrixTab === "netoff") {
+      window.open(`/api/ic-matrix/download-netoff-details${qs}`, "_blank");
     } else {
       window.open("/api/ic-matrix/download", "_blank");
     }
@@ -370,7 +372,8 @@ export default function IcMatrix() {
             <Button variant="outline" size="sm" onClick={handleDownload} data-testid="button-download">
               <Download className="w-4 h-4 mr-2" />
               {activeMatrixTab === "matrix" ? "Download Balance Matrix" :
-               activeMatrixTab === "netoffmatrix" || activeMatrixTab === "netoff" ? "Download Net-off Matrix" :
+               activeMatrixTab === "netoffmatrix" ? "Download Net-off Matrix" :
+               activeMatrixTab === "netoff" ? "Download Net-off Details" :
                "Download Compiled TB"}
             </Button>
           )}

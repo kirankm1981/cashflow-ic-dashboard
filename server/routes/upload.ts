@@ -56,7 +56,7 @@ export function registerUploadRoutes(app: Express) {
     }
   });
 
-  app.post("/api/upload/sheet-names", upload.single("file"), async (req, res) => {
+  app.post("/api/upload/sheet-names", requireWriteAccess, upload.single("file"), async (req, res) => {
     try {
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
       logUpload("IC-RECON", "SHEET-NAMES", `File: ${req.file.originalname} (${(req.file.size / 1024).toFixed(0)} KB)`);
@@ -78,7 +78,7 @@ export function registerUploadRoutes(app: Express) {
     }
   });
 
-  app.post("/api/upload/preview-headers", upload.single("file"), async (req, res) => {
+  app.post("/api/upload/preview-headers", requireWriteAccess, upload.single("file"), async (req, res) => {
     try {
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
       logUpload("IC-RECON", "PREVIEW-HEADERS", `File: ${req.file.originalname} (${(req.file.size / 1024).toFixed(0)} KB)`);
