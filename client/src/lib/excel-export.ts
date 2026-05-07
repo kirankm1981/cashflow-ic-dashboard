@@ -78,7 +78,7 @@ export function downloadExcel(sheets: ExcelSheetConfig[], fileName: string) {
 
         const val = wsData[rowIdx][colIdx];
         if (val && typeof val === "object" && "f" in val) {
-          ws[cellRef] = { t: "n", f: val.f };
+          ws[cellRef] = { t: "n", f: val.f, v: 0, z: "#,##0.00" };
         }
 
         if (typeof cell.v === "number") {
