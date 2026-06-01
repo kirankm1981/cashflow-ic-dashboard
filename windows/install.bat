@@ -104,13 +104,16 @@ echo.
 echo  Press ENTER to accept defaults shown in [brackets].
 echo.
 
-set "PG_HOST=localhost"
+set "PG_HOST=127.0.0.1"
 set "PG_PORT=5432"
 set "PG_DB=cashflow_ic_dashboard"
 set "PG_USER=postgres"
 
-set /p "PG_HOST=  PostgreSQL Host [localhost]: "
-if "!PG_HOST!"=="" set "PG_HOST=localhost"
+REM Default to 127.0.0.1 (IPv4) instead of localhost: on Windows, Node may resolve
+REM localhost to IPv6 (::1), which a default PostgreSQL install does not listen on.
+set /p "PG_HOST=  PostgreSQL Host [127.0.0.1]: "
+if "!PG_HOST!"=="" set "PG_HOST=127.0.0.1"
+if /i "!PG_HOST!"=="localhost" set "PG_HOST=127.0.0.1"
 
 set /p "PG_PORT=  PostgreSQL Port [5432]: "
 if "!PG_PORT!"=="" set "PG_PORT=5432"

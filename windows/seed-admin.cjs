@@ -1,6 +1,11 @@
 require('dotenv').config();
+const dns = require('dns');
 const { Client } = require('pg');
 const bcrypt = require('bcryptjs');
+
+// Force IPv4-first DNS so `localhost` reaches a PostgreSQL bound to 127.0.0.1.
+if (typeof dns.setDefaultResultOrder === 'function') dns.setDefaultResultOrder('ipv4first');
+function normalizeDbHost(url) { return url ? url.replace(/@localhost([:/])/i, '@127.0.0.1$1') : url; }
 
 async function main() {
   const adminPassword = process.env.ADMIN_PASSWORD;
@@ -9,7 +14,7 @@ async function main() {
     process.exit(1);
   }
 
-  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  const client = new Client({ connectionString: normalizeDbHost(process.env.DATABASE_URL) });
   await client.connect();
 
   try {

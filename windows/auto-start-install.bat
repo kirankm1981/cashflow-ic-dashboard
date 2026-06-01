@@ -105,133 +105,31 @@ echo [%date% %time%] VBS target: !VBS_TARGET! >> "%LOGFILE%"
     echo Dim strPath
     echo strPath = "%PROJECT_ROOT%"
     echo.
+    echo ' Create logs folder
     echo Dim logFolder
     echo logFolder = strPath ^& "\windows\logs"
     echo If Not fso.FolderExists^(logFolder^) Then fso.CreateFolder^(logFolder^)
     echo.
+    echo ' Log start
     echo Dim logFile
     echo Set logFile = fso.OpenTextFile^(logFolder ^& "\autostart.log", 8, True^)
-    echo logFile.WriteLine "[" ^& Now ^& "] Auto-start triggered"
+    echo logFile.WriteLine "[" ^& Now ^& "] Auto-start VBS triggered"
     echo.
-    echo ' Wait 3 minutes for PostgreSQL and other services to start after boot
+    echo ' Wait 3 minutes for system services to start after boot
     echo logFile.WriteLine "[" ^& Now ^& "] Waiting 3 minutes for system services..."
     echo WScript.Sleep 180000
-    echo logFile.WriteLine "[" ^& Now ^& "] Wait complete, proceeding..."
+    echo logFile.WriteLine "[" ^& Now ^& "] Wait complete, launching runner..."
     echo.
-    echo If Not fso.FolderExists^(strPath^) Then
-    echo     logFile.WriteLine "[" ^& Now ^& "] ERROR - Project folder not found"
-    echo     logFile.Close
-    echo     WScript.Quit 1
-    echo End If
-    echo logFile.WriteLine "[" ^& Now ^& "] Project folder OK"
-    echo.
-    echo If Not fso.FileExists^(strPath ^& "\.env"^) Then
-    echo     logFile.WriteLine "[" ^& Now ^& "] ERROR - .env not found"
-    echo     logFile.Close
-    echo     WScript.Quit 1
-    echo End If
-    echo.
-    echo Set envFile = fso.OpenTextFile^(strPath ^& "\.env", 1^)
-    echo Do While Not envFile.AtEndOfStream
-    echo     Dim envLine
-    echo     envLine = Trim^(envFile.ReadLine^)
-    echo     If Len^(envLine^) ^> 0 And Left^(envLine, 1^) ^<^> "#" Then
-    echo         Dim eqPos
-    echo         eqPos = InStr^(envLine, "="^)
-    echo         If eqPos ^> 0 Then
-    echo             WshShell.Environment^("Process"^)^(Left^(envLine, eqPos - 1^)^) = Mid^(envLine, eqPos + 1^)
-    echo         End If
-    echo     End If
-    echo Loop
-    echo envFile.Close
-    echo logFile.WriteLine "[" ^& Now ^& "] Environment loaded"
-    echo.
-    echo ' Diagnostic - log where node is found from VBS context
-    echo Dim nodePathFile, nodePathLog
+    echo ' Diagnostic - confirm node is reachable from this context
+    echo Dim nodePathLog
     echo nodePathLog = logFolder ^& "\node-path.log"
     echo WshShell.Run "cmd /c where node ^> """ ^& nodePathLog ^& """ 2^>^&1", 0, True
-    echo If fso.FileExists^(nodePathLog^) Then
-    echo     Set nodePathFile = fso.OpenTextFile^(nodePathLog, 1^)
-    echo     If Not nodePathFile.AtEndOfStream Then
-    echo         logFile.WriteLine "[" ^& Now ^& "] node found at: " ^& Trim^(nodePathFile.ReadAll^)
-    echo     Else
-    echo         logFile.WriteLine "[" ^& Now ^& "] WARNING - 'where node' returned no output - node not in PATH for VBS context"
-    echo     End If
-    echo     nodePathFile.Close
-    echo End If
     echo.
-    echo Dim portCheck
-    echo portCheck = WshShell.Run^("cmd /c netstat -an ^| find ""0.0.0.0:3000""", 0, True^)
-    echo If portCheck = 0 Then
-    echo     logFile.WriteLine "[" ^& Now ^& "] Port 3000 in use - server already running"
-    echo     logFile.Close
-    echo     WshShell.Run "http://localhost:3000", 1, False
-    echo     WScript.Quit 0
-    echo End If
-    echo.
-    echo ' Try database connection up to 12 times
-    echo Dim retries, dbOk
-    echo retries = 0
-    echo dbOk = False
-    echo logFile.WriteLine "[" ^& Now ^& "] Checking database connection..."
-    echo Dim dbExit, dbLogPath, dbSepFile
-    echo dbLogPath = logFolder ^& "\db-check.log"
-    echo Do While retries ^< 12 And Not dbOk
-    echo     Set dbSepFile = fso.OpenTextFile^(dbLogPath, 8, True^)
-    echo     dbSepFile.WriteLine "--- attempt " ^& ^(retries + 1^) ^& " at " ^& Now ^& " ---"
-    echo     dbSepFile.Close
-    echo     dbExit = WshShell.Run^("cmd /c cd /d """ ^& strPath ^& """ ^&^& node windows\sync-db.cjs ^>^> """ ^& dbLogPath ^& """ 2^>^&1", 0, True^)
-    echo     If dbExit = 0 Then
-    echo         dbOk = True
-    echo         logFile.WriteLine "[" ^& Now ^& "] Database connected on attempt " ^& ^(retries + 1^)
-    echo     Else
-    echo         retries = retries + 1
-    echo         logFile.WriteLine "[" ^& Now ^& "] DB attempt " ^& retries ^& " failed (exit code " ^& dbExit ^& "), waiting 10s..."
-    echo         WScript.Sleep 10000
-    echo     End If
-    echo Loop
-    echo.
-    echo If Not dbOk Then
-    echo     logFile.WriteLine "[" ^& Now ^& "] ERROR - Database failed after 12 attempts"
-    echo     logFile.Close
-    echo     MsgBox "Database connection failed after 12 attempts." ^& vbCrLf ^& "Check that PostgreSQL is running.", vbCritical, "Assetz Strata"
-    echo     WScript.Quit 1
-    echo End If
-    echo.
-    echo Dim serverLog
-    echo serverLog = strPath ^& "\windows\logs\server.log"
-    echo logFile.WriteLine "[" ^& Now ^& "] Starting server..."
-    echo WshShell.Run "cmd /c cd /d """ ^& strPath ^& """ ^&^& set NODE_ENV=production ^&^& set NODE_OPTIONS=--max-old-space-size=2048 ^&^& node dist\index.cjs ^>^> """ ^& serverLog ^& """ 2^>^&1", 0, False
-    echo WScript.Sleep 3000
-    echo.
-    echo Dim attempts, serverUp
-    echo attempts = 0
-    echo serverUp = False
-    echo Do While attempts ^< 30 And Not serverUp
-    echo     Dim http
-    echo     Set http = CreateObject^("MSXML2.XMLHTTP"^)
-    echo     On Error Resume Next
-    echo     http.Open "GET", "http://localhost:3000/api/health", False
-    echo     http.Send
-    echo     If Err.Number = 0 And http.Status = 200 Then
-    echo         serverUp = True
-    echo     End If
-    echo     On Error GoTo 0
-    echo     Set http = Nothing
-    echo     If Not serverUp Then
-    echo         attempts = attempts + 1
-    echo         WScript.Sleep 2000
-    echo     End If
-    echo Loop
-    echo.
-    echo If serverUp Then
-    echo     logFile.WriteLine "[" ^& Now ^& "] Server running on http://localhost:3000"
-    echo Else
-    echo     logFile.WriteLine "[" ^& Now ^& "] WARNING - Server did not respond after 60s"
-    echo End If
-    echo.
+    echo ' Hand off everything (env load, DB retries, schema sync, server start,
+    echo ' health check, browser) to the Node runner - reliable and fully logged.
+    echo logFile.WriteLine "[" ^& Now ^& "] Running windows\autostart-runner.cjs"
     echo logFile.Close
-    echo WshShell.Run "http://localhost:3000", 1, False
+    echo WshShell.Run "cmd /c cd /d """ ^& strPath ^& """ ^&^& node windows\autostart-runner.cjs", 0, False
 )
 
 if exist "!VBS_TARGET!" (

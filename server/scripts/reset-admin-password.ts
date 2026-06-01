@@ -1,5 +1,14 @@
+import dns from "dns";
 import pg from "pg";
 import bcrypt from "bcryptjs";
+
+// Force IPv4-first DNS so `localhost` reaches a PostgreSQL bound to 127.0.0.1.
+if (typeof dns.setDefaultResultOrder === "function") {
+  dns.setDefaultResultOrder("ipv4first");
+}
+function normalizeDbHost(url: string | undefined): string | undefined {
+  return url ? url.replace(/@localhost([:/])/i, "@127.0.0.1$1") : url;
+}
 
 const DEFAULT_USERNAME = "admin";
 
@@ -32,7 +41,7 @@ async function resetAdminPassword() {
   }
 
   const pool = new pg.Pool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: normalizeDbHost(process.env.DATABASE_URL),
   });
 
   try {
