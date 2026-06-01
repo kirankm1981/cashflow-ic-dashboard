@@ -213,17 +213,17 @@ console.log("\n[1/5] D1 — Indirect CF Statement");
   assert(wb.SheetNames.includes("Indirect CF Statement"), "sheet name present");
   const ws = wb.Sheets["Indirect CF Statement"];
 
-  const totalOpRow = findRow(ws, "TOTAL OPERATING");
-  assert(totalOpRow !== null, "TOTAL OPERATING row found");
+  const totalOpRow = findRow(ws, "Subtotal — Operating");
+  assert(totalOpRow !== null, "Subtotal — Operating row found");
   const totalOpCell = ws[`D${totalOpRow}`];
-  assert(!!totalOpCell?.f, "TOTAL OPERATING net column has formula");
-  assertClose(evalExpr(totalOpCell.f as string, ws), expectedOperatingNet, "TOTAL OPERATING net evaluates");
+  assert(!!totalOpCell?.f, "Subtotal — Operating net column has formula");
+  assertClose(evalExpr(totalOpCell.f as string, ws), expectedOperatingNet, "Subtotal — Operating net evaluates");
 
-  const netChangeRow = findRow(ws, "NET CHANGE IN CASH");
-  assert(netChangeRow !== null, "NET CHANGE IN CASH row found");
+  const netChangeRow = findRow(ws, "Grand Total — Net Change in Cash");
+  assert(netChangeRow !== null, "Grand Total — Net Change in Cash row found");
   const ncCell = ws[`D${netChangeRow}`];
-  assert(!!ncCell?.f, "NET CHANGE has formula");
-  assertClose(evalExpr(ncCell.f as string, ws), expectedNetChange, "NET CHANGE matches dashboard total");
+  assert(!!ncCell?.f, "Grand Total — Net Change in Cash has formula");
+  assertClose(evalExpr(ncCell.f as string, ws), expectedNetChange, "Grand Total — Net Change in Cash matches dashboard total");
 }
 
 // ------------------------------------------------------------------

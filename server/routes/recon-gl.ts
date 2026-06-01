@@ -1112,11 +1112,27 @@ export function registerReconGlRoutes(app: Express) {
   app.get("/api/recon/download-rpt-data", async (_req, res) => {
     try {
       const { db } = await import("../db");
-      const { icReconGlRawRows } = await import("@shared/schema");
+      const { icReconGlRawRows, icMatrixMappingGl } = await import("@shared/schema");
 
-      const allIcRows = await db.select({ rowData: icReconGlRawRows.rowData })
-        .from(icReconGlRawRows)
-        .where(sql`(${icReconGlRawRows.rowData}->>'IC Counter Party Code') IS NOT NULL AND (${icReconGlRawRows.rowData}->>'IC Counter Party Code') != ''`);
+      // Mirror the on-screen "RPT Detail" table (client/src/pages/rpt-data.tsx) exactly,
+      // including the GL -> RPT Txn Type Detailed mapping used by /api/recon/rpt-data.
+      const [allIcRows, glMappings] = await Promise.all([
+        db.select({ rowData: icReconGlRawRows.rowData })
+          .from(icReconGlRawRows)
+          .where(sql`(${icReconGlRawRows.rowData}->>'IC Counter Party Code') IS NOT NULL AND (${icReconGlRawRows.rowData}->>'IC Counter Party Code') != ''`),
+        db.select({
+          newCoaGlName: icMatrixMappingGl.newCoaGlName,
+          rptTxnType: icMatrixMappingGl.rptTxnType,
+        }).from(icMatrixMappingGl)
+          .where(sql`${icMatrixMappingGl.rptTxnType} IS NOT NULL AND ${icMatrixMappingGl.rptTxnType} != ''`),
+      ]);
+
+      const glToRptTxnType = new Map<string, string>();
+      for (const m of glMappings) {
+        if (m.newCoaGlName && m.rptTxnType) {
+          glToRptTxnType.set(m.newCoaGlName.trim().toLowerCase(), m.rptTxnType.trim());
+        }
+      }
 
       const rows = allIcRows.map(r => {
         const d = typeof r.rowData === "string" ? JSON.parse(r.rowData) : r.rowData as Record<string, any>;
@@ -1124,25 +1140,29 @@ export function registerReconGlRoutes(app: Express) {
         const prefix = icGl.startsWith("RPT_") ? "RPT" : icGl.startsWith("IC_") ? "IC" : "";
         if (!prefix) return null;
         return {
-          "Company": d["Company"] || "",
+          "Company Name": d["Company"] || "",
           "Company Code": d["Company Code"] || "",
+          "Counter Party Name": d["IC Counter Party"] || "",
+          "Counter Party Code": d["IC Counter Party Code"] || "",
           "Document No": d["Document No"] || "",
           "Doc Date": d["Doc Date"] || "",
           "Account Head": d["Account Head"] || "",
           "Sub Account Head": d["Sub Account Head"] || "",
           "IC-RPT GL Name": icGl,
-          "IC Txn Type": d["IC Txn Type"] || "",
+          "RPT Txn Type": d["IC Txn Type"] || "",
+          "RPT Txn Type Detailed": glToRptTxnType.get(icGl.toLowerCase()) || "",
           "RPT Type": prefix,
-          "IC Counter Party Code": d["IC Counter Party Code"] || "",
-          "Debit": parseNum(d["Debit"]),
-          "Credit": parseNum(d["Credit"]),
           "Net Amount": parseNum(d["Debit"]) - parseNum(d["Credit"]),
-          "Narration": d["Narration"] || "",
         };
       }).filter(Boolean);
 
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.json_to_sheet(rows as any[]);
+      ws["!cols"] = [
+        { wch: 28 }, { wch: 14 }, { wch: 28 }, { wch: 18 }, { wch: 16 },
+        { wch: 12 }, { wch: 24 }, { wch: 24 }, { wch: 24 }, { wch: 18 },
+        { wch: 22 }, { wch: 10 }, { wch: 16 },
+      ];
       XLSX.utils.book_append_sheet(wb, ws, "RPT Detail");
       const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
@@ -1157,18 +1177,31 @@ export function registerReconGlRoutes(app: Express) {
   app.get("/api/recon/download-rpt-summary", async (_req, res) => {
     try {
       const { db } = await import("../db");
-      const { icReconGlRawRows } = await import("@shared/schema");
-      const companyMappings = await db.select().from(icMatrixMappingCompany);
-      const codeToName: Record<string, string> = {};
-      for (const m of companyMappings) {
-        if (m.companyCode && m.companyName) codeToName[m.companyCode] = m.companyName;
+      const { icReconGlRawRows, icMatrixMappingGl } = await import("@shared/schema");
+
+      // Mirror the on-screen "RPT Summary" table (client/src/pages/rpt-data.tsx) exactly.
+      // The screen groups by company|counterParty|txnType|rptTxnTypeDetailed|rptType
+      // (see /api/recon/rpt-summary); the download must use the same key so the
+      // aggregated amounts/counts match what the user sees.
+      const [allIcRows, glMappings] = await Promise.all([
+        db.select({ rowData: icReconGlRawRows.rowData })
+          .from(icReconGlRawRows)
+          .where(sql`(${icReconGlRawRows.rowData}->>'IC Counter Party Code') IS NOT NULL AND (${icReconGlRawRows.rowData}->>'IC Counter Party Code') != ''`),
+        db.select({
+          newCoaGlName: icMatrixMappingGl.newCoaGlName,
+          rptTxnType: icMatrixMappingGl.rptTxnType,
+        }).from(icMatrixMappingGl)
+          .where(sql`${icMatrixMappingGl.rptTxnType} IS NOT NULL AND ${icMatrixMappingGl.rptTxnType} != ''`),
+      ]);
+
+      const glToRptTxnType = new Map<string, string>();
+      for (const m of glMappings) {
+        if (m.newCoaGlName && m.rptTxnType) {
+          glToRptTxnType.set(m.newCoaGlName.trim().toLowerCase(), m.rptTxnType.trim());
+        }
       }
 
-      const allIcRows = await db.select({ rowData: icReconGlRawRows.rowData })
-        .from(icReconGlRawRows)
-        .where(sql`(${icReconGlRawRows.rowData}->>'IC Counter Party Code') IS NOT NULL AND (${icReconGlRawRows.rowData}->>'IC Counter Party Code') != ''`);
-
-      const groups: Record<string, { companyCode: string; companyName: string; cpCode: string; cpName: string; txnType: string; rptType: string; amount: number; count: number }> = {};
+      const groups: Record<string, { companyCode: string; companyName: string; cpCode: string; cpName: string; txnType: string; rptTxnTypeDetailed: string; rptType: string; amount: number; count: number }> = {};
 
       for (const r of allIcRows) {
         const d = typeof r.rowData === "string" ? JSON.parse(r.rowData) : r.rowData as Record<string, any>;
@@ -1178,28 +1211,48 @@ export function registerReconGlRoutes(app: Express) {
         const cc = d["Company Code"] || "";
         const cp = d["IC Counter Party Code"] || "";
         const txn = d["IC Txn Type"] || "";
-        const key = `${cc}|${cp}|${txn}|${prefix}`;
+        const rptTxnTypeDetailed = glToRptTxnType.get(icGl.toLowerCase()) || "";
+        const key = `${cc}|${cp}|${txn}|${rptTxnTypeDetailed}|${prefix}`;
         const net = parseNum(d["Debit"]) - parseNum(d["Credit"]);
         if (!groups[key]) {
-          groups[key] = { companyCode: cc, companyName: codeToName[cc] || d["Company"] || cc, cpCode: cp, cpName: codeToName[cp] || "", txnType: txn, rptType: prefix, amount: 0, count: 0 };
+          groups[key] = { companyCode: cc, companyName: d["Company"] || cc, cpCode: cp, cpName: d["IC Counter Party"] || cp, txnType: txn, rptTxnTypeDetailed, rptType: prefix, amount: 0, count: 0 };
         }
         groups[key].amount += net;
         groups[key].count += 1;
       }
 
-      const rows = Object.values(groups).sort((a, b) => a.companyCode.localeCompare(b.companyCode)).map(g => ({
-        "Company Code": g.companyCode,
+      const sorted = Object.values(groups).sort((a, b) => a.companyCode.localeCompare(b.companyCode) || a.cpCode.localeCompare(b.cpCode));
+      const rows: any[] = sorted.map((g, idx) => ({
+        "#": idx + 1,
         "Company Name": g.companyName,
-        "Counter Party Code": g.cpCode,
+        "Company Code": g.companyCode,
         "Counter Party Name": g.cpName,
-        "Transaction Type": g.txnType,
+        "Counter Party Code": g.cpCode,
+        "RPT Txn Type": g.txnType,
+        "RPT Txn Type Detailed": g.rptTxnTypeDetailed,
         "RPT Type": g.rptType,
+        "Count": g.count,
         "Net Amount": g.amount,
-        "Row Count": g.count,
       }));
+      rows.push({
+        "#": "",
+        "Company Name": "Total",
+        "Company Code": "",
+        "Counter Party Name": "",
+        "Counter Party Code": "",
+        "RPT Txn Type": "",
+        "RPT Txn Type Detailed": "",
+        "RPT Type": "",
+        "Count": sorted.reduce((s, g) => s + g.count, 0),
+        "Net Amount": sorted.reduce((s, g) => s + g.amount, 0),
+      });
 
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.json_to_sheet(rows);
+      ws["!cols"] = [
+        { wch: 6 }, { wch: 28 }, { wch: 14 }, { wch: 28 }, { wch: 18 },
+        { wch: 18 }, { wch: 22 }, { wch: 10 }, { wch: 10 }, { wch: 16 },
+      ];
       XLSX.utils.book_append_sheet(wb, ws, "RPT Summary");
       const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");

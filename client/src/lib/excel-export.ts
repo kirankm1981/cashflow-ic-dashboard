@@ -135,7 +135,7 @@ export function buildCashflowStatementSheet(
     const totalExcelRow = excelRow();
     rows.push({
       values: [
-        `TOTAL ${section.activity.toUpperCase()}`,
+        `Subtotal — ${section.activity}`,
         lineRows.length > 0 ? { f: `SUM(${lineRows.map(r => `${dCol}${r}`).join(",")})` } : "",
         lineRows.length > 0 ? { f: `SUM(${lineRows.map(r => `${cCol}${r}`).join(",")})` } : "",
         lineRows.length > 0 ? { f: `SUM(${lineRows.map(r => `${nCol}${r}`).join(",")})` } : "",
@@ -150,7 +150,7 @@ export function buildCashflowStatementSheet(
   if (activityTotalRows.length > 0) {
     rows.push({
       values: [
-        "NET CHANGE IN CASH",
+        "Grand Total — Net Change in Cash",
         { f: `SUM(${activityTotalRows.map(r => `${dCol}${r}`).join(",")})` },
         { f: `SUM(${activityTotalRows.map(r => `${cCol}${r}`).join(",")})` },
         { f: `SUM(${activityTotalRows.map(r => `${nCol}${r}`).join(",")})` },

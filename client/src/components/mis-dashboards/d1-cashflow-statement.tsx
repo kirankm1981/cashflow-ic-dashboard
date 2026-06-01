@@ -266,9 +266,9 @@ export function D1CashflowStatement({ rows, formatConfig }: Props) {
                             {section.activity}
                           </div>
                         </TableCell>
-                        <TableCell className="text-right text-xs font-medium">{fmt(sectionDebit)}</TableCell>
-                        <TableCell className="text-right text-xs font-medium">{fmt(sectionCredit)}</TableCell>
-                        <TableCell className={`text-right text-xs font-bold ${colorForValue(sectionNet)}`}>{fmt(sectionNet)}</TableCell>
+                        <TableCell className="text-right text-xs font-medium">{isExpanded ? "" : fmt(sectionDebit)}</TableCell>
+                        <TableCell className="text-right text-xs font-medium">{isExpanded ? "" : fmt(sectionCredit)}</TableCell>
+                        <TableCell className={`text-right text-xs font-bold ${isExpanded ? "" : colorForValue(sectionNet)}`}>{isExpanded ? "" : fmt(sectionNet)}</TableCell>
                       </TableRow>
                       {isExpanded && section.lines.map(line => {
                         const lineKey = `${section.activity}:${line.line}`;
@@ -301,6 +301,7 @@ export function D1CashflowStatement({ rows, formatConfig }: Props) {
                           </>
                         );
                       })}
+                      {isExpanded && (
                       <TableRow key={`subtotal-${section.activity}`} className="border-t-2">
                         <TableCell className="sticky left-0 bg-background z-10 text-xs font-bold pl-4">
                           Subtotal — {section.activity}
@@ -309,6 +310,7 @@ export function D1CashflowStatement({ rows, formatConfig }: Props) {
                         <TableCell className="text-right text-xs font-bold">{fmt(sectionCredit)}</TableCell>
                         <TableCell className={`text-right text-xs font-bold ${colorForValue(sectionNet)}`}>{fmt(sectionNet)}</TableCell>
                       </TableRow>
+                      )}
                     </>
                   );
                 })}
