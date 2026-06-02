@@ -69,6 +69,11 @@ log(`Target HTTP port: ${process.env.PORT || "3000"} (HTTPS ${process.env.HTTPS_
 log(`Logs: autostart.log, db-check.log, server.log in windows\\logs`);
 log(`DATABASE_URL set: ${!!process.env.DATABASE_URL}`);
 
+// Create both log files immediately, before any guard below can exit, so their
+// presence always confirms the runner actually executed.
+dbLog("=== Auto-start runner invoked ===");
+serverLog("=== Auto-start runner invoked ===");
+
 if (!process.env.DATABASE_URL) {
   log("FATAL: DATABASE_URL not set. Check .env file.");
   dbLog("FATAL: DATABASE_URL not found in environment or .env");
@@ -177,11 +182,6 @@ async function startServer() {
 }
 
 async function main() {
-  // Always create both log files as soon as the runner runs, so their
-  // presence confirms the runner executed even when it short-circuits below.
-  dbLog("=== Auto-start runner invoked ===");
-  serverLog("=== Auto-start runner invoked ===");
-
   // If the server is already up, just open the browser and exit.
   try {
     await httpHealthCheck(HEALTH_URL, 2000);
