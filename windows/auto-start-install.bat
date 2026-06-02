@@ -132,18 +132,29 @@ echo [%date% %time%] VBS target: !VBS_TARGET! >> "%LOGFILE%"
     echo WshShell.Run "cmd /c cd /d """ ^& strPath ^& """ ^&^& node windows\autostart-runner.cjs", 0, False
 )
 
-if exist "!VBS_TARGET!" (
-    echo  [OK] Auto-start entry created.
-    echo.
-    echo  File: !VBS_TARGET!
-    echo.
-    echo [%date% %time%] OK - VBS created in Startup folder >> "%LOGFILE%"
-) else (
-    echo  [ERROR] Could not write to Startup folder.
-    echo [%date% %time%] ERROR - Failed to create VBS >> "%LOGFILE%"
+if not exist "!VBS_TARGET!" (
+    echo  [ERROR] Startup file was NOT created.
+    echo  Expected: !VBS_TARGET!
+    echo [%date% %time%] ERROR - VBS not found after write >> "%LOGFILE%"
     pause
     exit /b 1
 )
+
+findstr /c:"autostart-runner.cjs" "!VBS_TARGET!" >nul 2>&1
+if errorlevel 1 (
+    echo  [ERROR] Startup file was created but looks incomplete or corrupted.
+    echo  File: !VBS_TARGET!
+    echo  Please run this installer again.
+    echo [%date% %time%] ERROR - VBS incomplete - missing runner handoff line >> "%LOGFILE%"
+    pause
+    exit /b 1
+)
+
+echo  [OK] Auto-start entry created and verified.
+echo.
+echo  File: !VBS_TARGET!
+echo.
+echo [%date% %time%] OK - VBS created and verified in Startup folder >> "%LOGFILE%"
 
 echo  ============================================
 echo   Auto-Start Setup Complete!
