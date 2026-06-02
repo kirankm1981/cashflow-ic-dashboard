@@ -125,8 +125,8 @@ echo [%date% %time%] VBS target: !VBS_TARGET! >> "%LOGFILE%"
     echo nodePathLog = logFolder ^& "\node-path.log"
     echo WshShell.Run "cmd /c where node ^> """ ^& nodePathLog ^& """ 2^>^&1", 0, True
     echo.
-    echo ' Hand off everything (env load, DB retries, schema sync, server start,
-    echo ' health check, browser) to the Node runner - reliable and fully logged.
+    echo ' Hand off everything to the Node runner - env load, DB retries,
+    echo ' schema sync, server start, health check, browser. Fully logged.
     echo logFile.WriteLine "[" ^& Now ^& "] Running windows\autostart-runner.cjs"
     echo logFile.Close
     echo WshShell.Run "cmd /c cd /d """ ^& strPath ^& """ ^&^& node windows\autostart-runner.cjs", 0, False
