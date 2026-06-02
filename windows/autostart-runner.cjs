@@ -52,6 +52,9 @@ function log(msg) {
 function dbLog(msg) {
   try { fs.appendFileSync(dbLogFile, `[${ts()}] ${msg}\n`); } catch (_) {}
 }
+function serverLog(msg) {
+  try { fs.appendFileSync(serverLogPath, `[${ts()}] ${msg}\n`); } catch (_) {}
+}
 
 const HEALTH_URL = "http://127.0.0.1:" + (process.env.PORT || "3000") + "/api/health";
 
@@ -174,10 +177,17 @@ async function startServer() {
 }
 
 async function main() {
+  // Always create both log files as soon as the runner runs, so their
+  // presence confirms the runner executed even when it short-circuits below.
+  dbLog("=== Auto-start runner invoked ===");
+  serverLog("=== Auto-start runner invoked ===");
+
   // If the server is already up, just open the browser and exit.
   try {
     await httpHealthCheck(HEALTH_URL, 2000);
     log("Server already running on port 3000, exiting");
+    dbLog("Server already running - DB connection check skipped.");
+    serverLog("Server already running on port 3000 - runner did not spawn a new server (likely started manually via start.bat).");
     try { execSync('start "" "http://localhost:3000"', { stdio: "ignore", shell: true }); } catch (_) {}
     process.exit(0);
   } catch (_) {
