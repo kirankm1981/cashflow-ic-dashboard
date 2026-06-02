@@ -35,6 +35,7 @@ import { formatAmount, SCALE_SUFFIXES } from "@/lib/number-format";
 import { ChartFormatSettings } from "@/components/chart-format-settings";
 import { DashboardFilters } from "@/components/mis-dashboards/dashboard-filters";
 import { downloadExcel, buildCashflowByProjectSheet } from "@/lib/excel-export";
+import { aggregateCashflowByProject } from "@/lib/mis-aggregations";
 import { D1CashflowStatement } from "@/components/mis-dashboards/d1-cashflow-statement";
 import { D2PlWip } from "@/components/mis-dashboards/d2-pl-wip";
 import { D3WorkingCapital } from "@/components/mis-dashboards/d3-working-capital";
@@ -160,60 +161,7 @@ export default function CashflowDashboard() {
       .sort((a, b) => (Math.abs(b.inflow) + Math.abs(b.outflow) + Math.abs(b.cashBank)) - (Math.abs(a.inflow) + Math.abs(a.outflow) + Math.abs(a.cashBank)));
   }, [filteredData]);
 
-  const pivotData = useMemo(() => {
-    const projects = new Set<string>();
-    const structure = new Map<string, Map<string, Map<string, number>>>();
-
-    for (const r of filteredData) {
-      const cfType = r.cashflow || "Unclassified";
-      const head = r.cfHead || "Unmapped";
-      const project = r.projectName || "Unassigned";
-      projects.add(project);
-
-      if (!structure.has(cfType)) structure.set(cfType, new Map());
-      const heads = structure.get(cfType)!;
-      if (!heads.has(head)) heads.set(head, new Map());
-      const projectMap = heads.get(head)!;
-      projectMap.set(project, (projectMap.get(project) || 0) + (r.amount || 0));
-    }
-
-    const projectList = Array.from(projects).sort();
-    const rows: Array<{
-      cfType: string;
-      cfHead: string;
-      isParent: boolean;
-      projects: Record<string, number>;
-      total: number;
-    }> = [];
-
-    for (const [cfType, heads] of structure) {
-      const parentProjects: Record<string, number> = {};
-      let parentTotal = 0;
-      for (const [head, projectMap] of heads) {
-        const rowProjects: Record<string, number> = {};
-        let rowTotal = 0;
-        for (const [proj, val] of projectMap) {
-          rowProjects[proj] = val;
-          rowTotal += val;
-          parentProjects[proj] = (parentProjects[proj] || 0) + val;
-        }
-        parentTotal += rowTotal;
-        rows.push({ cfType, cfHead: head, isParent: false, projects: rowProjects, total: rowTotal });
-      }
-      rows.push({ cfType, cfHead: "", isParent: true, projects: parentProjects, total: parentTotal });
-    }
-
-    const sortedRows: typeof rows = [];
-    const cfTypes = Array.from(structure.keys()).sort();
-    for (const cfType of cfTypes) {
-      const parent = rows.find(r => r.isParent && r.cfType === cfType)!;
-      const children = rows.filter(r => !r.isParent && r.cfType === cfType).sort((a, b) => a.cfHead.localeCompare(b.cfHead));
-      sortedRows.push(parent);
-      sortedRows.push(...children);
-    }
-
-    return { projectList, rows: sortedRows };
-  }, [filteredData]);
+  const pivotData = useMemo(() => aggregateCashflowByProject(filteredData), [filteredData]);
 
   const totalInflow = useMemo(() =>
     filteredData.filter(r => r.cashflow === "Inflow").reduce((s, r) => s + (r.amount || 0), 0),
@@ -347,7 +295,6 @@ export default function CashflowDashboard() {
         <TabsList data-testid="tabs-cashflow-dashboard">
           <TabsTrigger value="dashboard" data-testid="tab-cf-dashboard">Cashflow Overview</TabsTrigger>
           <TabsTrigger value="detailed" data-testid="tab-cf-detailed">Cashflow by Project</TabsTrigger>
-          <TabsTrigger value="d1" data-testid="tab-d1">CF Statement</TabsTrigger>
           <TabsTrigger value="d2" data-testid="tab-d2">PL & WIP</TabsTrigger>
           <TabsTrigger value="d3" data-testid="tab-d3">Working Capital</TabsTrigger>
           <TabsTrigger value="d4" data-testid="tab-d4">Debt & Finance</TabsTrigger>
