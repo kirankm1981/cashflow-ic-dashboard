@@ -49,6 +49,13 @@ for /f "tokens=*" %%v in ('node -v') do (
     echo  [OK] Node.js %%v
     echo [%date% %time%] OK - Node.js %%v >> "%LOGFILE%"
 )
+
+REM -- Resolve absolute node.exe path so the boot VBS does not depend on PATH
+set "NODE_EXE="
+for /f "delims=" %%i in ('where node 2^>nul') do if not defined NODE_EXE set "NODE_EXE=%%i"
+if not defined NODE_EXE set "NODE_EXE=node"
+echo  [OK] Node path: !NODE_EXE!
+echo [%date% %time%] Node path resolved: !NODE_EXE! >> "%LOGFILE%"
 echo.
 
 REM -- Check production build
@@ -129,7 +136,7 @@ echo [%date% %time%] VBS target: !VBS_TARGET! >> "%LOGFILE%"
     echo ' schema sync, server start, health check, browser. Fully logged.
     echo logFile.WriteLine "[" ^& Now ^& "] Running windows\autostart-runner.cjs"
     echo logFile.Close
-    echo WshShell.Run "cmd /c cd /d """ ^& strPath ^& """ ^&^& node windows\autostart-runner.cjs", 0, False
+    echo WshShell.Run "cmd /c cd /d """ ^& strPath ^& """ ^&^& ""!NODE_EXE!"" windows\autostart-runner.cjs ^> ""windows\logs\runner-launch.log"" 2^>^&1", 0, False
 )
 
 if not exist "!VBS_TARGET!" (

@@ -119,7 +119,7 @@ async function tryConnect() {
 function runSchemaSync() {
   try {
     log("Running schema sync...");
-    const out = execSync("node windows/sync-db.cjs", {
+    const out = execSync(`"${process.execPath}" windows/sync-db.cjs`, {
       cwd: projectRoot,
       stdio: "pipe",
       env: process.env,
@@ -151,7 +151,7 @@ async function startServer() {
   const outFd = fs.openSync(serverLogPath, "a");
   const errFd = fs.openSync(serverLogPath, "a");
 
-  const server = spawn("node", ["dist/index.cjs"], {
+  const server = spawn(process.execPath, ["dist/index.cjs"], {
     cwd: projectRoot,
     env,
     stdio: ["ignore", outFd, errFd],
