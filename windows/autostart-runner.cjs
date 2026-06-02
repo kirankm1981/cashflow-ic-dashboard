@@ -61,6 +61,9 @@ function safeTarget(url) {
 
 log("Auto-start runner started");
 log(`Project root: ${projectRoot}`);
+log(`Platform: ${process.platform} ${process.arch}, Node: ${process.version}`);
+log(`Target HTTP port: ${process.env.PORT || "3000"} (HTTPS ${process.env.HTTPS_PORT || "3443"} if certs present)`);
+log(`Logs: autostart.log, db-check.log, server.log in windows\\logs`);
 log(`DATABASE_URL set: ${!!process.env.DATABASE_URL}`);
 
 if (!process.env.DATABASE_URL) {
@@ -113,16 +116,20 @@ async function tryConnect() {
 function runSchemaSync() {
   try {
     log("Running schema sync...");
-    execSync("node windows/sync-db.cjs", {
+    const out = execSync("node windows/sync-db.cjs", {
       cwd: projectRoot,
       stdio: "pipe",
       env: process.env,
       timeout: 90000,
     });
+    const text = (out || "").toString().trim();
+    if (text) text.split(/\r?\n/).forEach((l) => log(`  [sync-db] ${l}`));
     log("Schema sync complete");
     return true;
   } catch (err) {
     log(`Schema sync reported a problem (non-fatal): ${err.message || err}`);
+    const eout = ((err.stdout || "") + (err.stderr || "")).toString().trim();
+    if (eout) eout.split(/\r?\n/).forEach((l) => log(`  [sync-db] ${l}`));
     return false;
   }
 }

@@ -164,19 +164,24 @@ if !errorlevel! equ 0 (
     psql -h !PG_HOST! -p !PG_PORT! -U !PG_USER! -tc "SELECT 1 FROM pg_database WHERE datname='!PG_DB!'" 2>nul | findstr "1" >nul
     if !errorlevel! neq 0 (
         echo  Creating database "!PG_DB!"...
-        psql -h !PG_HOST! -p !PG_PORT! -U !PG_USER! -c "CREATE DATABASE !PG_DB!;" 2>nul
+        echo [%date% %time%] Creating database !PG_DB! >> "%LOGFILE%"
+        psql -h !PG_HOST! -p !PG_PORT! -U !PG_USER! -c "CREATE DATABASE !PG_DB!;" >> "%LOGFILE%" 2>&1
         if !errorlevel! equ 0 (
             echo  [OK] Database "!PG_DB!" created.
+            echo [%date% %time%] OK - Database !PG_DB! created >> "%LOGFILE%"
         ) else (
             echo  [WARNING] Could not auto-create database.
             echo  You may need to create it manually via pgAdmin or psql.
+            echo [%date% %time%] WARNING - Could not auto-create database !PG_DB! >> "%LOGFILE%"
         )
     ) else (
         echo  [OK] Database "!PG_DB!" already exists.
+        echo [%date% %time%] OK - Database !PG_DB! already exists >> "%LOGFILE%"
     )
 ) else (
     echo  [NOTE] psql not in PATH - skipping auto-create.
     echo  Make sure the database "!PG_DB!" exists.
+    echo [%date% %time%] NOTE - psql not in PATH, skipped DB auto-create >> "%LOGFILE%"
 )
 set PGPASSWORD=
 echo [%date% %time%] OK - Database check done >> "%LOGFILE%"

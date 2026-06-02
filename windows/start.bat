@@ -23,7 +23,11 @@ if !errorlevel! neq 0 (
     pause
     exit /b 1
 )
-for /f "tokens=*" %%v in ('node -v') do echo  Node.js %%v
+for /f "tokens=*" %%v in ('node -v') do (
+    echo  Node.js %%v
+    echo [%date% %time%] OK - Node.js %%v >> "%LOGFILE%"
+)
+echo [%date% %time%] cwd: %CD% >> "%LOGFILE%"
 echo.
 
 if not exist .env (
