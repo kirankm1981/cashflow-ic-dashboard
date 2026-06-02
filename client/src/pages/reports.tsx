@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BarChart3, Search, Download } from "lucide-react";
 import * as XLSX from "xlsx";
+import { buildEntityCpSummarySheet } from "@shared/excel-builders";
 
 interface EntityCounterPartyRow {
   entity: string;
@@ -64,35 +65,9 @@ export default function Reports({ embedded = false }: { embedded?: boolean } = {
 
   const handleExportReport = () => {
     if (!filtered || filtered.length === 0) return;
-    const exportRows = filtered.map(r => ({
-      "Entity": displayName(r.entity),
-      "Counter Party": displayName(r.counterParty),
-      "Total": r.total,
-      "Matched": r.matched,
-      "Reversals": r.reversal || 0,
-      "Review": r.review,
-      "Suggested": r.suggested,
-      "Unmatched": r.unmatched,
-      "Rate (%)": r.rate,
-    }));
-    exportRows.push({
-      "Entity": "TOTAL",
-      "Counter Party": "",
-      "Total": totals.total,
-      "Matched": totals.matched,
-      "Reversals": totals.reversal,
-      "Review": totals.review,
-      "Suggested": totals.suggested,
-      "Unmatched": totals.unmatched,
-      "Rate (%)": overallRate,
-    });
-
-    const ws = XLSX.utils.json_to_sheet(exportRows);
+    const built = buildEntityCpSummarySheet(filtered, totals, overallRate, displayName);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Entity CP Summary");
-    ws["!cols"] = [
-      { wch: 30 }, { wch: 30 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 10 },
-    ];
+    XLSX.utils.book_append_sheet(wb, built.ws, built.name);
     const dateStr = new Date().toISOString().slice(0, 10);
     XLSX.writeFile(wb, `entity_counterparty_summary_${dateStr}.xlsx`);
   };

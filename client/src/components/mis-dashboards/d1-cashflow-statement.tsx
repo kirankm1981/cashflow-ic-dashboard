@@ -8,6 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pi
 import { DashboardRow, createFmt, fmtSuffix, colorForValue, flowColor, FLOW_TEXT_COLOR, FLOW_BG_COLOR } from "./types";
 import type { FormatConfig, FlowColor } from "./types";
 import { downloadExcel, buildCashflowStatementSheet } from "@/lib/excel-export";
+import { aggregateCfTable } from "@/lib/mis-aggregations";
 
 const COLORS = { Operating: "#22c55e", Investing: "#f97316", Financing: "#3b82f6", "Cash & Cash Equivalents": "#8b5cf6" };
 
@@ -49,42 +50,7 @@ export function D1CashflowStatement({ rows, formatConfig }: Props) {
 
   const pieData = barData.map(d => ({ ...d, value: Math.abs(d.value) })).filter(d => d.value > 0);
 
-  const cfTable = useMemo(() => {
-    const sectionOrder = ["Operating", "Investing", "Financing", "Cash & Cash Equivalents"];
-    const structure: { activity: string; lines: { line: string; debit: number; credit: number; net: number; accountHeads: { head: string; debit: number; credit: number; net: number }[] }[] }[] = [];
-
-    for (const activity of sectionOrder) {
-      const activityRows = cfRows.filter(r => r.activityType === activity);
-      if (activityRows.length === 0) continue;
-
-      const lineMap = new Map<string, { debit: number; credit: number; net: number; ahMap: Map<string, { debit: number; credit: number; net: number }> }>();
-      for (const r of activityRows) {
-        const lineName = r.cfStatementLine || "Other";
-        if (!lineMap.has(lineName)) lineMap.set(lineName, { debit: 0, credit: 0, net: 0, ahMap: new Map() });
-        const entry = lineMap.get(lineName)!;
-        entry.debit += r.periodDebit || 0;
-        entry.credit += r.periodCredit || 0;
-        entry.net += r.periodNet;
-        const ah = r.accountHead || "Unknown";
-        if (!entry.ahMap.has(ah)) entry.ahMap.set(ah, { debit: 0, credit: 0, net: 0 });
-        const ahEntry = entry.ahMap.get(ah)!;
-        ahEntry.debit += r.periodDebit || 0;
-        ahEntry.credit += r.periodCredit || 0;
-        ahEntry.net += r.periodNet;
-      }
-
-      const lines = [...lineMap.entries()].map(([line, data]) => ({
-        line,
-        debit: data.debit,
-        credit: data.credit,
-        net: data.net,
-        accountHeads: [...data.ahMap.entries()].map(([head, d]) => ({ head, ...d })).sort((a, b) => Math.abs(b.net) - Math.abs(a.net)),
-      })).sort((a, b) => Math.abs(b.net) - Math.abs(a.net));
-
-      structure.push({ activity, lines });
-    }
-    return structure;
-  }, [cfRows]);
+  const cfTable = useMemo(() => aggregateCfTable(rows), [rows]);
 
   const waterfallData = useMemo(() => {
     const opLines = cfRows.filter(r => r.activityType === "Operating");

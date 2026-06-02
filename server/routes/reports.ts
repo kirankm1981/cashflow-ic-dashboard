@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { storage } from "../storage";
 import * as XLSX from "xlsx";
+import { buildIcReconExportSheet, buildIcReconTemplateSheet } from "@shared/excel-builders";
 
 export function registerReportRoutes(app: Express) {
   app.get("/api/export/excel", async (req, res) => {
@@ -24,30 +25,9 @@ export function registerReportRoutes(app: Express) {
 
       const lines = await storage.getSummarizedLines(filters);
 
-      const rows = lines.map(l => ({
-        "Company": l.company,
-        "Counter Party": l.counterParty,
-        "Document No": l.documentNo || "",
-        "Doc Date": l.docDate || "",
-        "Net Amount": l.netAmount || 0,
-        "Txn Count": l.transactionCount || 1,
-        "IC GL": l.icGl || "",
-        "Narration": l.narration || "",
-        "Status": l.reconStatus,
-        "Recon ID": l.reconId || "",
-        "Rule": l.reconRule || "",
-      }));
-
-      const ws = XLSX.utils.json_to_sheet(rows);
+      const built = buildIcReconExportSheet(lines);
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Reconciliation");
-
-      const colWidths = [
-        { wch: 25 }, { wch: 25 }, { wch: 18 }, { wch: 12 },
-        { wch: 16 }, { wch: 8 }, { wch: 20 }, { wch: 40 },
-        { wch: 12 }, { wch: 12 }, { wch: 20 },
-      ];
-      ws["!cols"] = colWidths;
+      XLSX.utils.book_append_sheet(wb, built.ws, built.name);
 
       const xlsxBuffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
 
@@ -120,27 +100,9 @@ export function registerReportRoutes(app: Express) {
         return (a.id || 0) - (b.id || 0);
       });
 
-      const rows = allLines.map(l => ({
-        "Line ID": l.id,
-        "Company": l.company,
-        "Counter Party": l.counterParty,
-        "Document No": l.documentNo || "",
-        "Doc Date": l.docDate || "",
-        "Net Amount": l.netAmount || 0,
-        "Narration": l.narration || "",
-        "Status": l.reconStatus,
-        "Current Rec ID": l.reconId || "",
-        "User Rec ID": "",
-      }));
-
-      const ws = XLSX.utils.json_to_sheet(rows);
+      const built = buildIcReconTemplateSheet(allLines);
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Reconciliation Template");
-
-      ws["!cols"] = [
-        { wch: 8 }, { wch: 25 }, { wch: 25 }, { wch: 18 }, { wch: 12 },
-        { wch: 16 }, { wch: 40 }, { wch: 14 }, { wch: 14 }, { wch: 16 },
-      ];
+      XLSX.utils.book_append_sheet(wb, built.ws, built.name);
 
       const xlsxBuffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
       const dateStr = new Date().toISOString().slice(0, 10);

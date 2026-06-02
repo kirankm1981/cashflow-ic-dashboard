@@ -9,38 +9,13 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pi
 import { DashboardRow, createFmt, fmtSuffix, flowColor, FLOW_BG_COLOR } from "./types";
 import type { FormatConfig, FlowColor } from "./types";
 import { downloadExcel, buildPLSheet, buildWIPSheet } from "@/lib/excel-export";
+import { aggregatePl, aggregateWipDetail, PL_ORDER, PL_SIGNS, PL_LABELS } from "@/lib/mis-aggregations";
 
 function plColor(value: number): string {
   if (value > 0) return "text-emerald-700 dark:text-emerald-400";
   if (value < 0) return "text-amber-700 dark:text-amber-400";
   return "text-muted-foreground";
 }
-
-const PL_ORDER = [
-  "Revenue from Operations",
-  "Other Income",
-  "__TOTAL_INCOME__",
-  "Cost of Construction",
-  "__GROSS_PROFIT__",
-  "Employee Expenses",
-  "Sales & Marketing",
-  "Admin & Other Expenses",
-  "Facility Management",
-  "__EBITDA__",
-  "Depreciation & Amortization",
-  "__EBIT__",
-  "Finance Cost",
-  "__EBT__",
-  "Tax Expense",
-  "__PAT__",
-];
-
-const PL_SIGNS: Record<string, number> = {
-  "Revenue from Operations": 1, "Other Income": 1,
-  "Cost of Construction": -1, "Employee Expenses": -1, "Sales & Marketing": -1,
-  "Admin & Other Expenses": -1, "Facility Management": -1,
-  "Depreciation & Amortization": -1, "Finance Cost": -1, "Tax Expense": -1,
-};
 
 const WIP_COLORS = ["#3b82f6", "#f97316", "#22c55e", "#ef4444", "#8b5cf6", "#06b6d4"];
 
@@ -58,61 +33,27 @@ export function D2PlWip({ rows, formatConfig }: Props) {
   const plRows = useMemo(() => rows.filter(r => r.plCategory), [rows]);
   const wipRows = useMemo(() => rows.filter(r => r.wipComponent), [rows]);
 
-  const plSums = useMemo(() => {
-    const map: Record<string, { periodNet: number; items: { head: string; net: number }[] }> = {};
-    const ahMap: Record<string, Record<string, number>> = {};
-    for (const r of plRows) {
-      const cat = r.plCategory!;
-      const sign = r.plSign || PL_SIGNS[cat] || 0;
-      const val = sign > 0
-        ? Math.abs(r.periodNet)
-        : -Math.abs(r.periodNet);
-      if (!map[cat]) map[cat] = { periodNet: 0, items: [] };
-      map[cat].periodNet += val;
-      if (!ahMap[cat]) ahMap[cat] = {};
-      const ah = r.accountHead || "Other";
-      ahMap[cat][ah] = (ahMap[cat][ah] || 0) + val;
-    }
-    for (const cat of Object.keys(ahMap)) {
-      map[cat].items = Object.entries(ahMap[cat]).map(([head, net]) => ({ head, net })).sort((a, b) => Math.abs(b.net) - Math.abs(a.net));
-    }
-    return map;
-  }, [plRows]);
+  const plAggregation = useMemo(() => aggregatePl(rows), [rows]);
+  const plSums = plAggregation.plSums;
+  const calculatedRows = plAggregation.calculatedRows;
+  const calculatedLabels = PL_LABELS;
 
-  const revenue = (plSums["Revenue from Operations"]?.periodNet || 0);
-  const otherIncome = (plSums["Other Income"]?.periodNet || 0);
-  const totalIncome = revenue + otherIncome;
-  const costOfConstruction = (plSums["Cost of Construction"]?.periodNet || 0);
-  const grossProfit = totalIncome + costOfConstruction;
+  const revenue = plSums["Revenue from Operations"]?.periodNet || 0;
+  const otherIncome = plSums["Other Income"]?.periodNet || 0;
+  const totalIncome = calculatedRows.__TOTAL_INCOME__;
+  const costOfConstruction = plSums["Cost of Construction"]?.periodNet || 0;
+  const grossProfit = calculatedRows.__GROSS_PROFIT__;
   const employee = plSums["Employee Expenses"]?.periodNet || 0;
   const salesMkt = plSums["Sales & Marketing"]?.periodNet || 0;
   const admin = plSums["Admin & Other Expenses"]?.periodNet || 0;
   const facility = plSums["Facility Management"]?.periodNet || 0;
-  const ebitda = grossProfit + employee + salesMkt + admin + facility;
+  const ebitda = calculatedRows.__EBITDA__;
   const depreciation = plSums["Depreciation & Amortization"]?.periodNet || 0;
-  const ebit = ebitda + depreciation;
+  const ebit = calculatedRows.__EBIT__;
   const financeCost = plSums["Finance Cost"]?.periodNet || 0;
-  const ebt = ebit + financeCost;
+  const ebt = calculatedRows.__EBT__;
   const tax = plSums["Tax Expense"]?.periodNet || 0;
-  const pat = ebt + tax;
-
-  const calculatedRows: Record<string, number> = {
-    "__TOTAL_INCOME__": totalIncome,
-    "__GROSS_PROFIT__": grossProfit,
-    "__EBITDA__": ebitda,
-    "__EBIT__": ebit,
-    "__EBT__": ebt,
-    "__PAT__": pat,
-  };
-
-  const calculatedLabels: Record<string, string> = {
-    "__TOTAL_INCOME__": "TOTAL INCOME",
-    "__GROSS_PROFIT__": "GROSS PROFIT",
-    "__EBITDA__": "EBITDA",
-    "__EBIT__": "EBIT",
-    "__EBT__": "EBT (Earnings Before Tax)",
-    "__PAT__": "PAT (Profit After Tax)",
-  };
+  const pat = calculatedRows.__PAT__;
 
   const waterfallData = [
     { name: "Revenue", value: revenue, fill: "#22c55e" },
@@ -349,18 +290,7 @@ export function D2PlWip({ rows, formatConfig }: Props) {
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        const wipData = wipRows.reduce<{ project: string; component: string; opening: number; period: number; closing: number }[]>((acc, r) => {
-                          const key = `${r.projectName || "Unassigned"}|${r.wipComponent}`;
-                          const existing = acc.find(a => `${a.project}|${a.component}` === key);
-                          if (existing) {
-                            existing.opening += r.openingNet;
-                            existing.period += r.periodNet;
-                            existing.closing += r.closingNet;
-                          } else {
-                            acc.push({ project: r.projectName || "Unassigned", component: r.wipComponent!, opening: r.openingNet, period: r.periodNet, closing: r.closingNet });
-                          }
-                          return acc;
-                        }, []).sort((a, b) => Math.abs(b.closing) - Math.abs(a.closing));
+                        const wipData = aggregateWipDetail(rows);
                         const sheet = buildWIPSheet(wipData);
                         downloadExcel([sheet], `WIP_Detail_${new Date().toISOString().slice(0, 10)}.xlsx`);
                       }}

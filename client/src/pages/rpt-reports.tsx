@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/select";
 import { MultiSelectFilter } from "@/components/ui/multi-select-filter";
 import * as XLSX from "xlsx-js-style";
+import { buildEntityRptReportSheet } from "@shared/excel-builders";
+import { buildRptStatusWorksheet, buildRptInterGroupWorksheet } from "@/lib/rpt-export";
 
 function formatNum(val: number | null | undefined): string {
   if (val === null || val === undefined || val === 0) return "-";
@@ -194,86 +196,11 @@ function StatusTab({ period }: { period: string }) {
               disabled={!groups.length}
               data-testid="btn-download-status"
               onClick={() => {
-                const ws: XLSX.WorkSheet = {};
-                const colHeader = ["Entity", ...dynCols, "Net", "Status"];
-                const colCount = colHeader.length;
                 const filterParts: string[] = [];
                 if (icTxnType.length) filterParts.push(`IC Txn Type: ${icTxnType.join(", ")}`);
                 if (icType.length) filterParts.push(`RPT Type: ${icType.join(", ")}`);
                 const filterLabel = filterParts.length ? filterParts.join(" | ") : undefined;
-                const hdrOffset = addReportHeaders(ws, "Entity Status Report", "RPT Status — Net Lender / Net Borrower", period, colCount, filterLabel);
-                const netColIdx = dynCols.length + 1;
-                const statusColIdx = dynCols.length + 2;
-                const netColLetter = XLSX.utils.encode_col(netColIdx);
-                const dataRows: any[][] = [colHeader];
-                let rowNum = hdrOffset + 1;
-                const groupRowIndices: number[] = [];
-                for (const grp of groups) {
-                  const grpExcelRow = rowNum + 1;
-                  const grpDataRow: any[] = [grp.group];
-                  for (let ci = 0; ci < dynCols.length; ci++) grpDataRow.push(null);
-                  grpDataRow.push(null);
-                  grpDataRow.push("");
-                  dataRows.push(grpDataRow);
-                  groupRowIndices.push(rowNum);
-                  rowNum++;
-                  const entityStartRow = rowNum;
-                  for (const e of grp.entities) {
-                    const eRow: any[] = ["  " + e.entityName];
-                    for (const col of dynCols) eRow.push(e.balances?.[col] || 0);
-                    eRow.push(null);
-                    eRow.push(null);
-                    dataRows.push(eRow);
-                    rowNum++;
-                  }
-                  const entityEndRow = rowNum - 1;
-                  for (let ei = entityStartRow; ei <= entityEndRow; ei++) {
-                    const excelR = ei + 1;
-                    const firstDataCol = XLSX.utils.encode_col(1);
-                    const lastDataCol = XLSX.utils.encode_col(dynCols.length);
-                    const netAddr = XLSX.utils.encode_cell({ r: ei, c: netColIdx });
-                    ws[netAddr] = { t: "n", f: `SUM(${firstDataCol}${excelR}:${lastDataCol}${excelR})`, z: "#,##0" };
-                    const statusAddr = XLSX.utils.encode_cell({ r: ei, c: statusColIdx });
-                    ws[statusAddr] = { t: "s", f: `IF(${netColLetter}${excelR}>0,"Net Lender",IF(${netColLetter}${excelR}<0,"Net Borrower",""))` };
-                  }
-                  for (let ci = 0; ci < dynCols.length; ci++) {
-                    const colLetter = XLSX.utils.encode_col(ci + 1);
-                    const addr = XLSX.utils.encode_cell({ r: grpExcelRow - 1, c: ci + 1 });
-                    ws[addr] = { t: "n", f: `SUM(${colLetter}${entityStartRow + 1}:${colLetter}${entityEndRow + 1})`, z: "#,##0" };
-                  }
-                  const grpNetAddr = XLSX.utils.encode_cell({ r: grpExcelRow - 1, c: netColIdx });
-                  const firstDataCol = XLSX.utils.encode_col(1);
-                  const lastDataCol = XLSX.utils.encode_col(dynCols.length);
-                  ws[grpNetAddr] = { t: "n", f: `SUM(${firstDataCol}${grpExcelRow}:${lastDataCol}${grpExcelRow})`, z: "#,##0" };
-                }
-                XLSX.utils.sheet_add_aoa(ws, dataRows, { origin: XLSX.utils.encode_cell({ r: hdrOffset, c: 0 }) });
-                const totalRows = hdrOffset + dataRows.length;
-                styleColumnHeaders(ws, hdrOffset, colCount);
-                let dataIdx = 0;
-                for (let r = hdrOffset + 1; r < totalRows; r++) {
-                  const isGroupRow = groupRowIndices.includes(r);
-                  const srcRow = dataRows[r - hdrOffset];
-                  if (isGroupRow) {
-                    for (let c = 0; c < colCount; c++) {
-                      styleCell(ws, r, c, { font: FONT_GROUP, fill: FILL_GROUP, border: CELL_BORDER, alignment: { horizontal: c === 0 ? "left" : "right" }, numFmt: c > 0 && c <= netColIdx ? "#,##0" : undefined });
-                    }
-                  } else {
-                    for (let c = 0; c < colCount; c++) {
-                      const isNum = c >= 1 && c <= netColIdx;
-                      if (isNum) {
-                        const rawVal = srcRow ? srcRow[c] : undefined;
-                        const numVal = typeof rawVal === "number" ? rawVal : undefined;
-                        styleCell(ws, r, c, { font: fontForValue(numVal), border: CELL_BORDER, alignment: { horizontal: "right" }, numFmt: "#,##0" });
-                      } else if (c === statusColIdx) {
-                        styleCell(ws, r, c, { font: FONT_BOLD, border: CELL_BORDER, alignment: { horizontal: "left" } });
-                      } else {
-                        styleCell(ws, r, c, { font: FONT_DEFAULT, border: CELL_BORDER, alignment: { horizontal: "left" } });
-                      }
-                    }
-                  }
-                }
-                ws["!ref"] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: totalRows - 1, c: colCount - 1 } });
-                ws["!cols"] = [{ wch: 45 }, ...dynCols.map(() => ({ wch: 18 })), { wch: 18 }, { wch: 14 }];
+                const ws = buildRptStatusWorksheet({ groups, dynCols, period, filterLabel });
                 const suffix = icTxnType.length ? `_${icTxnType.join("_")}` : "";
                 downloadXlsx(ws, `RPT_Status${suffix}.xlsx`, "Status");
               }}
@@ -400,96 +327,11 @@ function InterGroupTab({ period }: { period: string }) {
               disabled={!groups.length}
               data-testid="btn-download-intergroup"
               onClick={() => {
-                const ws: XLSX.WorkSheet = {};
-                const colHeader = ["Entity Group", "RPT Group", ...dynCols, "Grand Total"];
-                const colCount = colHeader.length;
                 const filterParts: string[] = [];
                 if (icTxnType.length) filterParts.push(`IC Txn Type: ${icTxnType.join(", ")}`);
                 if (icType.length) filterParts.push(`RPT Type: ${icType.join(", ")}`);
                 const filterLabel = filterParts.length ? filterParts.join(" | ") : undefined;
-                const hdrOffset = addReportHeaders(ws, "RPT Reconciliation — Inter Group", "Sum of Adj Cl Bal — Entity Group wise, RPT Group wise", period, colCount, filterLabel);
-                const gtColIdx = dynCols.length + 2;
-                const firstDynCol = 2;
-                const dataRows: any[][] = [colHeader];
-                const groupRowIndices: number[] = [];
-                const detailRanges: { grpRow: number; startRow: number; endRow: number }[] = [];
-                let rowNum = hdrOffset + 1;
-                for (const grp of groups) {
-                  const grpDataRow: any[] = [grp.group, ""];
-                  for (let ci = 0; ci < dynCols.length; ci++) grpDataRow.push(null);
-                  grpDataRow.push(null);
-                  dataRows.push(grpDataRow);
-                  const grpRowIdx = rowNum;
-                  groupRowIndices.push(rowNum);
-                  rowNum++;
-                  const detailStart = rowNum;
-                  for (const rr of grp.rptRows) {
-                    const eRow: any[] = ["", rr.rptGroup];
-                    for (const col of dynCols) eRow.push(rr.balances?.[col] || 0);
-                    eRow.push(null);
-                    dataRows.push(eRow);
-                    rowNum++;
-                  }
-                  const detailEnd = rowNum - 1;
-                  detailRanges.push({ grpRow: grpRowIdx, startRow: detailStart, endRow: detailEnd });
-                }
-                const gtRow: any[] = ["Grand Total", ""];
-                for (let ci = 0; ci < dynCols.length; ci++) gtRow.push(null);
-                gtRow.push(null);
-                dataRows.push(gtRow);
-                const grandTotalRowIdx = rowNum;
-                rowNum++;
-                XLSX.utils.sheet_add_aoa(ws, dataRows, { origin: XLSX.utils.encode_cell({ r: hdrOffset, c: 0 }) });
-                for (const { grpRow, startRow, endRow } of detailRanges) {
-                  for (let dr = startRow; dr <= endRow; dr++) {
-                    const exR = dr + 1;
-                    const firstL = XLSX.utils.encode_col(firstDynCol);
-                    const lastL = XLSX.utils.encode_col(firstDynCol + dynCols.length - 1);
-                    const addr = XLSX.utils.encode_cell({ r: dr, c: gtColIdx });
-                    ws[addr] = { t: "n", f: `SUM(${firstL}${exR}:${lastL}${exR})`, z: "#,##0" };
-                  }
-                  for (let ci = 0; ci < dynCols.length; ci++) {
-                    const colL = XLSX.utils.encode_col(firstDynCol + ci);
-                    const addr = XLSX.utils.encode_cell({ r: grpRow, c: firstDynCol + ci });
-                    ws[addr] = { t: "n", f: `SUM(${colL}${startRow + 1}:${colL}${endRow + 1})`, z: "#,##0" };
-                  }
-                  const grpGtAddr = XLSX.utils.encode_cell({ r: grpRow, c: gtColIdx });
-                  const firstL = XLSX.utils.encode_col(firstDynCol);
-                  const lastL = XLSX.utils.encode_col(firstDynCol + dynCols.length - 1);
-                  ws[grpGtAddr] = { t: "n", f: `SUM(${firstL}${grpRow + 1}:${lastL}${grpRow + 1})`, z: "#,##0" };
-                }
-                for (let ci = 0; ci < dynCols.length; ci++) {
-                  const colL = XLSX.utils.encode_col(firstDynCol + ci);
-                  const refs = groupRowIndices.map(gr => `${colL}${gr + 1}`).join(",");
-                  const addr = XLSX.utils.encode_cell({ r: grandTotalRowIdx, c: firstDynCol + ci });
-                  ws[addr] = { t: "n", f: `SUM(${refs})`, z: "#,##0" };
-                }
-                const gtGtAddr = XLSX.utils.encode_cell({ r: grandTotalRowIdx, c: gtColIdx });
-                const firstL = XLSX.utils.encode_col(firstDynCol);
-                const lastL = XLSX.utils.encode_col(firstDynCol + dynCols.length - 1);
-                ws[gtGtAddr] = { t: "n", f: `SUM(${firstL}${grandTotalRowIdx + 1}:${lastL}${grandTotalRowIdx + 1})`, z: "#,##0" };
-                const totalRows = hdrOffset + dataRows.length;
-                styleColumnHeaders(ws, hdrOffset, colCount);
-                for (let r = hdrOffset + 1; r < totalRows; r++) {
-                  const isGroupRow = groupRowIndices.includes(r);
-                  const isGrandTotalRow = r === grandTotalRowIdx;
-                  const srcRow = dataRows[r - hdrOffset];
-                  for (let c = 0; c < colCount; c++) {
-                    const isNum = c >= 2;
-                    if (isGrandTotalRow) {
-                      styleCell(ws, r, c, { font: c === 0 ? { ...FONT_GROUP, color: { rgb: "FFFFFF" } } : FONT_GROUP, fill: FILL_TOTAL_HDR, border: CELL_BORDER, alignment: { horizontal: c < 2 ? "left" : "right" }, numFmt: isNum ? "#,##0" : undefined });
-                    } else if (isGroupRow) {
-                      styleCell(ws, r, c, { font: FONT_GROUP, fill: FILL_GROUP, border: CELL_BORDER, alignment: { horizontal: c < 2 ? "left" : "right" }, numFmt: isNum ? "#,##0" : undefined });
-                    } else if (isNum) {
-                      const numVal = typeof srcRow?.[c] === "number" ? srcRow[c] : undefined;
-                      styleCell(ws, r, c, { font: fontForValue(numVal), border: CELL_BORDER, alignment: { horizontal: "right" }, numFmt: "#,##0" });
-                    } else {
-                      styleCell(ws, r, c, { font: FONT_DEFAULT, border: CELL_BORDER, alignment: { horizontal: "left" } });
-                    }
-                  }
-                }
-                ws["!ref"] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: totalRows - 1, c: colCount - 1 } });
-                ws["!cols"] = [{ wch: 16 }, { wch: 14 }, ...dynCols.map(() => ({ wch: 20 })), { wch: 18 }];
+                const ws = buildRptInterGroupWorksheet({ groups, dynCols, period, filterLabel });
                 const suffix = icTxnType.length ? `_${icTxnType.join("_")}` : "";
                 downloadXlsx(ws, `RPT_Inter_Group${suffix}.xlsx`, "Inter Group");
               }}
@@ -1970,53 +1812,17 @@ function EntityWorkingTab({ period }: { period: string }) {
 
   function handleDownload() {
     if (!reportData || rows.length === 0) return;
-    const wb = XLSX.utils.book_new();
-    const headerRow = [
-      "Entity Name",
-      "Account Head", "Sub Account Head", "RPT Ledger Name", "Counter Party",
-      "C/NC", "FS Group", "FS Heading",
-      "Net OPB",
-      ...movCols.map(c => c.label),
-      "CLB Net", "CLB-TB", "Diff",
-    ];
-    const dataRows = rows.map(r => [
-      r.entityName || "",
-      r.accountHead || "",
-      r.subAccountHead || "",
-      r.rptLedgerName || "",
-      r.counterPartyShort,
-      r.currentNonCurrent,
-      r.fsGroup,
-      r.fsHeading,
-      r.netOpb || 0,
-      ...movCols.map(c => r.movements[c.key] || 0),
-      r.clbNet || 0,
-      r.clbTb || 0,
-      r.diff || 0,
-    ]);
+    const built = buildEntityRptReportSheet(
+      `Entity RPT Report: ${reportData.entity.name} (${reportData.entity.code})`,
+      reportData.period || period,
+      movCols,
+      rows,
+      totals,
+    );
+    const ws = built.ws;
 
-    const totalRow = [
-      "", "", "", "", "", "", "", "Total",
-      totals?.netOpb || 0,
-      ...movCols.map(c => totals?.movements[c.key] || 0),
-      totals?.clbNet || 0,
-      totals?.clbTb || 0,
-      totals?.diff || 0,
-    ];
-
-    const allRows = [
-      [`Entity RPT Report: ${reportData.entity.name} (${reportData.entity.code})`],
-      [`Period: ${reportData.period || period}`],
-      [],
-      headerRow,
-      ...dataRows,
-      totalRow,
-    ];
-    const ws = XLSX.utils.aoa_to_sheet(allRows);
-
-    const headerRowIdx = 3;
-    for (let c = 0; c < headerRow.length; c++) {
-      const cellRef = XLSX.utils.encode_cell({ r: headerRowIdx, c });
+    for (let c = 0; c < built.headerRow.length; c++) {
+      const cellRef = XLSX.utils.encode_cell({ r: built.headerRowIdx, c });
       if (ws[cellRef]) {
         ws[cellRef].s = { font: FONT_HEADER, fill: FILL_HEADER, border: CELL_BORDER, alignment: { horizontal: "center" } };
       }
@@ -2025,22 +1831,20 @@ function EntityWorkingTab({ period }: { period: string }) {
     ws[XLSX.utils.encode_cell({ r: 0, c: 0 })].s = { font: FONT_TITLE };
     ws[XLSX.utils.encode_cell({ r: 1, c: 0 })].s = { font: FONT_META };
 
-    const numStart = 6;
-    for (let ri = 0; ri < dataRows.length; ri++) {
-      for (let ci = numStart; ci < headerRow.length; ci++) {
-        const cellRef = XLSX.utils.encode_cell({ r: headerRowIdx + 1 + ri, c: ci });
+    for (let ri = 0; ri < built.dataRows.length; ri++) {
+      for (let ci = built.numStartCol; ci < built.headerRow.length; ci++) {
+        const cellRef = XLSX.utils.encode_cell({ r: built.headerRowIdx + 1 + ri, c: ci });
         if (ws[cellRef]) {
-          const val = dataRows[ri][ci] as number;
+          const val = built.dataRows[ri][ci] as number;
           ws[cellRef].s = { font: fontForValue(val), border: CELL_BORDER, numFmt: "#,##0" };
         }
       }
     }
 
-    const totalRowIdx = headerRowIdx + 1 + dataRows.length;
-    for (let c = 0; c < headerRow.length; c++) {
-      const cellRef = XLSX.utils.encode_cell({ r: totalRowIdx, c });
+    for (let c = 0; c < built.headerRow.length; c++) {
+      const cellRef = XLSX.utils.encode_cell({ r: built.totalRowIdx, c });
       if (ws[cellRef]) {
-        const val = typeof totalRow[c] === "number" ? totalRow[c] as number : 0;
+        const val = typeof built.totalRow[c] === "number" ? built.totalRow[c] as number : 0;
         ws[cellRef].s = { font: fontForValue(val, true), fill: FILL_TOTAL_COL, border: CELL_BORDER, numFmt: "#,##0" };
       }
     }
@@ -2054,7 +1858,8 @@ function EntityWorkingTab({ period }: { period: string }) {
       { wch: 15 }, { wch: 15 }, { wch: 15 },
     ];
 
-    XLSX.utils.book_append_sheet(wb, ws, "Entity RPT Report");
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, built.name);
     const entityShort = reportData.entity.shortName || reportData.entity.code;
     XLSX.writeFile(wb, `Entity_RPT_Report_${entityShort}.xlsx`);
   }

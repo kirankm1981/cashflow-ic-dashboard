@@ -8,6 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ComposedChar
 import { DashboardRow, createFmt, fmtSuffix, colorForValue, flowColor, FLOW_BG_COLOR } from "./types";
 import type { FormatConfig, FlowColor } from "./types";
 import { downloadExcel, buildWorkingCapitalSheet } from "@/lib/excel-export";
+import { aggregateWorkingCapital } from "@/lib/mis-aggregations";
 
 interface Props {
   rows: DashboardRow[];
@@ -21,32 +22,12 @@ export function D3WorkingCapital({ rows, formatConfig }: Props) {
 
   const wcRows = useMemo(() => rows.filter(r => r.wcBucket), [rows]);
 
-  const bucketData = useMemo(() => {
-    const map: Record<string, { wcSign: number; closingNet: number; openingNet: number; wcMovement: number; items: { head: string; closing: number; opening: number }[] }> = {};
-    const ahMap: Record<string, Record<string, { closing: number; opening: number }>> = {};
-    for (const r of wcRows) {
-      const bucket = r.wcBucket!;
-      const sign = r.wcSign || 0;
-      if (!map[bucket]) map[bucket] = { wcSign: sign, closingNet: 0, openingNet: 0, wcMovement: 0, items: [] };
-      map[bucket].closingNet += r.closingNet;
-      map[bucket].openingNet += r.openingNet;
-      map[bucket].wcMovement += (r.closingNet - r.openingNet) * sign;
-      if (!ahMap[bucket]) ahMap[bucket] = {};
-      const ah = r.accountHead || "Other";
-      if (!ahMap[bucket][ah]) ahMap[bucket][ah] = { closing: 0, opening: 0 };
-      ahMap[bucket][ah].closing += r.closingNet;
-      ahMap[bucket][ah].opening += r.openingNet;
-    }
-    for (const bucket of Object.keys(ahMap)) {
-      map[bucket].items = Object.entries(ahMap[bucket]).map(([head, d]) => ({ head, ...d })).sort((a, b) => Math.abs(b.closing) - Math.abs(a.closing));
-    }
-    return map;
-  }, [wcRows]);
-
-  const currentAssets = Object.entries(bucketData).filter(([, d]) => d.wcSign > 0).reduce((s, [, d]) => s + Math.abs(d.closingNet), 0);
-  const currentLiabilities = Object.entries(bucketData).filter(([, d]) => d.wcSign < 0).reduce((s, [, d]) => s + Math.abs(d.closingNet), 0);
-  const nwc = currentAssets - currentLiabilities;
-  const wcChange = Object.values(bucketData).reduce((s, d) => s + d.wcMovement, 0);
+  const wcAggregation = useMemo(() => aggregateWorkingCapital(rows), [rows]);
+  const bucketData = wcAggregation.bucketData;
+  const currentAssets = wcAggregation.currentAssets;
+  const currentLiabilities = wcAggregation.currentLiabilities;
+  const nwc = wcAggregation.nwc;
+  const wcChange = wcAggregation.wcChange;
 
   const horizontalBarData = useMemo(() => {
     return Object.entries(bucketData)
@@ -81,8 +62,8 @@ export function D3WorkingCapital({ rows, formatConfig }: Props) {
     return data;
   }, [bucketData, nwc]);
 
-  const assetBuckets = Object.entries(bucketData).filter(([, d]) => d.wcSign > 0).sort((a, b) => Math.abs(b[1].closingNet) - Math.abs(a[1].closingNet));
-  const liabilityBuckets = Object.entries(bucketData).filter(([, d]) => d.wcSign < 0).sort((a, b) => Math.abs(b[1].closingNet) - Math.abs(a[1].closingNet));
+  const assetBuckets = wcAggregation.assetBuckets;
+  const liabilityBuckets = wcAggregation.liabilityBuckets;
 
   const statutoryRows = useMemo(() => {
     const statBucket = wcRows.filter(r => r.wcBucket === "Statutory Dues Payable");

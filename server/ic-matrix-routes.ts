@@ -6,6 +6,12 @@ import { eq, sql, asc } from "drizzle-orm";
 import { parseFileInWorker } from "./file-processor";
 import { requireAuth, requireWriteAccess } from "./middleware/auth";
 import { upload, cleanupFile, logUpload } from "./utils/upload-config";
+import {
+  buildIcDataSheet,
+  buildIcBalanceMatrixSheet,
+  buildIcNetoffMatrixSheets,
+  buildIcNetoffDetailsSheet,
+} from "@shared/excel-builders";
 
 import { normalizeText } from "./utils/normalize";
 
@@ -542,30 +548,9 @@ export function registerIcMatrixRoutes(app: Express) {
       const baseCondition = sql.join(conditions, sql` AND `);
       const data = await db.select().from(icMatrixTbData).where(baseCondition);
 
-      const rows = data.map(r => ({
-        "Company": r.company || "",
-        "Company Code": r.companyCode || "",
-        "Account Head": r.accountHead || "",
-        "Sub Account Head": r.subAccountHead || "",
-        "Closing Debit": r.closingDebit || 0,
-        "Closing Credit": r.closingCredit || 0,
-        "Net Balance": r.netBalance || 0,
-        "New COA GL Name": r.newCoaGlName || "",
-        "IC Counter Party": r.icCounterParty || "",
-        "IC CP Code": r.icCounterPartyCode || "",
-        "IC Txn Type": r.icTxnType || "",
-        "RPT Txn Type": r.rptTxnType || "",
-        "TB Source": r.tbSource || "",
-      }));
-
       const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.json_to_sheet(rows);
-      ws["!cols"] = [
-        { wch: 30 }, { wch: 15 }, { wch: 25 }, { wch: 25 },
-        { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 25 },
-        { wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 25 },
-      ];
-      XLSX.utils.book_append_sheet(wb, ws, "IC Data");
+      const built = buildIcDataSheet(data);
+      XLSX.utils.book_append_sheet(wb, built.ws, built.name);
       const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       const dateStr = new Date().toISOString().slice(0, 10);
@@ -726,29 +711,9 @@ export function registerIcMatrixRoutes(app: Express) {
       if (filterCompanies.length > 0) companyCodes = companyCodes.filter(c => filterCompanies.includes(c));
       if (filterCounterParties.length > 0) counterPartyCodes = counterPartyCodes.filter(c => filterCounterParties.includes(c));
 
-      const cpHeaders = counterPartyCodes.map(cp => `${cp} - ${codeToName[cp] || cp}`);
-      const sheetRows: any[][] = [];
-      sheetRows.push(["Company Code", "Company Name", ...cpHeaders, "Total"]);
-
-      let grandTotal = 0;
-      const columnTotals: number[] = counterPartyCodes.map(() => 0);
-      for (const cc of companyCodes) {
-        let total = 0;
-        const vals = counterPartyCodes.map((cp, i) => {
-          const val = balanceMap.get(`${cc}|${cp}`) || 0;
-          columnTotals[i] += val;
-          total += val;
-          return val || "";
-        });
-        grandTotal += total;
-        sheetRows.push([cc, codeToName[cc] || cc, ...vals, total]);
-      }
-      sheetRows.push(["", "Column Total", ...columnTotals.map(v => v || ""), grandTotal]);
-
+      const built = buildIcBalanceMatrixSheet(companyCodes, counterPartyCodes, codeToName, balanceMap);
       const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.aoa_to_sheet(sheetRows);
-      ws["!cols"] = [{ wch: 15 }, { wch: 30 }, ...counterPartyCodes.map(() => ({ wch: 18 })), { wch: 18 }];
-      XLSX.utils.book_append_sheet(wb, ws, "IC Balance Matrix");
+      XLSX.utils.book_append_sheet(wb, built.ws, built.name);
       const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       const bmDateStr = new Date().toISOString().slice(0, 10);
@@ -803,84 +768,10 @@ export function registerIcMatrixRoutes(app: Express) {
       if (filterCompanies.length > 0) companyCodes = companyCodes.filter(c => filterCompanies.includes(c));
       if (filterCounterParties.length > 0) counterPartyCodes = counterPartyCodes.filter(c => filterCounterParties.includes(c));
 
-      const netOffBalanceMap = new Map<string, number>();
-      const netOffProcessed = new Set<string>();
-      const allCodesUnion = new Set([...companyCodes, ...counterPartyCodes]);
-      for (const a of allCodesUnion) {
-        for (const b of allCodesUnion) {
-          if (a === b) continue;
-          const pairKey = [a, b].sort().join("|");
-          if (netOffProcessed.has(pairKey)) continue;
-          netOffProcessed.add(pairKey);
-          const aToB = balanceMap.get(`${a}|${b}`) || 0;
-          const bToA = balanceMap.get(`${b}|${a}`) || 0;
-          const net = aToB + bToA;
-          if (net >= 0) {
-            netOffBalanceMap.set(`${a}|${b}`, net);
-            netOffBalanceMap.set(`${b}|${a}`, 0);
-          } else {
-            netOffBalanceMap.set(`${a}|${b}`, 0);
-            netOffBalanceMap.set(`${b}|${a}`, net);
-          }
-        }
-      }
-
-      const cpHeaders = counterPartyCodes.map(cp => `${cp} - ${codeToName[cp] || cp}`);
-      const sheetRows: any[][] = [];
-      sheetRows.push(["Company Code", "Company Name", ...cpHeaders, "Total"]);
-
-      let grandTotal = 0;
-      const columnTotals: number[] = counterPartyCodes.map(() => 0);
-      for (const cc of companyCodes) {
-        let total = 0;
-        const vals = counterPartyCodes.map((cp, i) => {
-          const val = netOffBalanceMap.get(`${cc}|${cp}`) || 0;
-          columnTotals[i] += val;
-          total += val;
-          return val || "";
-        });
-        grandTotal += total;
-        sheetRows.push([cc, codeToName[cc] || cc, ...vals, total]);
-      }
-      sheetRows.push(["", "Column Total", ...columnTotals.map(v => v || ""), grandTotal]);
-
-      const netOffSummaryRows: {
-        companyCode: string; counterPartyCode: string;
-        companyBalance: number; counterPartyBalance: number; difference: number;
-      }[] = [];
-      const summaryProcessed = new Set<string>();
-      for (const cc of companyCodes) {
-        for (const cp of counterPartyCodes) {
-          if (cc === cp) continue;
-          const pairKey = [cc, cp].sort().join("|");
-          if (summaryProcessed.has(pairKey)) continue;
-          summaryProcessed.add(pairKey);
-          const ccToCp = balanceMap.get(`${cc}|${cp}`) || 0;
-          const cpToCc = balanceMap.get(`${cp}|${cc}`) || 0;
-          const diff = ccToCp + cpToCc;
-          if (Math.abs(diff) > 0.01) {
-            netOffSummaryRows.push({ companyCode: cc, counterPartyCode: cp, companyBalance: ccToCp, counterPartyBalance: cpToCc, difference: diff });
-          }
-        }
-      }
-      netOffSummaryRows.sort((a, b) => Math.abs(b.difference) - Math.abs(a.difference));
-
+      const built = buildIcNetoffMatrixSheets(companyCodes, counterPartyCodes, codeToName, balanceMap);
       const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.aoa_to_sheet(sheetRows);
-      ws["!cols"] = [{ wch: 15 }, { wch: 30 }, ...counterPartyCodes.map(() => ({ wch: 18 })), { wch: 18 }];
-      XLSX.utils.book_append_sheet(wb, ws, "IC Net-off Matrix");
-
-      const summarySheet = XLSX.utils.json_to_sheet(netOffSummaryRows.map(r => ({
-        "Company Code": r.companyCode,
-        "Company Name": codeToName[r.companyCode] || r.companyCode,
-        "Counter Party Code": r.counterPartyCode,
-        "Counter Party Name": codeToName[r.counterPartyCode] || r.counterPartyCode,
-        "Company Balance": r.companyBalance,
-        "Counter Party Balance": r.counterPartyBalance,
-        "Difference": r.difference,
-      })));
-      summarySheet["!cols"] = [{ wch: 15 }, { wch: 30 }, { wch: 18 }, { wch: 30 }, { wch: 18 }, { wch: 20 }, { wch: 15 }];
-      XLSX.utils.book_append_sheet(wb, summarySheet, "Net-off Summary");
+      XLSX.utils.book_append_sheet(wb, built.matrix.ws, built.matrix.name);
+      XLSX.utils.book_append_sheet(wb, built.summary.ws, built.summary.name);
 
       const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
@@ -936,39 +827,9 @@ export function registerIcMatrixRoutes(app: Express) {
       if (filterCompanies.length > 0) companyCodes = companyCodes.filter(c => filterCompanies.includes(c));
       if (filterCounterParties.length > 0) counterPartyCodes = counterPartyCodes.filter(c => filterCounterParties.includes(c));
 
-      const detailRows: {
-        companyCode: string; counterPartyCode: string;
-        companyBalance: number; counterPartyBalance: number; difference: number;
-      }[] = [];
-      const processed = new Set<string>();
-      for (const cc of companyCodes) {
-        for (const cp of counterPartyCodes) {
-          if (cc === cp) continue;
-          const pairKey = [cc, cp].sort().join("|");
-          if (processed.has(pairKey)) continue;
-          processed.add(pairKey);
-          const ccToCp = balanceMap.get(`${cc}|${cp}`) || 0;
-          const cpToCc = balanceMap.get(`${cp}|${cc}`) || 0;
-          const diff = ccToCp + cpToCc;
-          if (Math.abs(diff) > 0.01) {
-            detailRows.push({ companyCode: cc, counterPartyCode: cp, companyBalance: ccToCp, counterPartyBalance: cpToCc, difference: diff });
-          }
-        }
-      }
-      detailRows.sort((a, b) => Math.abs(b.difference) - Math.abs(a.difference));
-
+      const built = buildIcNetoffDetailsSheet(companyCodes, counterPartyCodes, codeToName, balanceMap);
       const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.json_to_sheet(detailRows.map(r => ({
-        "Company Code": r.companyCode,
-        "Company Name": codeToName[r.companyCode] || r.companyCode,
-        "Counter Party Code": r.counterPartyCode,
-        "Counter Party Name": codeToName[r.counterPartyCode] || r.counterPartyCode,
-        "Company Balance": r.companyBalance,
-        "Counter Party Balance": r.counterPartyBalance,
-        "Difference": r.difference,
-      })));
-      ws["!cols"] = [{ wch: 15 }, { wch: 30 }, { wch: 18 }, { wch: 30 }, { wch: 18 }, { wch: 20 }, { wch: 15 }];
-      XLSX.utils.book_append_sheet(wb, ws, "Net-off Details");
+      XLSX.utils.book_append_sheet(wb, built.ws, built.name);
 
       const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
